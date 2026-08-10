@@ -22,6 +22,8 @@ const connectionBadge = document.getElementById("connection-badge");
 
 const WORLD = { width:1280, height:720, floor:650 };
 const COLORS = { atlas:"#ff704d", nita:"#54d8e8", cream:"#f5efe3", dark:"#10141d" };
+const sprites = { atlas:new Image(), nita:new Image() };
+sprites.atlas.src="assets/atlas.png";sprites.nita.src="assets/nita.png";
 const state = { running:false, paused:false, level:0, keys:{}, platforms:[], hazards:[], crates:[], switches:[], doors:[], exits:[], particles:[], last:0, audio:true, messageTimer:0 };
 const network = { role:"solo", peer:null, connection:null, lastSync:0 };
 
@@ -132,9 +134,13 @@ function completeLevel(){
 
 function drawRounded(x,y,w,h,r,color){ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill();}
 function drawPlayer(p){
-  const color=COLORS[p.type];ctx.save();ctx.translate(p.x+p.w/2,p.y+p.h/2);if(p.facing<0)ctx.scale(-1,1);
-  ctx.shadowColor=color;ctx.shadowBlur=14;drawRounded(-p.w/2,-p.h/2,p.w,p.h,10,color);ctx.shadowBlur=0;
-  ctx.fillStyle=COLORS.dark;ctx.fillRect(5,-p.h/2+13,5,5);ctx.fillStyle=COLORS.cream;ctx.fillRect(-p.w/2+6,p.h/2-7,9,7);ctx.fillRect(p.w/2-15,p.h/2-7,9,7);ctx.restore();
+  const color=COLORS[p.type],sprite=sprites[p.type],crouching=p.h<p.normalH,bob=p.onGround&&Math.abs(p.vx)>10?Math.sin(performance.now()*.018)*2:0;
+  const drawH=crouching?39:69,drawW=crouching?51:46;
+  ctx.save();ctx.translate(p.x+p.w/2,p.y+p.h);if(p.facing<0)ctx.scale(-1,1);ctx.rotate(p.onGround?0:p.vx*.00018);
+  ctx.globalAlpha=.32;ctx.fillStyle=color;ctx.beginPath();ctx.ellipse(0,2,drawW*.48,7,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.shadowColor=color;ctx.shadowBlur=12;
+  if(sprite.complete&&sprite.naturalWidth)ctx.drawImage(sprite,-drawW/2,-drawH+bob,drawW,drawH);
+  else drawRounded(-p.w/2,-p.h, p.w,p.h,10,color);
+  ctx.shadowBlur=0;ctx.restore();
 }
 function draw(){
   const rect=canvas.getBoundingClientRect(),scale=Math.min(rect.width/WORLD.width,rect.height/WORLD.height),ox=(rect.width-WORLD.width*scale)/2,oy=(rect.height-WORLD.height*scale)/2;
@@ -220,3 +226,4 @@ joinForm.addEventListener("submit",e=>{
 copyCodeButton.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(roomCodeDisplay.textContent);copyCodeButton.textContent="KOPYALANDI";}catch{showMessage("Kodu elle paylaşabilirsin.",2);}});
 soloButton.addEventListener("click",()=>{network.role="solo";document.body.classList.remove("multiplayer-host","multiplayer-guest");connectionBadge.textContent="AYNI CİHAZ";loadLevel(0);state.running=true;state.last=performance.now();overlay.classList.add("hidden");});
 state.keysPressed={};loadLevel(0);resize();requestAnimationFrame(t=>{state.last=t;requestAnimationFrame(loop);});
+if(new URLSearchParams(location.search).has("solo"))setTimeout(()=>soloButton.click(),100);
