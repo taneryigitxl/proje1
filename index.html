@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
+    <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js" defer></script>
     <script src="script.js" defer></script>
   </head>
   <body>
@@ -17,7 +18,7 @@
       <canvas id="game-canvas" aria-label="İki kişilik platform oyunu"></canvas>
 
       <header class="hud">
-        <div class="brand"><span>NITA</span> YOLLARDA</div>
+        <div class="brand"><span>NITA</span> YOLLARDA <b id="connection-badge">ÇEVRİMDIŞI</b></div>
         <div class="level-info"><small>BÖLÜM</small><strong id="level-number">1 / 5</strong><span id="level-name">İlk Adımlar</span></div>
         <div class="hud-actions">
           <button id="sound-button" type="button" aria-label="Sesi kapat">SES AÇIK</button>
@@ -38,12 +39,31 @@
 
       <div id="message" class="message" aria-live="polite"></div>
 
+      <div class="touch-controls atlas-touch" aria-label="Atlas dokunmatik kontrolleri">
+        <button data-key="a" aria-label="Atlas sola">←</button><button data-key="d" aria-label="Atlas sağa">→</button>
+        <button data-key="w" class="jump" aria-label="Atlas zıpla">↑</button><button data-key="s" class="action" aria-label="Sandık kaldır veya fırlat">KALDIR</button>
+      </div>
+      <div class="touch-controls nita-touch" aria-label="Nita dokunmatik kontrolleri">
+        <button data-key="arrowleft" aria-label="Nita sola">←</button><button data-key="arrowright" aria-label="Nita sağa">→</button>
+        <button data-key="arrowup" class="jump" aria-label="Nita zıpla">↑</button><button data-key="arrowdown" class="action" aria-label="Nita eğil">EĞİL</button>
+      </div>
+
       <section id="overlay" class="overlay">
         <div class="title-mark" aria-hidden="true"><i></i><i></i></div>
         <p class="eyebrow">İKİ KUTUP · TEK YOL</p>
         <h1 id="overlay-title">Nita<br /><em>Yollarda</em></h1>
         <p id="overlay-text">Atlas ve Nita’yı birlikte çıkışa ulaştır. Engelleri aşmak için farklı yeteneklerini kullan.</p>
-        <button id="start-button" type="button">YOLCULUĞA BAŞLA <span>→</span></button>
+        <div id="lobby-actions" class="lobby-actions">
+          <button id="create-room" type="button">ODA KUR <span>＋</span></button>
+          <button id="show-join" type="button" class="secondary">ODAYA KATIL <span>→</span></button>
+          <button id="solo-game" type="button" class="text-button">AYNI CİHAZDA OYNA</button>
+        </div>
+        <form id="join-form" class="join-form" hidden>
+          <label for="room-code">6 HANELİ ODA KODU</label>
+          <div><input id="room-code" maxlength="6" autocomplete="off" inputmode="text" placeholder="ABC123" required /><button type="submit">KATIL</button></div>
+        </form>
+        <div id="room-wait" class="room-wait" hidden><span>ODA KODU</span><strong id="room-code-display">------</strong><button id="copy-code" type="button">KODU KOPYALA</button><p>İkinci oyuncu bekleniyor…</p></div>
+        <button id="start-button" type="button" hidden>SONRAKİ BÖLÜM <span>→</span></button>
         <p class="restart-hint"><kbd>R</kbd> bölümü yeniden başlatır</p>
       </section>
     </main>

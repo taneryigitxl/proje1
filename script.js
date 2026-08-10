@@ -9,10 +9,21 @@ const soundButton = document.getElementById("sound-button");
 const message = document.getElementById("message");
 const levelNumber = document.getElementById("level-number");
 const levelName = document.getElementById("level-name");
+const createRoomButton = document.getElementById("create-room");
+const showJoinButton = document.getElementById("show-join");
+const soloButton = document.getElementById("solo-game");
+const lobbyActions = document.getElementById("lobby-actions");
+const joinForm = document.getElementById("join-form");
+const roomInput = document.getElementById("room-code");
+const roomWait = document.getElementById("room-wait");
+const roomCodeDisplay = document.getElementById("room-code-display");
+const copyCodeButton = document.getElementById("copy-code");
+const connectionBadge = document.getElementById("connection-badge");
 
 const WORLD = { width:1280, height:720, floor:650 };
 const COLORS = { atlas:"#ff704d", nita:"#54d8e8", cream:"#f5efe3", dark:"#10141d" };
 const state = { running:false, paused:false, level:0, keys:{}, platforms:[], hazards:[], crates:[], switches:[], doors:[], exits:[], particles:[], last:0, audio:true, messageTimer:0 };
+const network = { role:"solo", peer:null, connection:null, lastSync:0 };
 
 const levels = [
   {
@@ -115,8 +126,8 @@ function update(dt){
 
 function resetLevel(text){if(!state.running)return;loadLevel(state.level);showMessage(text,2);tone(100,.25);}
 function completeLevel(){
-  tone(620,.15);if(state.level<levels.length-1){state.running=false;overlayTitle.innerHTML=`Bölüm<br><em>Tamam!</em>`;overlayText.textContent=`${levels[state.level].name} geride kaldı. Sırada ${levels[state.level+1].name} var.`;startButton.innerHTML='SONRAKİ BÖLÜM <span>→</span>';overlay.classList.remove("hidden");startButton.dataset.action="next";}
-  else{state.running=false;overlayTitle.innerHTML=`Yol<br><em>Tamamlandı</em>`;overlayText.textContent="Atlas ve Nita beş yolu da birlikte aştı. Baştan oynamaya hazır mısın?";startButton.innerHTML='YENİDEN OYNA <span>↻</span>';overlay.classList.remove("hidden");startButton.dataset.action="restart";}
+  tone(620,.15);if(state.level<levels.length-1){state.running=false;overlayTitle.innerHTML=`Bölüm<br><em>Tamam!</em>`;overlayText.textContent=`${levels[state.level].name} geride kaldı. Sırada ${levels[state.level+1].name} var.`;startButton.innerHTML='SONRAKİ BÖLÜM <span>→</span>';overlay.classList.remove("hidden");startButton.hidden=network.role==="guest";startButton.dataset.action="next";sendPacket({type:"complete",level:state.level,final:false});}
+  else{state.running=false;overlayTitle.innerHTML=`Yol<br><em>Tamamlandı</em>`;overlayText.textContent="Atlas ve Nita beş yolu da birlikte aştı. Baştan oynamaya hazır mısın?";startButton.innerHTML='YENİDEN OYNA <span>↻</span>';overlay.classList.remove("hidden");startButton.hidden=network.role==="guest";startButton.dataset.action="restart";sendPacket({type:"complete",level:state.level,final:true});}
 }
 
 function drawRounded(x,y,w,h,r,color){ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill();}
@@ -141,14 +152,61 @@ function draw(){
 }
 
 function resize(){const dpr=Math.min(devicePixelRatio||1,2),r=canvas.getBoundingClientRect();canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);draw();}
-function loop(time){const dt=Math.min((time-state.last)/1000,.032);state.last=time;if(state.running&&!state.paused)update(dt);draw();requestAnimationFrame(loop);}
+function loop(time){const dt=Math.min((time-state.last)/1000,.032);state.last=time;if(state.running&&!state.paused&&network.role!=="guest")update(dt);if(network.role==="host"&&state.running&&time-network.lastSync>45){sendSnapshot();network.lastSync=time;}draw();requestAnimationFrame(loop);}
 function tone(freq,duration){if(!state.audio)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;state.ac||=new AC();const o=state.ac.createOscillator(),g=state.ac.createGain();o.frequency.value=freq;o.type="triangle";g.gain.setValueAtTime(.045,state.ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,state.ac.currentTime+duration);o.connect(g);g.connect(state.ac.destination);o.start();o.stop(state.ac.currentTime+duration);}
 
-window.addEventListener("keydown",e=>{const key=e.key.toLowerCase();if(["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright","r"].includes(key))e.preventDefault();if(!state.keys[key])state.keysPressed[key]=true;state.keys[key]=true;if(key==="r"&&state.running)resetLevel("Bölüm yeniden başladı.");});
-window.addEventListener("keyup",e=>state.keys[e.key.toLowerCase()]=false);
-startButton.addEventListener("click",()=>{const action=startButton.dataset.action;if(action==="next")loadLevel(state.level+1);else if(action==="restart")loadLevel(0);state.running=true;state.paused=false;state.last=performance.now();startButton.dataset.action="";overlay.classList.add("hidden");});
+function setControl(key,down){
+  if(network.role==="guest"){sendPacket({type:"key",key,down});return;}
+  if(down&&!state.keys[key])state.keysPressed[key]=true;state.keys[key]=down;
+}
+window.addEventListener("keydown",e=>{const key=e.key.toLowerCase();if(["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright","r"].includes(key))e.preventDefault();setControl(key,true);if(key==="r"&&state.running&&network.role!=="guest")resetLevel("Bölüm yeniden başladı.");});
+window.addEventListener("keyup",e=>setControl(e.key.toLowerCase(),false));
+startButton.addEventListener("click",()=>{const action=startButton.dataset.action;if(action==="next")loadLevel(state.level+1);else if(action==="restart")loadLevel(0);state.running=true;state.paused=false;state.last=performance.now();startButton.dataset.action="";startButton.hidden=true;overlay.classList.add("hidden");sendPacket({type:"start",level:state.level});});
 pauseButton.addEventListener("click",()=>{if(!state.running)return;state.paused=!state.paused;pauseButton.textContent=state.paused?"DEVAM ET":"DURAKLAT";showMessage(state.paused?"Oyun duraklatıldı.":"Yola devam!",1.2);});
 soundButton.addEventListener("click",()=>{state.audio=!state.audio;soundButton.textContent=state.audio?"SES AÇIK":"SES KAPALI";soundButton.setAttribute("aria-label",state.audio?"Sesi kapat":"Sesi aç");});
 document.addEventListener("visibilitychange",()=>{if(document.hidden&&state.running&&!state.paused){state.paused=true;pauseButton.textContent="DEVAM ET";}});
 window.addEventListener("resize",resize);
+document.querySelectorAll(".touch-controls button").forEach(button=>{
+  const key=button.dataset.key;
+  const press=e=>{e.preventDefault();button.classList.add("active");setControl(key,true);};
+  const release=e=>{e.preventDefault();button.classList.remove("active");setControl(key,false);};
+  button.addEventListener("pointerdown",press);button.addEventListener("pointerup",release);button.addEventListener("pointercancel",release);button.addEventListener("pointerleave",e=>{if(e.buttons)release(e);});
+});
+
+function roomCode(){const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";return Array.from({length:6},()=>chars[Math.floor(Math.random()*chars.length)]).join("");}
+function sendPacket(packet){if(network.connection?.open)network.connection.send(packet);}
+function sendSnapshot(){sendPacket({type:"state",level:state.level,atlas:{...atlas,holding:null},nita:{...nita,holding:null},crates:state.crates.map(c=>({...c})),switches:state.switches.map(s=>({pressed:s.pressed})),doors:state.doors.map(d=>({open:d.open}))});}
+function beginMultiplayer(role){
+  network.role=role;document.body.classList.remove("multiplayer-host","multiplayer-guest");document.body.classList.add(`multiplayer-${role}`);
+  connectionBadge.textContent=role==="host"?"ATLAS · BAĞLI":"NITA · BAĞLI";connectionBadge.style.color=role==="host"?COLORS.atlas:COLORS.nita;
+  loadLevel(0);state.running=role==="host";state.paused=false;state.last=performance.now();overlay.classList.add("hidden");if(role==="host")sendPacket({type:"start",level:0});
+}
+function receivePacket(data){
+  if(data.type==="key"&&network.role==="host"){if(data.down&&!state.keys[data.key])state.keysPressed[data.key]=true;state.keys[data.key]=data.down;}
+  if(data.type==="start"&&network.role==="guest"){loadLevel(data.level);state.running=true;state.paused=false;overlay.classList.add("hidden");}
+  if(data.type==="state"&&network.role==="guest"){
+    if(state.level!==data.level)loadLevel(data.level);Object.assign(atlas,data.atlas);Object.assign(nita,data.nita);state.crates=data.crates;
+    data.switches.forEach((s,i)=>{if(state.switches[i])state.switches[i].pressed=s.pressed;});data.doors.forEach((d,i)=>{if(state.doors[i])state.doors[i].open=d.open;});
+  }
+  if(data.type==="complete"&&network.role==="guest"){
+    state.running=false;overlayTitle.innerHTML=data.final?'Yol<br><em>Tamamlandı</em>':'Bölüm<br><em>Tamam!</em>';overlayText.textContent=data.final?'Beş yolu da birlikte aştınız!':'Oda sahibinin sonraki bölümü başlatması bekleniyor…';
+    lobbyActions.hidden=true;joinForm.hidden=true;roomWait.hidden=true;startButton.hidden=true;overlay.classList.remove("hidden");
+  }
+}
+function bindConnection(connection,role){
+  network.connection=connection;connection.on("data",receivePacket);connection.on("open",()=>beginMultiplayer(role));connection.on("close",()=>{state.running=false;connectionBadge.textContent="BAĞLANTI KOPTU";showMessage("Diğer oyuncuyla bağlantı kesildi.",4);});
+}
+function peerError(error){roomWait.hidden=true;joinForm.hidden=false;connectionBadge.textContent="BAĞLANTI HATASI";showMessage(error.type==="peer-unavailable"?"Oda bulunamadı. Kodu kontrol et.":"Bağlantı kurulamadı. Tekrar dene.",4);}
+createRoomButton.addEventListener("click",()=>{
+  if(typeof Peer==="undefined"){showMessage("Çevrimiçi oyun servisi yüklenemedi.",4);return;}
+  const code=roomCode();lobbyActions.hidden=true;roomWait.hidden=false;roomCodeDisplay.textContent=code;connectionBadge.textContent="OYUNCU BEKLENİYOR";
+  network.peer=new Peer(`nita-${code.toLowerCase()}`);network.peer.on("connection",conn=>bindConnection(conn,"host"));network.peer.on("error",peerError);
+});
+showJoinButton.addEventListener("click",()=>{lobbyActions.hidden=true;joinForm.hidden=false;roomInput.focus();});
+joinForm.addEventListener("submit",e=>{
+  e.preventDefault();if(typeof Peer==="undefined"){showMessage("Çevrimiçi oyun servisi yüklenemedi.",4);return;}const code=roomInput.value.trim().toLowerCase();if(code.length!==6)return;joinForm.hidden=true;connectionBadge.textContent="BAĞLANIYOR";overlayText.textContent="Odaya bağlanılıyor…";
+  network.peer=new Peer();network.peer.on("open",()=>bindConnection(network.peer.connect(`nita-${code}`,{reliable:true}),"guest"));network.peer.on("error",peerError);
+});
+copyCodeButton.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(roomCodeDisplay.textContent);copyCodeButton.textContent="KOPYALANDI";}catch{showMessage("Kodu elle paylaşabilirsin.",2);}});
+soloButton.addEventListener("click",()=>{network.role="solo";document.body.classList.remove("multiplayer-host","multiplayer-guest");connectionBadge.textContent="AYNI CİHAZ";loadLevel(0);state.running=true;state.last=performance.now();overlay.classList.add("hidden");});
 state.keysPressed={};loadLevel(0);resize();requestAnimationFrame(t=>{state.last=t;requestAnimationFrame(loop);});
