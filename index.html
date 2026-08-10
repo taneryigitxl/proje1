@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Yiğit Taner'in yeni web projesi." />
+    <title>Yiğit Taner — Online</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Manrope:wght@600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="script.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="logo" href="#top" aria-label="Ana sayfa">YT<span>.</span></a>
+      <nav aria-label="Ana menü">
+        <a href="#hakkinda">Hakkında</a>
+        <a href="#projeler">Projeler</a>
+        <a class="nav-cta" href="mailto:hello@yigittaner.online">İletişim</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <p class="eyebrow">YİGİTTANER.ONLINE</p>
+        <h1 id="hero-title">Fikirleri dijital<br /><em>deneyimlere</em> dönüştürüyorum.</h1>
+        <p class="hero-copy">Burası yeni projelerimi, denemelerimi ve internette ürettiğim işleri bir araya getirdiğim alan.</p>
+        <div class="hero-actions">
+          <a class="button primary" href="#projeler">Projeleri gör <span aria-hidden="true">↘</span></a>
+          <a class="button secondary" href="https://yigittaner.com">yigittaner.com <span aria-hidden="true">↗</span></a>
+        </div>
+      </section>
+
+      <section id="hakkinda" class="about section-grid">
+        <p class="section-label">01 / Hakkında</p>
+        <div>
+          <h2>Merhaba, ben Yiğit.</h2>
+          <p>Bu metni kendini ve bu sitenin amacını anlatacak şekilde değiştirebilirsin. Dosyayı VS Code'da açıp doğrudan düzenlemen yeterli.</p>
+        </div>
+      </section>
+
+      <section id="projeler" class="projects">
+        <p class="section-label">02 / Seçili işler</p>
+        <div class="project-list">
+          <article class="project-card">
+            <span>01</span><h3>Yeni Proje</h3><p>Web / 2026</p><a href="#" aria-label="Yeni Projeyi aç">↗</a>
+          </article>
+          <article class="project-card">
+            <span>02</span><h3>Yakında</h3><p>Deney / 2026</p><a href="#" aria-label="Yakında projesini aç">↗</a>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <p>© <span id="year"></span> Yiğit Taner</p>
+      <p>İstanbul, Türkiye</p>
+    </footer>
+  </body>
+</html>
