@@ -39,9 +39,9 @@ const levels = [
   },
   {
     name:"Dar Geçit", theme:"ruins", sky:["#e9b875","#6f775b"], starts:[[70,590],[130,590]],
-    platforms:[[0,650,205,70],[280,565,175,85],[525,500,145,24],[745,575,150,75],[985,515,295,135],[430,405,190,26],[700,345,170,26]],
+    platforms:[[0,650,205,70],[280,565,175,85],[525,500,145,24],[745,575,150,75],[985,515,295,135],[430,350,190,26],[700,270,170,26]],
     hazards:[[205,634,75,16,"atlas"],[455,634,70,16,"nita"],[670,634,75,16,"atlas"],[895,634,90,16,"nita"]], crates:[[150,610],[565,460]], switches:[], doors:[],
-    tunnels:[[285,490,165,36],[990,440,150,38]], exits:[[1070,455,"atlas"],[1200,455,"nita"]], hint:"İlk sandık Atlas'a basamak olur; Nita iki dar geçidi kullanarak yolu kısaltabilir."
+    tunnels:[[285,490,165,36],[1130,440,110,38]], exits:[[1070,455,"atlas"],[1200,455,"nita"]], hint:"Atlas iki sandığı basamak yaparak üst rotaya çıkar; Nita dar geçitlerden ilerler."
   },
   {
     name:"Ağırlık Meselesi", theme:"mine", sky:["#292736","#594349"], starts:[[70,590],[135,590]],
