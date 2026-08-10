@@ -2,49 +2,49 @@
 <html lang="tr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Fikirleri yakala, glitch’lerden kaç. Fikir Avı tarayıcı oyunu." />
-    <meta name="theme-color" content="#191816" />
-    <title>Fikir Avı — 2D Tarayıcı Oyunu</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="description" content="Nita Yollarda — iki kişilik, beş bölümlük 2D platform oyunu." />
+    <meta name="theme-color" content="#10141d" />
+    <title>Nita Yollarda</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Manrope:wght@600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
     <script src="script.js" defer></script>
   </head>
   <body>
-    <main>
-      <section class="game-section" aria-labelledby="game-title">
-        <div class="game-heading">
-          <div>
-            <p class="eyebrow">YİĞİTTANER.ONLINE SUNAR</p>
-            <h2 id="game-title">Fikir Avı<span>.</span></h2>
-          </div>
-          <p>Kıvılcımları yakala, glitch’lere çarpma. Her fikir +10 puan; arka arkaya yakaladıkça çarpanın büyür.</p>
-        </div>
+    <main id="game" aria-label="Nita Yollarda oyun alanı">
+      <canvas id="game-canvas" aria-label="İki kişilik platform oyunu"></canvas>
 
-        <div class="game-shell">
-          <div class="game-toolbar" aria-label="Oyun bilgileri">
-            <div><span>SKOR</span><strong id="score">000</strong></div>
-            <div><span>EN İYİ</span><strong id="high-score">000</strong></div>
-            <div><span>SÜRE</span><strong id="timer">45</strong></div>
-            <button id="sound-toggle" class="icon-button" type="button" aria-label="Sesi kapat" aria-pressed="true">♪</button>
-          </div>
-          <div class="canvas-wrap">
-            <canvas id="game-canvas" width="1000" height="560" aria-label="Fikir Avı oyun alanı"></canvas>
-            <div id="game-overlay" class="game-overlay">
-              <p class="overlay-kicker">MİNİ OYUN</p>
-              <h3 id="overlay-title">Fikirleri yakalamaya hazır mısın?</h3>
-              <p id="overlay-copy"><kbd>←</kbd> <kbd>→</kbd> veya <kbd>A</kbd> <kbd>D</kbd> ile hareket et. Telefonda parmağını sürükle.</p>
-              <button id="start-game" class="button game-button" type="button">Oyunu başlat <span aria-hidden="true">→</span></button>
-            </div>
-          </div>
-          <div class="game-footer">
-            <p><span class="legend idea"></span> Fikir +10</p>
-            <p><span class="legend glitch"></span> Glitch −1 can</p>
-            <p id="lives" aria-live="polite">CAN ● ● ●</p>
-          </div>
+      <header class="hud">
+        <div class="brand"><span>NITA</span> YOLLARDA</div>
+        <div class="level-info"><small>BÖLÜM</small><strong id="level-number">1 / 5</strong><span id="level-name">İlk Adımlar</span></div>
+        <div class="hud-actions">
+          <button id="sound-button" type="button" aria-label="Sesi kapat">SES AÇIK</button>
+          <button id="pause-button" type="button">DURAKLAT</button>
         </div>
+      </header>
+
+      <aside class="controls" aria-label="Kontroller">
+        <div class="player-control atlas-control">
+          <span class="player-dot"></span><strong>ATLAS</strong>
+          <span><kbd>W</kbd> zıpla</span><span><kbd>A</kbd><kbd>D</kbd> yürü</span><span><kbd>S</kbd> kaldır / fırlat</span>
+        </div>
+        <div class="player-control nita-control">
+          <span class="player-dot"></span><strong>NITA</strong>
+          <span><kbd>↑</kbd> zıpla</span><span><kbd>←</kbd><kbd>→</kbd> yürü</span><span><kbd>↓</kbd> eğil</span>
+        </div>
+      </aside>
+
+      <div id="message" class="message" aria-live="polite"></div>
+
+      <section id="overlay" class="overlay">
+        <div class="title-mark" aria-hidden="true"><i></i><i></i></div>
+        <p class="eyebrow">İKİ KUTUP · TEK YOL</p>
+        <h1 id="overlay-title">Nita<br /><em>Yollarda</em></h1>
+        <p id="overlay-text">Atlas ve Nita’yı birlikte çıkışa ulaştır. Engelleri aşmak için farklı yeteneklerini kullan.</p>
+        <button id="start-button" type="button">YOLCULUĞA BAŞLA <span>→</span></button>
+        <p class="restart-hint"><kbd>R</kbd> bölümü yeniden başlatır</p>
       </section>
     </main>
   </body>
