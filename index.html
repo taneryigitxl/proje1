@@ -39,6 +39,14 @@
 
       <div id="message" class="message" aria-live="polite"></div>
 
+      <section id="level-transition" class="level-transition" aria-live="assertive" aria-hidden="true">
+        <div class="transition-burst" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div class="transition-check" aria-hidden="true">✓</div>
+        <p>BÖLÜM TAMAMLANDI</p>
+        <strong id="transition-level-name"></strong>
+        <span id="transition-next">SONRAKİ BÖLÜME GEÇİLİYOR…</span>
+      </section>
+
       <div class="touch-controls atlas-touch" aria-label="Atlas dokunmatik kontrolleri">
         <div class="joystick" data-left="a" data-right="d" data-up="w" aria-label="Atlas hareket joystick’i"><i></i><span></span></div>
         <div class="touch-actions"><button data-key="w" class="jump" aria-label="Atlas zıpla">ZIPLA</button><button data-key="s" class="action" aria-label="Sandık kaldır veya fırlat">KALDIR<br />FIRLAT</button></div>

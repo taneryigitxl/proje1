@@ -19,6 +19,9 @@ const roomWait = document.getElementById("room-wait");
 const roomCodeDisplay = document.getElementById("room-code-display");
 const copyCodeButton = document.getElementById("copy-code");
 const connectionBadge = document.getElementById("connection-badge");
+const levelTransition = document.getElementById("level-transition");
+const transitionLevelName = document.getElementById("transition-level-name");
+const transitionNext = document.getElementById("transition-next");
 
 const WORLD = { width:1280, height:720, floor:650 };
 const COLORS = { atlas:"#ff704d", nita:"#54d8e8", cream:"#f5efe3", dark:"#10141d" };
@@ -30,39 +33,39 @@ const network = { role:"solo", peer:null, connection:null, lastSync:0 };
 const levels = [
   {
     name:"İlk Adımlar", theme:"meadow", sky:["#72cfe5","#d9f3d4"], starts:[[90,590],[155,590]],
-    platforms:[[0,650,1280,70],[310,555,180,24],[560,490,170,24],[795,560,160,24],[1040,495,170,24]],
-    hazards:[[500,634,60,16,"nita"],[730,634,65,16,"atlas"]], crates:[], switches:[], doors:[], exits:[[1138,435,"atlas"],[1192,590,"nita"]],
+    platforms:[[0,650,230,70],[300,590,145,24],[515,520,140,24],[730,575,135,24],[940,500,130,24],[1130,570,150,80]],
+    hazards:[[230,634,70,16,"nita"],[445,634,70,16,"atlas"],[655,634,75,16,"nita"],[865,634,75,16,"atlas"],[1070,634,60,16,"nita"]], crates:[], switches:[], doors:[], exits:[[985,440,"atlas"],[1200,510,"nita"]],
     hint:"İki karakteri de kendi renklerindeki çıkışa ulaştır."
   },
   {
     name:"Dar Geçit", theme:"ruins", sky:["#e9b875","#6f775b"], starts:[[70,590],[130,590]],
-    platforms:[[0,650,1280,70],[280,565,190,85],[525,505,210,24],[790,570,175,80],[1010,515,270,135],[430,420,250,26],[735,355,210,26]],
-    hazards:[[470,634,55,16,"atlas"],[965,634,45,16,"nita"]], crates:[[210,610]], switches:[], doors:[],
-    tunnels:[[285,490,180,36]], exits:[[1100,455,"atlas"],[1200,455,"nita"]], hint:"Nita dar geçitte eğilmeli. Atlas sandığı basamak olarak kullanabilir."
+    platforms:[[0,650,205,70],[280,565,175,85],[525,500,145,24],[745,575,150,75],[985,515,295,135],[430,405,190,26],[700,345,170,26]],
+    hazards:[[205,634,75,16,"atlas"],[455,634,70,16,"nita"],[670,634,75,16,"atlas"],[895,634,90,16,"nita"]], crates:[[150,610],[565,460]], switches:[], doors:[],
+    tunnels:[[285,490,165,36],[990,440,150,38]], exits:[[1070,455,"atlas"],[1200,455,"nita"]], hint:"İlk sandık Atlas'a basamak olur; Nita iki dar geçidi kullanarak yolu kısaltabilir."
   },
   {
     name:"Ağırlık Meselesi", theme:"mine", sky:["#292736","#594349"], starts:[[70,590],[135,590]],
-    platforms:[[0,650,1280,70],[230,555,180,24],[495,480,165,24],[750,405,160,24],[1020,520,260,130],[680,610,115,40]],
-    hazards:[[410,634,85,16,"nita"],[795,634,225,16,"atlas"]], crates:[[310,515],[580,440]],
-    switches:[[705,600,70,10,0]], doors:[[935,430,28,220,0]], exits:[[1095,460,"atlas"],[1190,460,"nita"]], hint:"Atlas sandığı sarı düğmenin üzerine taşımalı."
+    platforms:[[0,650,190,70],[255,570,150,24],[485,490,145,24],[700,410,145,24],[925,535,125,115],[1115,470,165,180],[625,600,105,50]],
+    hazards:[[190,634,65,16,"nita"],[405,634,80,16,"atlas"],[630,634,70,16,"nita"],[730,634,195,16,"atlas"],[1050,634,65,16,"nita"]], crates:[[300,530],[535,450]],
+    switches:[[645,590,65,10,0],[955,525,65,10,1]], doors:[[875,360,28,290,0],[1080,330,28,320,1]], exits:[[1180,410,"atlas"],[1228,410,"nita"]], hint:"İki sandığı doğru düğmelere taşı; ilk kapı açılmadan ikinciye ulaşılamaz."
   },
   {
     name:"Zıt Akımlar", theme:"storm", sky:["#173447","#358a91"], starts:[[65,590],[125,590]],
-    platforms:[[0,650,1280,70],[190,560,170,24],[420,475,180,24],[665,545,190,24],[920,445,160,24],[1090,570,190,80],[610,355,190,24]],
-    hazards:[[360,634,60,16,"atlas"],[600,634,65,16,"nita"],[855,634,65,16,"atlas"]], crates:[[245,520]],
-    switches:[[745,535,70,10,0]], doors:[[875,380,26,270,0]], tunnels:[[1095,495,120,38]], exits:[[990,385,"atlas"],[1200,510,"nita"]], hint:"Sandık kapıyı açar; Nita son geçitte eğilerek ilerler."
+    platforms:[[0,650,170,70],[235,565,135,24],[440,475,135,24],[645,555,145,24],[855,455,135,24],[1080,570,200,80],[590,345,155,24],[930,315,125,24]],
+    hazards:[[170,634,65,16,"atlas"],[370,634,70,16,"nita"],[575,634,70,16,"atlas"],[790,634,65,16,"nita"],[990,634,90,16,"atlas"]], crates:[[270,525],[685,515]],
+    switches:[[680,545,65,10,0],[950,305,65,10,1]], doors:[[815,360,26,290,0],[1050,280,26,370,1]], tunnels:[[1085,495,125,38]], exits:[[960,395,"atlas"],[1205,510,"nita"]], hint:"İlk kapı için sandığı fırlat; ikinci düğmeye ulaşmak için diğer sandığı basamak yap."
   },
   {
     name:"Son Yol", theme:"temple", sky:["#2c1e42","#a34f6d"], starts:[[60,590],[120,590]],
-    platforms:[[0,650,1280,70],[180,570,150,24],[390,490,145,24],[600,410,150,24],[810,500,140,24],[1030,420,250,24],[535,585,125,65]],
-    hazards:[[330,634,60,16,"nita"],[535,634,65,16,"atlas"],[750,634,60,16,"nita"],[950,634,80,16,"atlas"]], crates:[[230,530],[455,450]],
-    switches:[[560,575,70,10,0],[845,490,70,10,1]], doors:[[770,300,28,350,0],[995,300,28,350,1]], tunnels:[[1035,342,145,38]],
-    exits:[[1120,360,"atlas"],[1215,360,"nita"]], hint:"İki düğme, iki kapı. Son yolu birlikte açın."
+    platforms:[[0,650,150,70],[215,575,125,24],[410,490,120,24],[595,400,125,24],[790,510,115,24],[1015,420,265,24],[520,585,105,65],[905,580,80,70]],
+    hazards:[[150,634,65,16,"nita"],[340,634,70,16,"atlas"],[625,634,165,16,"nita"],[985,634,30,16,"atlas"]], crates:[[255,535],[455,450],[825,470]],
+    switches:[[540,575,65,10,0],[815,500,65,10,1],[925,570,50,10,2]], doors:[[745,300,28,350,0],[985,285,28,365,1],[1180,300,28,350,2]], tunnels:[[1020,342,135,38]],
+    exits:[[1080,360,"atlas"],[1218,360,"nita"]], hint:"Üç düğme, üç sandık. Sırayı bozarsan son kapıya kutu taşıyamazsın."
   }
 ];
 
 function makePlayer(type,x,y){
-  return { type,x,y,w:34,h:50,normalH:50,crouchH:29,vx:0,vy:0,speed:245,jump:505,onGround:false,facing:1,holding:null,atExit:false,actionTimer:0,crouchBlend:0 };
+  return { type,x,y,w:34,h:50,normalH:50,crouchH:29,vx:0,vy:0,speed:245,jump:505,onGround:false,facing:1,holding:null,atExit:false,actionTimer:0,actionType:null,crouchBlend:0 };
 }
 let atlas = makePlayer("atlas",0,0), nita = makePlayer("nita",0,0);
 
@@ -113,10 +116,9 @@ function updateCrates(dt){
 
 function handleAtlasAction(){
   if(!state.keysPressed.s)return;
-  atlas.actionTimer=.58;
-  if(atlas.holding){const c=atlas.holding;c.held=false;c.visualDelay=.42;c.x=atlas.x+(atlas.facing>0?atlas.w+6:-c.w-6);c.y=atlas.y+5;c.vx=atlas.facing*390;c.vy=-165;atlas.holding=null;tone(170,.12);return;}
+  if(atlas.holding){atlas.actionType="throw";atlas.actionTimer=.44;const c=atlas.holding;c.held=false;c.visualDelay=atlas.actionTimer;c.x=atlas.x+(atlas.facing>0?atlas.w+6:-c.w-6);c.y=atlas.y+5;c.vx=atlas.facing*390;c.vy=-165;atlas.holding=null;tone(170,.12);return;}
   const crate=state.crates.find(c=>!c.held&&Math.hypot((c.x+c.w/2)-(atlas.x+atlas.w/2),(c.y+c.h/2)-(atlas.y+atlas.h/2))<78);
-  if(crate){crate.held=true;atlas.holding=crate;tone(310,.08);}else showMessage("Sandığa biraz daha yaklaş.",1.2);
+  if(crate){atlas.actionType="pickup";atlas.actionTimer=.34;crate.held=true;atlas.holding=crate;tone(310,.08);}else showMessage("Sandığa biraz daha yaklaş.",1.2);
 }
 
 function update(dt){
@@ -129,15 +131,23 @@ function update(dt){
 }
 
 function resetLevel(text){if(!state.running)return;loadLevel(state.level);showMessage(text,2);tone(100,.25);}
+function playLevelTransition(levelName,final,done){
+  transitionLevelName.textContent=levelName;transitionNext.textContent=final?"YOLCULUK TAMAMLANDI":"SONRAKİ BÖLÜME GEÇİLİYOR…";
+  levelTransition.classList.remove("active");void levelTransition.offsetWidth;levelTransition.classList.add("active");levelTransition.setAttribute("aria-hidden","false");
+  setTimeout(()=>{levelTransition.classList.remove("active");levelTransition.setAttribute("aria-hidden","true");done?.();},2150);
+}
 function completeLevel(){
-  tone(620,.15);if(state.level<levels.length-1){state.running=false;overlayTitle.innerHTML=`Bölüm<br><em>Tamam!</em>`;overlayText.textContent=`${levels[state.level].name} geride kaldı. Sırada ${levels[state.level+1].name} var.`;startButton.innerHTML='SONRAKİ BÖLÜM <span>→</span>';overlay.classList.remove("hidden");startButton.hidden=network.role==="guest";startButton.dataset.action="next";sendPacket({type:"complete",level:state.level,final:false});}
-  else{state.running=false;overlayTitle.innerHTML=`Yol<br><em>Tamamlandı</em>`;overlayText.textContent="Atlas ve Nita beş yolu da birlikte aştı. Baştan oynamaya hazır mısın?";startButton.innerHTML='YENİDEN OYNA <span>↻</span>';overlay.classList.remove("hidden");startButton.hidden=network.role==="guest";startButton.dataset.action="restart";sendPacket({type:"complete",level:state.level,final:true});}
+  if(!state.running)return;state.running=false;tone(620,.15);const completedLevel=state.level,final=completedLevel===levels.length-1;sendPacket({type:"complete",level:completedLevel,final});
+  playLevelTransition(levels[completedLevel].name,final,()=>{
+    if(!final){loadLevel(completedLevel+1);state.running=true;state.paused=false;state.last=performance.now();sendPacket({type:"start",level:state.level});return;}
+    overlayTitle.innerHTML=`Yol<br><em>Tamamlandı</em>`;overlayText.textContent="Atlas ve Nita beş yolu da birlikte aştı. Baştan oynamaya hazır mısın?";startButton.innerHTML='YENİDEN OYNA <span>↻</span>';startButton.hidden=network.role==="guest";startButton.dataset.action="restart";overlay.classList.remove("hidden");
+  });
 }
 
 function drawRounded(x,y,w,h,r,color){ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill();}
 function drawPlayer(p){
   const color=COLORS[p.type],moving=p.onGround&&Math.abs(p.vx)>10,bob=moving?Math.sin(performance.now()*.018)*1.2:0;let sprite=sprites[p.type],frame=0,drawH=69,drawW=46,sheet=false;
-  if(p.type==="atlas"&&(p.actionTimer>0||p.holding||p.isHolding)){sprite=sprites.atlasAction;frame=(p.holding||p.isHolding)&&p.actionTimer<=0?1:Math.min(3,Math.floor((.58-p.actionTimer)/.145));drawH=76;drawW=76;sheet=true;}
+  if(p.type==="atlas"&&(p.actionTimer>0||p.holding||p.isHolding)){sprite=sprites.atlasAction;if(p.actionType==="throw"&&p.actionTimer>0)frame=p.actionTimer>.22?2:3;else if(p.actionType==="pickup"&&p.actionTimer>0)frame=p.actionTimer>.17?0:1;else frame=1;drawH=76;drawW=76;sheet=true;}
   else if(p.type==="nita"&&p.crouchBlend>.05){sprite=sprites.nitaCrouch;frame=Math.min(2,Math.floor(p.crouchBlend*2.99));drawH=72;drawW=64;sheet=true;}
   else if(moving){sprite=p.type==="atlas"?sprites.atlasWalk:sprites.nitaWalk;frame=Math.floor(performance.now()*.008)%4;drawH=72;drawW=p.type==="atlas"?54:58;sheet=true;}
   ctx.save();ctx.translate(p.x+p.w/2,p.y+p.h);if(p.facing<0)ctx.scale(-1,1);ctx.rotate(p.onGround?0:p.vx*.00018);
@@ -179,6 +189,12 @@ function drawDoor(d){
 }
 
 function drawExit(e){const color=COLORS[e.type],x=e.x-3;ctx.fillStyle="#242b35";ctx.fillRect(x-5,e.y-8,e.w+10,e.h+8);ctx.fillStyle=color+"55";ctx.fillRect(x,e.y,e.w,e.h);ctx.strokeStyle=color;ctx.lineWidth=4;ctx.shadowColor=color;ctx.shadowBlur=14;ctx.strokeRect(x,e.y,e.w,e.h);ctx.shadowBlur=0;ctx.fillStyle="#f7dc92";ctx.beginPath();ctx.arc(x+e.w-10,e.y+e.h/2,3,0,Math.PI*2);ctx.fill();ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(x+e.w/2-8,e.y+14);ctx.lineTo(x+e.w/2+8,e.y+14);ctx.lineTo(x+e.w/2,e.y+24);ctx.fill();}
+function drawCrate(c){
+  ctx.save();ctx.translate(c.x,c.y);drawRounded(0,0,c.w,c.h,3,"#8b4d2b");
+  ctx.fillStyle="#a96236";ctx.fillRect(4,4,c.w-8,c.h-8);ctx.strokeStyle="#5b2f1d";ctx.lineWidth=4;ctx.strokeRect(2,2,c.w-4,c.h-4);
+  ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(6,6);ctx.lineTo(c.w-6,c.h-6);ctx.moveTo(c.w-6,6);ctx.lineTo(6,c.h-6);ctx.stroke();
+  ctx.strokeStyle="rgba(239,174,105,.55)";ctx.lineWidth=1.5;ctx.strokeRect(7,7,c.w-14,c.h-14);ctx.restore();
+}
 function draw(){
   const rect=canvas.getBoundingClientRect(),scale=Math.min(rect.width/WORLD.width,rect.height/WORLD.height),ox=(rect.width-WORLD.width*scale)/2,oy=(rect.height-WORLD.height*scale)/2;
   const level=levels[state.level]||levels[0],gradient=ctx.createLinearGradient(0,0,0,rect.height);gradient.addColorStop(0,level.sky[0]);gradient.addColorStop(1,level.sky[1]);ctx.fillStyle=gradient;ctx.fillRect(0,0,rect.width,rect.height);
@@ -191,7 +207,7 @@ function draw(){
   for(const sw of state.switches){const c=sw.door%2?COLORS.nita:COLORS.atlas;drawRounded(sw.x,sw.y+(sw.pressed?5:0),sw.w,sw.h-(sw.pressed?5:0),4,sw.pressed?c:c+"88");ctx.fillStyle="rgba(255,255,255,.45)";ctx.fillRect(sw.x+10,sw.y+2,sw.w-20,2);}
   for(const d of state.doors)drawDoor(d);
   for(const e of state.exits)drawExit(e);
-  for(const c of state.crates){if(c.held||c.visualDelay>0)continue;ctx.save();ctx.translate(c.x,c.y);drawRounded(0,0,c.w,c.h,5,"#d49a54");ctx.strokeStyle="#835d33";ctx.lineWidth=4;ctx.strokeRect(7,7,c.w-14,c.h-14);ctx.restore();}
+  for(const c of state.crates){if(c.held||c.visualDelay>0)continue;drawCrate(c);}
   drawPlayer(atlas);drawPlayer(nita);state.particles.forEach(p=>{ctx.globalAlpha=p.life;ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,5,5);});ctx.globalAlpha=1;ctx.restore();
 }
 
@@ -243,8 +259,7 @@ function receivePacket(data){
     data.switches.forEach((s,i)=>{if(state.switches[i])state.switches[i].pressed=s.pressed;});data.doors.forEach((d,i)=>{if(state.doors[i])Object.assign(state.doors[i],d);});
   }
   if(data.type==="complete"&&network.role==="guest"){
-    state.running=false;overlayTitle.innerHTML=data.final?'Yol<br><em>Tamamlandı</em>':'Bölüm<br><em>Tamam!</em>';overlayText.textContent=data.final?'Beş yolu da birlikte aştınız!':'Oda sahibinin sonraki bölümü başlatması bekleniyor…';
-    lobbyActions.hidden=true;joinForm.hidden=true;roomWait.hidden=true;startButton.hidden=true;overlay.classList.remove("hidden");
+    state.running=false;playLevelTransition(levels[data.level]?.name||"Bölüm",data.final,()=>{if(data.final){overlayTitle.innerHTML='Yol<br><em>Tamamlandı</em>';overlayText.textContent='Beş yolu da birlikte aştınız!';lobbyActions.hidden=true;joinForm.hidden=true;roomWait.hidden=true;startButton.hidden=true;overlay.classList.remove("hidden");}});
   }
 }
 function bindConnection(connection,role){

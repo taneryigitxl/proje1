@@ -22,6 +22,19 @@ button { font:inherit; }
 kbd { min-width:21px; display:inline-grid; place-items:center; margin:0 2px; padding:3px 5px; border:1px solid rgba(245,239,227,.38); border-bottom-width:2px; border-radius:4px; color:var(--cream); font:700 .58rem "DM Sans",sans-serif; }
 .message { position:absolute; z-index:4; top:94px; left:50%; translate:-50% 0; padding:10px 16px; border-radius:100px; background:var(--cream); color:var(--night); font-weight:700; font-size:.78rem; opacity:0; transform:translateY(-8px); transition:.2s ease; pointer-events:none; }
 .message.show { opacity:1; transform:translateY(0); }
+.level-transition { position:absolute;z-index:6;inset:0;display:grid;place-content:center;justify-items:center;text-align:center;background:radial-gradient(circle at center,rgba(84,216,232,.3),rgba(8,11,17,.94) 62%);opacity:0;visibility:hidden;pointer-events:none; }
+.level-transition.active { visibility:visible;animation:transitionScreen 2.15s ease both; }
+.transition-check { position:relative;z-index:2;display:grid;place-items:center;width:104px;height:104px;border:5px solid var(--nita);border-radius:50%;color:var(--cream);background:var(--night);box-shadow:0 0 0 12px rgba(84,216,232,.12),0 0 55px rgba(84,216,232,.55);font:800 4rem/1 "Manrope",sans-serif;animation:checkPop .55s cubic-bezier(.2,1.5,.5,1) both; }
+.level-transition p { margin:28px 0 4px;color:var(--nita);font:800 clamp(1.5rem,4vw,3rem) "Manrope",sans-serif;letter-spacing:.08em;animation:transitionText .5s .22s ease both; }
+.level-transition strong { font:700 clamp(.9rem,2vw,1.25rem) "Manrope",sans-serif;opacity:.82;animation:transitionText .5s .32s ease both; }
+.level-transition>span { margin-top:18px;font-size:.62rem;font-weight:700;letter-spacing:.18em;opacity:.5;animation:transitionText .5s .42s ease both; }
+.transition-burst { position:absolute;left:50%;top:50%;width:1px;height:1px; }
+.transition-burst i { position:absolute;left:-2px;top:-145px;width:4px;height:34px;border-radius:4px;background:var(--atlas);transform-origin:2px 145px;animation:burstRay .7s .1s ease-out both; }
+.transition-burst i:nth-child(2){background:var(--nita);transform:rotate(120deg)}.transition-burst i:nth-child(3){background:var(--cream);transform:rotate(240deg)}
+@keyframes transitionScreen { 0%{opacity:0} 12%,82%{opacity:1} 100%{opacity:0} }
+@keyframes checkPop { 0%{opacity:0;transform:scale(.2) rotate(-25deg)} 100%{opacity:1;transform:scale(1) rotate(0)} }
+@keyframes transitionText { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+@keyframes burstRay { from{opacity:0;scale:1 .2} 45%{opacity:.9} to{opacity:0;scale:1 1.8} }
 .overlay { position:absolute; z-index:5; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; text-align:center; background:radial-gradient(circle at 50% 40%,rgba(42,52,72,.76),rgba(9,12,18,.96) 68%); transition:opacity .4s ease,visibility .4s; }
 .overlay.hidden { opacity:0; visibility:hidden; pointer-events:none; }
 .overlay h1 { margin:10px 0 16px; font:800 clamp(4rem,10vw,8.5rem)/.75 "Manrope",sans-serif; letter-spacing:-.085em; text-transform:uppercase; }
@@ -64,4 +77,4 @@ kbd { min-width:21px; display:inline-grid; place-items:center; margin:0 2px; pad
   .hud{min-height:54px;padding:8px 12px;grid-template-columns:1fr auto}.level-info{display:none}.hud-actions button:first-child{display:none}.controls{display:none}.overlay h1{font-size:clamp(2.8rem,10vw,4.5rem)}.overlay>p:not(.eyebrow,.restart-hint){max-width:440px;font-size:.74rem;margin-bottom:12px}.lobby-actions{width:min(440px,76vw);min-width:0}.lobby-actions button{padding:11px 9px;font-size:.62rem}.touch-controls{display:flex}.multiplayer-host .nita-touch,.multiplayer-guest .atlas-touch{display:none}.multiplayer-host .atlas-touch{left:18px}.multiplayer-guest .nita-touch{right:18px}.overlay{padding:10px 12px}.title-mark{height:26px}.title-mark i{height:28px}.restart-hint{display:none}
 }
 @media(max-width:700px) and (orientation:portrait){.rotate-device{display:flex}}
-@media(prefers-reduced-motion:reduce){.overlay,.message{transition:none}}
+@media(prefers-reduced-motion:reduce){.overlay,.message{transition:none}.level-transition.active{animation-duration:2.15s}.transition-check,.level-transition p,.level-transition strong,.level-transition>span,.transition-burst i{animation:none}}
