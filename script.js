@@ -146,13 +146,16 @@ function completeLevel(){
 
 function drawRounded(x,y,w,h,r,color){ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill();}
 function drawPlayer(p){
-  const color=COLORS[p.type],moving=p.onGround&&Math.abs(p.vx)>10,bob=moving?Math.sin(performance.now()*.018)*1.2:0;let sprite=sprites[p.type],frame=0,drawH=69,drawW=46,sheet=false;
-  if(p.type==="atlas"&&(p.actionTimer>0||p.holding||p.isHolding)){sprite=sprites.atlasAction;if(p.actionType==="throw"&&p.actionTimer>0)frame=p.actionTimer>.22?2:3;else if(p.actionType==="pickup"&&p.actionTimer>0)frame=p.actionTimer>.17?0:1;else frame=1;drawH=76;drawW=76;sheet=true;}
+  const color=COLORS[p.type],moving=p.onGround&&Math.abs(p.vx)>10,bob=moving?Math.sin(performance.now()*.018)*1.2:0;let sprite=sprites[p.type],frame=0,drawH=69,drawW=46,sheet=false,atlasAction=false;
+  if(p.type==="atlas"&&(p.actionTimer>0||p.holding||p.isHolding)){sprite=sprites.atlasAction;if(p.actionType==="throw"&&p.actionTimer>0)frame=p.actionTimer>.22?2:3;else if(p.actionType==="pickup"&&p.actionTimer>0)frame=p.actionTimer>.17?0:1;else frame=1;drawH=69;drawW=69;sheet=true;atlasAction=true;}
   else if(p.type==="nita"&&p.crouchBlend>.05){sprite=sprites.nitaCrouch;frame=Math.min(2,Math.floor(p.crouchBlend*2.99));drawH=72;drawW=64;sheet=true;}
   else if(moving){sprite=p.type==="atlas"?sprites.atlasWalk:sprites.nitaWalk;frame=Math.floor(performance.now()*.008)%4;drawH=72;drawW=p.type==="atlas"?54:58;sheet=true;}
   ctx.save();ctx.translate(p.x+p.w/2,p.y+p.h);if(p.facing<0)ctx.scale(-1,1);ctx.rotate(p.onGround?0:p.vx*.00018);
   ctx.globalAlpha=.32;ctx.fillStyle=color;ctx.beginPath();ctx.ellipse(0,2,drawW*.48,7,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.shadowColor=color;ctx.shadowBlur=12;
-  if(sprite.complete&&sprite.naturalWidth){if(sheet)ctx.drawImage(sprite,frame*256,0,256,512,-drawW/2,-drawH+bob,drawW,drawH);else ctx.drawImage(sprite,-drawW/2,-drawH+bob,drawW,drawH);}
+  if(sprite.complete&&sprite.naturalWidth){
+    if(atlasAction){ctx.save();ctx.beginPath();ctx.moveTo(-drawW/2,-drawH);ctx.lineTo(drawW/2,-drawH);ctx.lineTo(drawW/2,-22);ctx.lineTo(24,-22);ctx.lineTo(24,4);ctx.lineTo(-drawW/2,4);ctx.closePath();ctx.clip();ctx.drawImage(sprite,frame*256,0,256,512,-drawW/2,-drawH+bob,drawW,drawH);ctx.restore();}
+    else if(sheet)ctx.drawImage(sprite,frame*256,0,256,512,-drawW/2,-drawH+bob,drawW,drawH);else ctx.drawImage(sprite,-drawW/2,-drawH+bob,drawW,drawH);
+  }
   else drawRounded(-p.w/2,-p.h, p.w,p.h,10,color);
   ctx.shadowBlur=0;ctx.restore();
 }
