@@ -1,59 +1,65 @@
-:root {
-  --ink: #191816;
-  --paper: #f3f0e9;
-  --accent: #ef5b35;
-  --line: rgba(25, 24, 22, 0.2);
+:root { --ink:#191816; --paper:#f3f0e9; --accent:#ef5b35; --yellow:#f5c84c; --line:rgba(25,24,22,.2); }
+* { box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body { margin:0; color:var(--ink); background:var(--paper); font-family:"DM Sans",sans-serif; }
+a { color:inherit; text-decoration:none; }
+button { font:inherit; }
+.site-header, main, footer { width:min(1180px,calc(100% - 48px)); margin-inline:auto; }
+.site-header { height:96px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); }
+.logo { font:700 1.45rem "Manrope",sans-serif; }
+.logo span, em, .game-heading h2 span { color:var(--accent); }
+nav { display:flex; align-items:center; gap:28px; font-size:.92rem; }
+nav a { transition:opacity .2s ease; }
+nav a:hover { opacity:.55; }
+.nav-cta { border:1px solid var(--ink); padding:10px 16px; border-radius:100px; }
+.hero { padding:110px 0 130px; }
+.eyebrow, .section-label, .overlay-kicker { font-size:.76rem; letter-spacing:.16em; font-weight:600; }
+h1,h2,h3 { font-family:"Manrope",sans-serif; letter-spacing:-.05em; }
+h1 { max-width:960px; margin:24px 0; font-size:clamp(3rem,7.6vw,7rem); line-height:.98; }
+h1 em { font-style:normal; }
+.hero-copy { max-width:590px; font-size:1.2rem; line-height:1.65; color:#5b5750; }
+.hero-actions { display:flex; flex-wrap:wrap; gap:12px; margin-top:40px; }
+.button { display:inline-flex; align-items:center; border:0; padding:15px 20px; border-radius:100px; font-weight:600; cursor:pointer; }
+.button span { margin-left:16px; }
+.primary { background:var(--ink); color:var(--paper); }
+.secondary { border:1px solid var(--line); }
+.section-grid { display:grid; grid-template-columns:1fr 2fr; gap:40px; padding:100px 0; border-top:1px solid var(--line); }
+h2 { margin:0 0 22px; font-size:clamp(2.2rem,5vw,4.3rem); }
+.about div p { max-width:620px; color:#5b5750; font-size:1.15rem; line-height:1.75; }
+.game-section { padding:100px 0; border-top:1px solid var(--line); }
+.game-heading { display:grid; grid-template-columns:1fr 1fr; gap:40px; align-items:end; margin-bottom:46px; }
+.game-heading h2 { margin:12px 0 0; }
+.game-heading>p { max-width:510px; margin:0 0 8px; color:#5b5750; line-height:1.65; }
+.game-shell { overflow:hidden; border:1px solid var(--ink); border-radius:22px; background:var(--ink); color:var(--paper); box-shadow:10px 10px 0 var(--accent); }
+.game-toolbar { min-height:76px; display:flex; align-items:center; gap:42px; padding:14px 22px; border-bottom:1px solid rgba(243,240,233,.2); }
+.game-toolbar div { display:grid; gap:2px; }
+.game-toolbar span { font-size:.62rem; letter-spacing:.14em; color:#aaa69f; }
+.game-toolbar strong { font:700 1.35rem "Manrope",sans-serif; font-variant-numeric:tabular-nums; }
+.icon-button { width:42px; height:42px; margin-left:auto; border:1px solid rgba(243,240,233,.35); border-radius:50%; color:inherit; background:transparent; cursor:pointer; }
+.icon-button[aria-pressed="false"] { opacity:.4; }
+.canvas-wrap { position:relative; aspect-ratio:1000/560; min-height:280px; }
+#game-canvas { display:block; width:100%; height:100%; touch-action:none; background:#211f1c; }
+.game-overlay { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; text-align:center; background:rgba(25,24,22,.84); backdrop-filter:blur(4px); transition:opacity .25s ease; }
+.game-overlay.hidden { opacity:0; pointer-events:none; }
+.game-overlay h3 { max-width:650px; margin:10px 0 12px; font-size:clamp(1.8rem,4vw,3.5rem); line-height:1.05; }
+.game-overlay>p:not(.overlay-kicker) { max-width:590px; margin:0 0 28px; color:#c6c0b6; line-height:1.6; }
+kbd { padding:3px 7px; border:1px solid #77716a; border-bottom-width:3px; border-radius:5px; font:inherit; color:var(--paper); }
+.game-button { color:var(--ink); background:var(--yellow); }
+.game-footer { display:flex; gap:26px; align-items:center; padding:16px 22px; font-size:.78rem; border-top:1px solid rgba(243,240,233,.2); }
+.game-footer p { margin:0; }
+.game-footer p:last-child { margin-left:auto; letter-spacing:.09em; }
+.legend { display:inline-block; width:9px; height:9px; margin-right:5px; border-radius:50%; }
+.legend.idea { background:var(--yellow); box-shadow:0 0 8px var(--yellow); }
+.legend.glitch { border-radius:1px; background:var(--accent); }
+.projects { padding:100px 0; border-top:1px solid var(--line); }
+.project-list { margin-top:48px; }
+.project-card { display:grid; grid-template-columns:50px 1fr auto 40px; align-items:center; gap:20px; padding:28px 0; border-top:1px solid var(--line); }
+.project-card:last-child { border-bottom:1px solid var(--line); }
+.project-card h3 { margin:0; font-size:clamp(1.6rem,4vw,3rem); }
+.project-card p { color:#777169; }
+.project-card a { font-size:1.5rem; }
+footer { display:flex; justify-content:space-between; padding:38px 0; border-top:1px solid var(--line); font-size:.85rem; }
+@media(max-width:700px){
+  .site-header,main,footer{width:min(100% - 28px,1180px)} nav a:not(.nav-cta){display:none}.hero{padding:75px 0 95px}.section-grid,.game-heading{grid-template-columns:1fr}.game-section,.projects,.section-grid{padding:72px 0}.game-heading{gap:12px}.game-toolbar{gap:22px;padding:11px 14px}.game-toolbar strong{font-size:1.05rem}.game-footer{gap:13px;padding:13px 14px}.game-footer p:nth-child(2){display:none}.canvas-wrap{min-height:340px}.project-card{grid-template-columns:32px 1fr 24px}.project-card p{display:none}
 }
-
-* { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
-body {
-  margin: 0;
-  color: var(--ink);
-  background: var(--paper);
-  font-family: "DM Sans", sans-serif;
-}
-a { color: inherit; text-decoration: none; }
-.site-header, main, footer { width: min(1180px, calc(100% - 48px)); margin-inline: auto; }
-.site-header {
-  height: 96px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--line);
-}
-.logo { font: 700 1.45rem "Manrope", sans-serif; }
-.logo span, em { color: var(--accent); }
-nav { display: flex; align-items: center; gap: 28px; font-size: .92rem; }
-.nav-cta { border: 1px solid var(--ink); padding: 10px 16px; border-radius: 100px; }
-.hero { padding: 110px 0 130px; }
-.eyebrow, .section-label { font-size: .76rem; letter-spacing: .16em; font-weight: 600; }
-h1, h2, h3 { font-family: "Manrope", sans-serif; letter-spacing: -.05em; }
-h1 { max-width: 960px; margin: 24px 0; font-size: clamp(3rem, 7.6vw, 7rem); line-height: .98; }
-h1 em { font-style: normal; }
-.hero-copy { max-width: 590px; font-size: 1.2rem; line-height: 1.65; color: #5b5750; }
-.hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 40px; }
-.button { padding: 15px 20px; border-radius: 100px; font-weight: 600; }
-.button span { margin-left: 16px; }
-.primary { background: var(--ink); color: var(--paper); }
-.secondary { border: 1px solid var(--line); }
-.section-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 40px; padding: 100px 0; border-top: 1px solid var(--line); }
-h2 { margin: 0 0 22px; font-size: clamp(2.2rem, 5vw, 4.3rem); }
-.about div p { max-width: 620px; color: #5b5750; font-size: 1.15rem; line-height: 1.75; }
-.projects { padding: 100px 0; border-top: 1px solid var(--line); }
-.project-list { margin-top: 48px; }
-.project-card { display: grid; grid-template-columns: 50px 1fr auto 40px; align-items: center; gap: 20px; padding: 28px 0; border-top: 1px solid var(--line); }
-.project-card:last-child { border-bottom: 1px solid var(--line); }
-.project-card h3 { margin: 0; font-size: clamp(1.6rem, 4vw, 3rem); }
-.project-card p { color: #777169; }
-.project-card a { font-size: 1.5rem; }
-footer { display: flex; justify-content: space-between; padding: 38px 0; border-top: 1px solid var(--line); font-size: .85rem; }
-@media (max-width: 700px) {
-  .site-header, main, footer { width: min(100% - 28px, 1180px); }
-  nav a:not(.nav-cta) { display: none; }
-  .hero { padding: 75px 0 95px; }
-  .section-grid { grid-template-columns: 1fr; }
-  .project-card { grid-template-columns: 32px 1fr 24px; }
-  .project-card p { display: none; }
-}
-@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.game-overlay{transition:none}}

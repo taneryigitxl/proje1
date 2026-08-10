@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Yiğit Taner'in yeni web projesi." />
+    <meta name="description" content="Yiğit Taner'in dijital projeleri ve Fikir Avı oyunu." />
+    <meta name="theme-color" content="#f3f0e9" />
     <title>Yiğit Taner — Online</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -16,6 +17,7 @@
       <a class="logo" href="#top" aria-label="Ana sayfa">YT<span>.</span></a>
       <nav aria-label="Ana menü">
         <a href="#hakkinda">Hakkında</a>
+        <a href="#oyun">Oyun</a>
         <a href="#projeler">Projeler</a>
         <a class="nav-cta" href="mailto:hello@yigittaner.online">İletişim</a>
       </nav>
@@ -23,11 +25,11 @@
 
     <main id="top">
       <section class="hero" aria-labelledby="hero-title">
-        <p class="eyebrow">YİGİTTANER.ONLINE</p>
+        <p class="eyebrow">YİĞİTTANER.ONLINE</p>
         <h1 id="hero-title">Fikirleri dijital<br /><em>deneyimlere</em> dönüştürüyorum.</h1>
-        <p class="hero-copy">Burası yeni projelerimi, denemelerimi ve internette ürettiğim işleri bir araya getirdiğim alan.</p>
+        <p class="hero-copy">Yeni projelerimi, denemelerimi ve internette ürettiğim işleri bir araya getirdiğim alan.</p>
         <div class="hero-actions">
-          <a class="button primary" href="#projeler">Projeleri gör <span aria-hidden="true">↘</span></a>
+          <a class="button primary" href="#oyun">Oyunu oyna <span aria-hidden="true">↓</span></a>
           <a class="button secondary" href="https://yigittaner.com">yigittaner.com <span aria-hidden="true">↗</span></a>
         </div>
       </section>
@@ -36,15 +38,48 @@
         <p class="section-label">01 / Hakkında</p>
         <div>
           <h2>Merhaba, ben Yiğit.</h2>
-          <p>Bu metni kendini ve bu sitenin amacını anlatacak şekilde değiştirebilirsin. Dosyayı VS Code'da açıp doğrudan düzenlemen yeterli.</p>
+          <p>Fikirleri tasarım ve teknolojiyle hayata geçiriyorum. Bu site; yeni işler, küçük deneyler ve biraz da oyun için kişisel alanım.</p>
+        </div>
+      </section>
+
+      <section id="oyun" class="game-section" aria-labelledby="game-title">
+        <div class="game-heading">
+          <div>
+            <p class="section-label">02 / İnteraktif deney</p>
+            <h2 id="game-title">Fikir Avı<span>.</span></h2>
+          </div>
+          <p>Kıvılcımları yakala, glitch’lere çarpma. Her fikir +10 puan; arka arkaya yakaladıkça çarpanın büyür.</p>
+        </div>
+
+        <div class="game-shell">
+          <div class="game-toolbar" aria-label="Oyun bilgileri">
+            <div><span>SKOR</span><strong id="score">000</strong></div>
+            <div><span>EN İYİ</span><strong id="high-score">000</strong></div>
+            <div><span>SÜRE</span><strong id="timer">45</strong></div>
+            <button id="sound-toggle" class="icon-button" type="button" aria-label="Sesi kapat" aria-pressed="true">♪</button>
+          </div>
+          <div class="canvas-wrap">
+            <canvas id="game-canvas" width="1000" height="560" aria-label="Fikir Avı oyun alanı"></canvas>
+            <div id="game-overlay" class="game-overlay">
+              <p class="overlay-kicker">MİNİ OYUN</p>
+              <h3 id="overlay-title">Fikirleri yakalamaya hazır mısın?</h3>
+              <p id="overlay-copy"><kbd>←</kbd> <kbd>→</kbd> veya <kbd>A</kbd> <kbd>D</kbd> ile hareket et. Telefonda parmağını sürükle.</p>
+              <button id="start-game" class="button game-button" type="button">Oyunu başlat <span aria-hidden="true">→</span></button>
+            </div>
+          </div>
+          <div class="game-footer">
+            <p><span class="legend idea"></span> Fikir +10</p>
+            <p><span class="legend glitch"></span> Glitch −1 can</p>
+            <p id="lives" aria-live="polite">CAN ● ● ●</p>
+          </div>
         </div>
       </section>
 
       <section id="projeler" class="projects">
-        <p class="section-label">02 / Seçili işler</p>
+        <p class="section-label">03 / Seçili işler</p>
         <div class="project-list">
           <article class="project-card">
-            <span>01</span><h3>Yeni Proje</h3><p>Web / 2026</p><a href="#" aria-label="Yeni Projeyi aç">↗</a>
+            <span>01</span><h3>Fikir Avı</h3><p>Oyun / 2026</p><a href="#oyun" aria-label="Fikir Avı oyununu aç">↗</a>
           </article>
           <article class="project-card">
             <span>02</span><h3>Yakında</h3><p>Deney / 2026</p><a href="#" aria-label="Yakında projesini aç">↗</a>
