@@ -22,38 +22,38 @@ const connectionBadge = document.getElementById("connection-badge");
 
 const WORLD = { width:1280, height:720, floor:650 };
 const COLORS = { atlas:"#ff704d", nita:"#54d8e8", cream:"#f5efe3", dark:"#10141d" };
-const sprites = { atlas:new Image(), nita:new Image() };
-sprites.atlas.src="assets/atlas.png";sprites.nita.src="assets/nita.png";
+const sprites = { atlas:new Image(), nita:new Image(), atlasWalk:new Image(), atlasAction:new Image(), nitaWalk:new Image(), nitaCrouch:new Image() };
+sprites.atlas.src="assets/atlas.png";sprites.nita.src="assets/nita.png";sprites.atlasWalk.src="assets/atlas-walk.png";sprites.atlasAction.src="assets/atlas-action.png";sprites.nitaWalk.src="assets/nita-walk.png";sprites.nitaCrouch.src="assets/nita-crouch.png";
 const state = { running:false, paused:false, level:0, keys:{}, platforms:[], hazards:[], crates:[], switches:[], doors:[], exits:[], particles:[], last:0, audio:true, messageTimer:0 };
 const network = { role:"solo", peer:null, connection:null, lastSync:0 };
 
 const levels = [
   {
-    name:"İlk Adımlar", sky:["#182131","#24324a"], starts:[[90,590],[155,590]],
+    name:"İlk Adımlar", theme:"meadow", sky:["#72cfe5","#d9f3d4"], starts:[[90,590],[155,590]],
     platforms:[[0,650,1280,70],[310,555,180,24],[560,490,170,24],[795,560,160,24],[1040,495,170,24]],
     hazards:[[500,634,60,16,"nita"],[730,634,65,16,"atlas"]], crates:[], switches:[], doors:[], exits:[[1138,435,"atlas"],[1192,590,"nita"]],
     hint:"İki karakteri de kendi renklerindeki çıkışa ulaştır."
   },
   {
-    name:"Dar Geçit", sky:["#192532","#304455"], starts:[[70,590],[130,590]],
+    name:"Dar Geçit", theme:"ruins", sky:["#e9b875","#6f775b"], starts:[[70,590],[130,590]],
     platforms:[[0,650,1280,70],[280,565,190,85],[525,505,210,24],[790,570,175,80],[1010,515,270,135],[430,420,250,26],[735,355,210,26]],
     hazards:[[470,634,55,16,"atlas"],[965,634,45,16,"nita"]], crates:[[210,610]], switches:[], doors:[],
     tunnels:[[285,490,180,36]], exits:[[1100,455,"atlas"],[1200,455,"nita"]], hint:"Nita dar geçitte eğilmeli. Atlas sandığı basamak olarak kullanabilir."
   },
   {
-    name:"Ağırlık Meselesi", sky:["#202034","#443552"], starts:[[70,590],[135,590]],
+    name:"Ağırlık Meselesi", theme:"mine", sky:["#292736","#594349"], starts:[[70,590],[135,590]],
     platforms:[[0,650,1280,70],[230,555,180,24],[495,480,165,24],[750,405,160,24],[1020,520,260,130],[680,610,115,40]],
     hazards:[[410,634,85,16,"nita"],[795,634,225,16,"atlas"]], crates:[[310,515],[580,440]],
     switches:[[705,600,70,10,0]], doors:[[935,430,28,220,0]], exits:[[1095,460,"atlas"],[1190,460,"nita"]], hint:"Atlas sandığı sarı düğmenin üzerine taşımalı."
   },
   {
-    name:"Zıt Akımlar", sky:["#172932","#23515b"], starts:[[65,590],[125,590]],
+    name:"Zıt Akımlar", theme:"storm", sky:["#173447","#358a91"], starts:[[65,590],[125,590]],
     platforms:[[0,650,1280,70],[190,560,170,24],[420,475,180,24],[665,545,190,24],[920,445,160,24],[1090,570,190,80],[610,355,190,24]],
     hazards:[[360,634,60,16,"atlas"],[600,634,65,16,"nita"],[855,634,65,16,"atlas"]], crates:[[245,520]],
     switches:[[745,535,70,10,0]], doors:[[875,380,26,270,0]], tunnels:[[1095,495,120,38]], exits:[[990,385,"atlas"],[1200,510,"nita"]], hint:"Sandık kapıyı açar; Nita son geçitte eğilerek ilerler."
   },
   {
-    name:"Son Yol", sky:["#201a2d","#513552"], starts:[[60,590],[120,590]],
+    name:"Son Yol", theme:"temple", sky:["#2c1e42","#a34f6d"], starts:[[60,590],[120,590]],
     platforms:[[0,650,1280,70],[180,570,150,24],[390,490,145,24],[600,410,150,24],[810,500,140,24],[1030,420,250,24],[535,585,125,65]],
     hazards:[[330,634,60,16,"nita"],[535,634,65,16,"atlas"],[750,634,60,16,"nita"],[950,634,80,16,"atlas"]], crates:[[230,530],[455,450]],
     switches:[[560,575,70,10,0],[845,490,70,10,1]], doors:[[770,300,28,350,0],[995,300,28,350,1]], tunnels:[[1035,342,145,38]],
@@ -62,7 +62,7 @@ const levels = [
 ];
 
 function makePlayer(type,x,y){
-  return { type,x,y,w:34,h:50,normalH:50,crouchH:29,vx:0,vy:0,speed:245,jump:505,onGround:false,facing:1,holding:null,atExit:false };
+  return { type,x,y,w:34,h:50,normalH:50,crouchH:29,vx:0,vy:0,speed:245,jump:505,onGround:false,facing:1,holding:null,atExit:false,actionTimer:0,crouchBlend:0 };
 }
 let atlas = makePlayer("atlas",0,0), nita = makePlayer("nita",0,0);
 
@@ -71,7 +71,7 @@ function loadLevel(index){
   state.hazards=data.hazards.map(r=>({x:r[0],y:r[1],w:r[2],h:r[3],safe:r[4]}));
   state.crates=data.crates.map(r=>({x:r[0],y:r[1],w:40,h:40,vx:0,vy:0,onGround:false,held:false}));
   state.switches=data.switches.map(r=>({x:r[0],y:r[1],w:r[2],h:r[3],door:r[4],pressed:false}));
-  state.doors=data.doors.map(r=>({x:r[0],y:r[1],w:r[2],h:r[3],id:r[4],open:false}));
+  state.doors=data.doors.map(r=>({x:r[0],y:r[1],w:r[2],h:r[3],id:r[4],open:false,openAmount:0}));
   state.tunnels=(data.tunnels||[]).map(r=>({x:r[0],y:r[1],w:r[2],h:r[3]}));
   state.exits=data.exits.map(r=>({x:r[0],y:r[1],w:48,h:60,type:r[2]}));
   atlas=makePlayer("atlas",data.starts[0][0],data.starts[0][1]); nita=makePlayer("nita",data.starts[1][0],data.starts[1][1]);
@@ -95,6 +95,7 @@ function moveBody(body,dt,includeCrates=false){
 
 function updatePlayer(p,left,right,jump,crouch,dt){
   const wantsCrouch=p.type==="nita"&&state.keys[crouch];
+  p.crouchBlend=Math.max(0,Math.min(1,p.crouchBlend+(wantsCrouch?dt*7:-dt*7)));p.actionTimer=Math.max(0,p.actionTimer-dt);
   if(wantsCrouch&&p.h!==p.crouchH){p.y+=p.h-p.crouchH;p.h=p.crouchH;}
   if(!wantsCrouch&&p.h!==p.normalH){const test={x:p.x,y:p.y-(p.normalH-p.h),w:p.w,h:p.normalH};if(!solids().some(s=>intersects(test,s))){p.y=test.y;p.h=p.normalH;}}
   const direction=(state.keys[left]?-1:0)+(state.keys[right]?1:0);p.vx=direction*p.speed*(wantsCrouch?.48:1);if(direction)p.facing=direction;
@@ -105,14 +106,15 @@ function updatePlayer(p,left,right,jump,crouch,dt){
 }
 
 function updateCrates(dt){
-  for(const crate of state.crates){if(crate.held)continue;crate.vy+=1120*dt;crate.vx*=Math.pow(.25,dt);moveBody(crate,dt);if(crate.y>WORLD.height)resetLevel("Sandık yoldan çıktı!");}
+  for(const crate of state.crates){crate.visualDelay=Math.max(0,(crate.visualDelay||0)-dt);if(crate.held)continue;crate.vy+=1120*dt;crate.vx*=Math.pow(.25,dt);moveBody(crate,dt);if(crate.y>WORLD.height)resetLevel("Sandık yoldan çıktı!");}
   for(const sw of state.switches){sw.pressed=state.crates.some(c=>!c.held&&intersects({x:sw.x,y:sw.y-8,w:sw.w,h:16},c));}
-  for(const door of state.doors)door.open=Boolean(state.switches.find(s=>s.door===door.id)?.pressed);
+  for(const door of state.doors){door.open=Boolean(state.switches.find(s=>s.door===door.id)?.pressed);door.openAmount=Math.max(0,Math.min(1,door.openAmount+(door.open?dt*2.8:-dt*2.8)));}
 }
 
 function handleAtlasAction(){
   if(!state.keysPressed.s)return;
-  if(atlas.holding){const c=atlas.holding;c.held=false;c.x=atlas.x+(atlas.facing>0?atlas.w+6:-c.w-6);c.y=atlas.y+5;c.vx=atlas.facing*390;c.vy=-165;atlas.holding=null;tone(170,.12);return;}
+  atlas.actionTimer=.58;
+  if(atlas.holding){const c=atlas.holding;c.held=false;c.visualDelay=.42;c.x=atlas.x+(atlas.facing>0?atlas.w+6:-c.w-6);c.y=atlas.y+5;c.vx=atlas.facing*390;c.vy=-165;atlas.holding=null;tone(170,.12);return;}
   const crate=state.crates.find(c=>!c.held&&Math.hypot((c.x+c.w/2)-(atlas.x+atlas.w/2),(c.y+c.h/2)-(atlas.y+atlas.h/2))<78);
   if(crate){crate.held=true;atlas.holding=crate;tone(310,.08);}else showMessage("Sandığa biraz daha yaklaş.",1.2);
 }
@@ -134,26 +136,62 @@ function completeLevel(){
 
 function drawRounded(x,y,w,h,r,color){ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill();}
 function drawPlayer(p){
-  const color=COLORS[p.type],sprite=sprites[p.type],crouching=p.h<p.normalH,bob=p.onGround&&Math.abs(p.vx)>10?Math.sin(performance.now()*.018)*2:0;
-  const drawH=crouching?39:69,drawW=crouching?51:46;
+  const color=COLORS[p.type],moving=p.onGround&&Math.abs(p.vx)>10,bob=moving?Math.sin(performance.now()*.018)*1.2:0;let sprite=sprites[p.type],frame=0,drawH=69,drawW=46,sheet=false;
+  if(p.type==="atlas"&&(p.actionTimer>0||p.holding||p.isHolding)){sprite=sprites.atlasAction;frame=(p.holding||p.isHolding)&&p.actionTimer<=0?1:Math.min(3,Math.floor((.58-p.actionTimer)/.145));drawH=76;drawW=76;sheet=true;}
+  else if(p.type==="nita"&&p.crouchBlend>.05){sprite=sprites.nitaCrouch;frame=Math.min(2,Math.floor(p.crouchBlend*2.99));drawH=72;drawW=64;sheet=true;}
+  else if(moving){sprite=p.type==="atlas"?sprites.atlasWalk:sprites.nitaWalk;frame=Math.floor(performance.now()*.008)%4;drawH=72;drawW=p.type==="atlas"?54:58;sheet=true;}
   ctx.save();ctx.translate(p.x+p.w/2,p.y+p.h);if(p.facing<0)ctx.scale(-1,1);ctx.rotate(p.onGround?0:p.vx*.00018);
   ctx.globalAlpha=.32;ctx.fillStyle=color;ctx.beginPath();ctx.ellipse(0,2,drawW*.48,7,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.shadowColor=color;ctx.shadowBlur=12;
-  if(sprite.complete&&sprite.naturalWidth)ctx.drawImage(sprite,-drawW/2,-drawH+bob,drawW,drawH);
+  if(sprite.complete&&sprite.naturalWidth){if(sheet)ctx.drawImage(sprite,frame*256,0,256,512,-drawW/2,-drawH+bob,drawW,drawH);else ctx.drawImage(sprite,-drawW/2,-drawH+bob,drawW,drawH);}
   else drawRounded(-p.w/2,-p.h, p.w,p.h,10,color);
   ctx.shadowBlur=0;ctx.restore();
 }
+
+function drawScenery(theme){
+  if(theme==="meadow"){
+    ctx.fillStyle="rgba(255,237,155,.75)";ctx.beginPath();ctx.arc(1080,135,68,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle="#8bbf76";ctx.beginPath();ctx.moveTo(0,430);ctx.quadraticCurveTo(210,250,430,430);ctx.quadraticCurveTo(690,210,940,430);ctx.quadraticCurveTo(1110,310,1280,420);ctx.lineTo(1280,720);ctx.lineTo(0,720);ctx.fill();
+    ctx.fillStyle="#4e875d";for(let x=30;x<1280;x+=145){ctx.fillRect(x,365+(x%3)*18,13,170);ctx.beginPath();ctx.arc(x+6,350+(x%3)*18,42,0,Math.PI*2);ctx.arc(x-22,370+(x%3)*18,31,0,Math.PI*2);ctx.arc(x+35,371+(x%3)*18,32,0,Math.PI*2);ctx.fill();}
+    ctx.fillStyle="rgba(255,255,255,.55)";for(const [x,y] of [[170,120],[520,165],[790,100]]){ctx.beginPath();ctx.ellipse(x,y,62,20,0,0,Math.PI*2);ctx.ellipse(x+48,y+2,42,16,0,0,Math.PI*2);ctx.fill();}
+  } else if(theme==="ruins"){
+    ctx.fillStyle="rgba(62,54,45,.22)";for(let x=40;x<1280;x+=210){ctx.fillRect(x,245,38,310);ctx.fillRect(x-18,235,74,18);ctx.fillRect(x-10,220,58,14);}ctx.fillStyle="rgba(245,211,150,.18)";ctx.beginPath();ctx.arc(1030,150,90,0,Math.PI*2);ctx.fill();
+  } else if(theme==="mine"){
+    ctx.fillStyle="#1b1a24";for(let x=0;x<1280;x+=170){ctx.beginPath();ctx.moveTo(x,520);ctx.lineTo(x+80,250-(x%4)*25);ctx.lineTo(x+170,520);ctx.fill();}ctx.strokeStyle="#bb8148";ctx.lineWidth=8;for(let x=120;x<1200;x+=260){ctx.beginPath();ctx.moveTo(x,560);ctx.lineTo(x,240);ctx.lineTo(x+150,240);ctx.lineTo(x+150,560);ctx.stroke();}ctx.fillStyle="rgba(255,194,91,.5)";for(let x=195;x<1200;x+=260){ctx.beginPath();ctx.arc(x,250,12,0,Math.PI*2);ctx.fill();}
+  } else if(theme==="storm"){
+    ctx.fillStyle="rgba(19,54,68,.45)";ctx.beginPath();ctx.moveTo(0,470);ctx.lineTo(160,280);ctx.lineTo(300,470);ctx.lineTo(480,220);ctx.lineTo(680,470);ctx.lineTo(900,250);ctx.lineTo(1120,470);ctx.lineTo(1280,320);ctx.lineTo(1280,720);ctx.lineTo(0,720);ctx.fill();ctx.strokeStyle="rgba(126,224,230,.18)";ctx.lineWidth=2;for(let x=0;x<1280;x+=48){ctx.beginPath();ctx.moveTo(x,80);ctx.lineTo(x-35,190);ctx.stroke();}
+  } else {
+    ctx.fillStyle="rgba(30,20,54,.45)";for(let x=60;x<1280;x+=190){ctx.fillRect(x,235,48,330);ctx.beginPath();ctx.moveTo(x-18,235);ctx.lineTo(x+24,190);ctx.lineTo(x+66,235);ctx.fill();}ctx.fillStyle="rgba(255,205,138,.22)";ctx.beginPath();ctx.arc(1050,145,90,0,Math.PI*2);ctx.fill();
+  }
+}
+
+function drawPlatform(p,theme){
+  const palette={meadow:["#727a70","#4d564f"],ruins:["#a77d51","#745437"],mine:["#51464a","#312b31"],storm:["#42636c","#263e48"],temple:["#695270","#42354f"]}[theme];
+  drawRounded(p.x,p.y,p.w,p.h,5,palette[1]);ctx.fillStyle=palette[0];ctx.fillRect(p.x+3,p.y+3,p.w-6,Math.min(18,p.h-3));ctx.strokeStyle="rgba(16,20,29,.22)";ctx.lineWidth=2;
+  if(theme==="meadow"||theme==="ruins"){for(let x=p.x+5;x<p.x+p.w;x+=35){ctx.strokeRect(x,p.y+5,30,Math.min(21,p.h-8));}if(theme==="meadow"){ctx.fillStyle="#76a956";ctx.fillRect(p.x,p.y-4,p.w,7);for(let x=p.x;x<p.x+p.w;x+=17){ctx.beginPath();ctx.moveTo(x,p.y);ctx.lineTo(x+6,p.y-10-(x%3));ctx.lineTo(x+10,p.y);ctx.fill();}}}
+  else if(theme==="mine"){for(let x=p.x+10;x<p.x+p.w;x+=42){ctx.strokeStyle="#9a673a";ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(x,p.y);ctx.lineTo(x+28,p.y+Math.min(22,p.h));ctx.stroke();}}
+  else{ctx.fillStyle="rgba(255,255,255,.12)";ctx.fillRect(p.x+8,p.y+6,p.w-16,3);}
+}
+
+function drawDoor(d){
+  const color=d.id%2?COLORS.nita:COLORS.atlas,w=54,x=d.x-(54-d.w)/2,panelY=d.y-d.openAmount*(d.h-18);
+  ctx.save();ctx.strokeStyle="#202735";ctx.lineWidth=9;ctx.strokeRect(x,d.y,w,d.h);ctx.beginPath();ctx.arc(x+w/2,d.y,w/2,Math.PI,0);ctx.stroke();ctx.beginPath();ctx.rect(x,d.y,w,d.h);ctx.clip();
+  const grad=ctx.createLinearGradient(x,panelY,x+w,panelY);grad.addColorStop(0,"#252b36");grad.addColorStop(.5,color);grad.addColorStop(1,"#252b36");ctx.fillStyle=grad;ctx.fillRect(x+5,panelY,w-10,d.h);ctx.strokeStyle="rgba(245,239,227,.35)";ctx.lineWidth=2;for(let y=panelY+20;y<panelY+d.h;y+=24)ctx.strokeRect(x+10,y,w-20,16);ctx.fillStyle="#ffe8a3";ctx.beginPath();ctx.arc(x+w-14,panelY+d.h*.55,3,0,Math.PI*2);ctx.fill();ctx.restore();ctx.shadowColor=color;ctx.shadowBlur=10;ctx.strokeStyle=color;ctx.lineWidth=3;ctx.strokeRect(x,d.y,w,d.h);ctx.shadowBlur=0;
+}
+
+function drawExit(e){const color=COLORS[e.type],x=e.x-3;ctx.fillStyle="#242b35";ctx.fillRect(x-5,e.y-8,e.w+10,e.h+8);ctx.fillStyle=color+"55";ctx.fillRect(x,e.y,e.w,e.h);ctx.strokeStyle=color;ctx.lineWidth=4;ctx.shadowColor=color;ctx.shadowBlur=14;ctx.strokeRect(x,e.y,e.w,e.h);ctx.shadowBlur=0;ctx.fillStyle="#f7dc92";ctx.beginPath();ctx.arc(x+e.w-10,e.y+e.h/2,3,0,Math.PI*2);ctx.fill();ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(x+e.w/2-8,e.y+14);ctx.lineTo(x+e.w/2+8,e.y+14);ctx.lineTo(x+e.w/2,e.y+24);ctx.fill();}
 function draw(){
   const rect=canvas.getBoundingClientRect(),scale=Math.min(rect.width/WORLD.width,rect.height/WORLD.height),ox=(rect.width-WORLD.width*scale)/2,oy=(rect.height-WORLD.height*scale)/2;
   const level=levels[state.level]||levels[0],gradient=ctx.createLinearGradient(0,0,0,rect.height);gradient.addColorStop(0,level.sky[0]);gradient.addColorStop(1,level.sky[1]);ctx.fillStyle=gradient;ctx.fillRect(0,0,rect.width,rect.height);
   ctx.save();ctx.translate(ox,oy);ctx.scale(scale,scale);
+  drawScenery(level.theme);
   ctx.globalAlpha=.07;ctx.fillStyle="#fff";for(let i=0;i<22;i++){const x=(i*193+state.level*47)%1280,y=(i*97)%540;ctx.beginPath();ctx.arc(x,y,1+(i%3),0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;
-  for(const p of state.platforms){drawRounded(p.x,p.y,p.w,p.h,8,"#323b4b");ctx.fillStyle="rgba(245,239,227,.11)";ctx.fillRect(p.x+8,p.y+5,p.w-16,3);}
-  for(const t of state.tunnels){drawRounded(t.x,t.y,t.w,t.h,4,"#252d3b");}
+  for(const p of state.platforms)drawPlatform(p,level.theme);
+  for(const t of state.tunnels)drawPlatform(t,level.theme);
   for(const h of state.hazards){const color=COLORS[h.safe];ctx.fillStyle=color;ctx.shadowColor=color;ctx.shadowBlur=12;for(let x=h.x;x<h.x+h.w;x+=18){ctx.beginPath();ctx.moveTo(x,h.y+h.h);ctx.lineTo(x+9,h.y);ctx.lineTo(x+18,h.y+h.h);ctx.fill();}ctx.shadowBlur=0;}
-  for(const sw of state.switches){drawRounded(sw.x,sw.y+(sw.pressed?5:0),sw.w,sw.h-(sw.pressed?5:0),4,sw.pressed?"#ffe174":"#8f7b45");}
-  for(const d of state.doors){ctx.globalAlpha=d.open?.18:1;drawRounded(d.x,d.y,d.w,d.h,5,"#ffe174");ctx.globalAlpha=1;}
-  for(const e of state.exits){ctx.strokeStyle=COLORS[e.type];ctx.lineWidth=5;ctx.shadowColor=COLORS[e.type];ctx.shadowBlur=15;ctx.strokeRect(e.x,e.y,e.w,e.h);ctx.shadowBlur=0;ctx.fillStyle=COLORS[e.type]+"22";ctx.fillRect(e.x,e.y,e.w,e.h);}
-  for(const c of state.crates){ctx.save();ctx.translate(c.x,c.y);drawRounded(0,0,c.w,c.h,5,"#d49a54");ctx.strokeStyle="#835d33";ctx.lineWidth=4;ctx.strokeRect(7,7,c.w-14,c.h-14);ctx.restore();}
+  for(const sw of state.switches){const c=sw.door%2?COLORS.nita:COLORS.atlas;drawRounded(sw.x,sw.y+(sw.pressed?5:0),sw.w,sw.h-(sw.pressed?5:0),4,sw.pressed?c:c+"88");ctx.fillStyle="rgba(255,255,255,.45)";ctx.fillRect(sw.x+10,sw.y+2,sw.w-20,2);}
+  for(const d of state.doors)drawDoor(d);
+  for(const e of state.exits)drawExit(e);
+  for(const c of state.crates){if(c.held||c.visualDelay>0)continue;ctx.save();ctx.translate(c.x,c.y);drawRounded(0,0,c.w,c.h,5,"#d49a54");ctx.strokeStyle="#835d33";ctx.lineWidth=4;ctx.strokeRect(7,7,c.w-14,c.h-14);ctx.restore();}
   drawPlayer(atlas);drawPlayer(nita);state.particles.forEach(p=>{ctx.globalAlpha=p.life;ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,5,5);});ctx.globalAlpha=1;ctx.restore();
 }
 
@@ -191,7 +229,7 @@ document.querySelectorAll(".joystick").forEach(stick=>{
 
 function roomCode(){const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";return Array.from({length:6},()=>chars[Math.floor(Math.random()*chars.length)]).join("");}
 function sendPacket(packet){if(network.connection?.open)network.connection.send(packet);}
-function sendSnapshot(){sendPacket({type:"state",level:state.level,atlas:{...atlas,holding:null},nita:{...nita,holding:null},crates:state.crates.map(c=>({...c})),switches:state.switches.map(s=>({pressed:s.pressed})),doors:state.doors.map(d=>({open:d.open}))});}
+function sendSnapshot(){sendPacket({type:"state",level:state.level,atlas:{...atlas,holding:null,isHolding:Boolean(atlas.holding)},nita:{...nita,holding:null},crates:state.crates.map(c=>({...c})),switches:state.switches.map(s=>({pressed:s.pressed})),doors:state.doors.map(d=>({open:d.open,openAmount:d.openAmount}))});}
 function beginMultiplayer(role){
   network.role=role;document.body.classList.remove("multiplayer-host","multiplayer-guest");document.body.classList.add(`multiplayer-${role}`);
   connectionBadge.textContent=role==="host"?"ATLAS · BAĞLI":"NITA · BAĞLI";connectionBadge.style.color=role==="host"?COLORS.atlas:COLORS.nita;
@@ -202,7 +240,7 @@ function receivePacket(data){
   if(data.type==="start"&&network.role==="guest"){loadLevel(data.level);state.running=true;state.paused=false;overlay.classList.add("hidden");}
   if(data.type==="state"&&network.role==="guest"){
     if(state.level!==data.level)loadLevel(data.level);Object.assign(atlas,data.atlas);Object.assign(nita,data.nita);state.crates=data.crates;
-    data.switches.forEach((s,i)=>{if(state.switches[i])state.switches[i].pressed=s.pressed;});data.doors.forEach((d,i)=>{if(state.doors[i])state.doors[i].open=d.open;});
+    data.switches.forEach((s,i)=>{if(state.switches[i])state.switches[i].pressed=s.pressed;});data.doors.forEach((d,i)=>{if(state.doors[i])Object.assign(state.doors[i],d);});
   }
   if(data.type==="complete"&&network.role==="guest"){
     state.running=false;overlayTitle.innerHTML=data.final?'Yol<br><em>Tamamlandı</em>':'Bölüm<br><em>Tamam!</em>';overlayText.textContent=data.final?'Beş yolu da birlikte aştınız!':'Oda sahibinin sonraki bölümü başlatması bekleniyor…';
@@ -226,4 +264,3 @@ joinForm.addEventListener("submit",e=>{
 copyCodeButton.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(roomCodeDisplay.textContent);copyCodeButton.textContent="KOPYALANDI";}catch{showMessage("Kodu elle paylaşabilirsin.",2);}});
 soloButton.addEventListener("click",()=>{network.role="solo";document.body.classList.remove("multiplayer-host","multiplayer-guest");connectionBadge.textContent="AYNI CİHAZ";loadLevel(0);state.running=true;state.last=performance.now();overlay.classList.add("hidden");});
 state.keysPressed={};loadLevel(0);resize();requestAnimationFrame(t=>{state.last=t;requestAnimationFrame(loop);});
-if(new URLSearchParams(location.search).has("solo"))setTimeout(()=>soloButton.click(),100);
