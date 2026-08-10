@@ -1,32 +1,16 @@
 :root { --ink:#191816; --paper:#f3f0e9; --accent:#ef5b35; --yellow:#f5c84c; --line:rgba(25,24,22,.2); }
 * { box-sizing:border-box; }
 html { scroll-behavior:smooth; }
-body { margin:0; color:var(--ink); background:var(--paper); font-family:"DM Sans",sans-serif; }
-a { color:inherit; text-decoration:none; }
+body { min-height:100vh; margin:0; color:var(--ink); background:var(--paper); font-family:"DM Sans",sans-serif; }
 button { font:inherit; }
-.site-header, main, footer { width:min(1180px,calc(100% - 48px)); margin-inline:auto; }
-.site-header { height:96px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); }
-.logo { font:700 1.45rem "Manrope",sans-serif; }
-.logo span, em, .game-heading h2 span { color:var(--accent); }
-nav { display:flex; align-items:center; gap:28px; font-size:.92rem; }
-nav a { transition:opacity .2s ease; }
-nav a:hover { opacity:.55; }
-.nav-cta { border:1px solid var(--ink); padding:10px 16px; border-radius:100px; }
-.hero { padding:110px 0 130px; }
-.eyebrow, .section-label, .overlay-kicker { font-size:.76rem; letter-spacing:.16em; font-weight:600; }
-h1,h2,h3 { font-family:"Manrope",sans-serif; letter-spacing:-.05em; }
-h1 { max-width:960px; margin:24px 0; font-size:clamp(3rem,7.6vw,7rem); line-height:.98; }
-h1 em { font-style:normal; }
-.hero-copy { max-width:590px; font-size:1.2rem; line-height:1.65; color:#5b5750; }
-.hero-actions { display:flex; flex-wrap:wrap; gap:12px; margin-top:40px; }
+main { width:min(1180px,calc(100% - 48px)); margin-inline:auto; }
+.game-heading h2 span { color:var(--accent); }
+.eyebrow, .overlay-kicker { font-size:.76rem; letter-spacing:.16em; font-weight:600; }
+h2,h3 { font-family:"Manrope",sans-serif; letter-spacing:-.05em; }
 .button { display:inline-flex; align-items:center; border:0; padding:15px 20px; border-radius:100px; font-weight:600; cursor:pointer; }
 .button span { margin-left:16px; }
-.primary { background:var(--ink); color:var(--paper); }
-.secondary { border:1px solid var(--line); }
-.section-grid { display:grid; grid-template-columns:1fr 2fr; gap:40px; padding:100px 0; border-top:1px solid var(--line); }
 h2 { margin:0 0 22px; font-size:clamp(2.2rem,5vw,4.3rem); }
-.about div p { max-width:620px; color:#5b5750; font-size:1.15rem; line-height:1.75; }
-.game-section { padding:100px 0; border-top:1px solid var(--line); }
+.game-section { padding:clamp(38px,7vh,82px) 0; }
 .game-heading { display:grid; grid-template-columns:1fr 1fr; gap:40px; align-items:end; margin-bottom:46px; }
 .game-heading h2 { margin:12px 0 0; }
 .game-heading>p { max-width:510px; margin:0 0 8px; color:#5b5750; line-height:1.65; }
@@ -51,15 +35,7 @@ kbd { padding:3px 7px; border:1px solid #77716a; border-bottom-width:3px; border
 .legend { display:inline-block; width:9px; height:9px; margin-right:5px; border-radius:50%; }
 .legend.idea { background:var(--yellow); box-shadow:0 0 8px var(--yellow); }
 .legend.glitch { border-radius:1px; background:var(--accent); }
-.projects { padding:100px 0; border-top:1px solid var(--line); }
-.project-list { margin-top:48px; }
-.project-card { display:grid; grid-template-columns:50px 1fr auto 40px; align-items:center; gap:20px; padding:28px 0; border-top:1px solid var(--line); }
-.project-card:last-child { border-bottom:1px solid var(--line); }
-.project-card h3 { margin:0; font-size:clamp(1.6rem,4vw,3rem); }
-.project-card p { color:#777169; }
-.project-card a { font-size:1.5rem; }
-footer { display:flex; justify-content:space-between; padding:38px 0; border-top:1px solid var(--line); font-size:.85rem; }
 @media(max-width:700px){
-  .site-header,main,footer{width:min(100% - 28px,1180px)} nav a:not(.nav-cta){display:none}.hero{padding:75px 0 95px}.section-grid,.game-heading{grid-template-columns:1fr}.game-section,.projects,.section-grid{padding:72px 0}.game-heading{gap:12px}.game-toolbar{gap:22px;padding:11px 14px}.game-toolbar strong{font-size:1.05rem}.game-footer{gap:13px;padding:13px 14px}.game-footer p:nth-child(2){display:none}.canvas-wrap{min-height:340px}.project-card{grid-template-columns:32px 1fr 24px}.project-card p{display:none}
+  main{width:min(100% - 28px,1180px)}.game-heading{grid-template-columns:1fr}.game-section{padding:34px 0}.game-heading{gap:8px;margin-bottom:28px}.game-toolbar{gap:22px;padding:11px 14px}.game-toolbar strong{font-size:1.05rem}.game-footer{gap:13px;padding:13px 14px}.game-footer p:nth-child(2){display:none}.canvas-wrap{min-height:340px}
 }
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.game-overlay{transition:none}}

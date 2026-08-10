@@ -1,5 +1,3 @@
-document.getElementById("year").textContent = new Date().getFullYear();
-
 const canvas = document.getElementById("game-canvas");
 const ctx = canvas.getContext("2d");
 const overlay = document.getElementById("game-overlay");
