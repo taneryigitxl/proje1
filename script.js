@@ -15,6 +15,8 @@ const atlasGearLabel = document.getElementById("atlas-gear");
 const nitaGearLabel = document.getElementById("nita-gear");
 const market = document.getElementById("market");
 const marketSummary = document.getElementById("market-summary");
+const marketToggle = document.getElementById("market-toggle");
+const marketGrid = document.getElementById("market-grid");
 const gloveName = document.getElementById("glove-name");
 const gloveDetail = document.getElementById("glove-detail");
 const gloveCost = document.getElementById("glove-cost");
@@ -41,10 +43,10 @@ const transitionNext = document.getElementById("transition-next");
 const WORLD = { width: 1280, height: 720 };
 const COLORS = { atlas: "#ff704d", nita: "#54d8e8", cream: "#f5efe3", dark: "#10141d" };
 const GEAR = [
-  { name: "Beyaz", color: "#f7f4e8", hits: 4, cloak: 1, cost: 0 },
-  { name: "Mavi", color: "#4ea8ff", hits: 3, cloak: 2, cost: 4 },
-  { name: "Mor", color: "#c36cff", hits: 2, cloak: 3, cost: 8 },
-  { name: "Sarı · Legendary", color: "#ffd34d", hits: 1, cloak: 5, cost: 12 }
+  { name: "Beyaz", color: "#f7f4e8", hits: 4, damage: 3, cloak: 1, cost: 0 },
+  { name: "Mavi", color: "#4ea8ff", hits: 3, damage: 4, cloak: 2, cost: 4 },
+  { name: "Mor", color: "#c36cff", hits: 2, damage: 6, cloak: 3, cost: 8 },
+  { name: "Sarı · Legendary", color: "#ffd34d", hits: 1, damage: 12, cloak: 5, cost: 12 }
 ];
 const ENEMY_HP = 12;
 const sprites = {
@@ -77,7 +79,7 @@ const levels = [
   },
   {
     name: "Derin Maden", theme: "mine", sky: ["#292735", "#574047"], starts: [[50,590],[105,590]],
-    platforms: [[0,650,180,70],[235,575,145,30],[435,490,145,30],[635,405,150,30],[835,520,145,30],[1030,435,250,285],[530,625,100,25],[805,325,135,26]],
+    platforms: [[0,650,180,70],[235,575,145,30],[435,490,145,30],[635,405,150,30],[835,520,145,30],[1030,435,250,285],[530,625,100,25],[805,325,135,26],[650,565,100,24]],
     hazards: [[180,648,55,72],[380,648,55,72],[630,648,205,72],[980,648,50,72]],
     enemies: [[260,525,250,350],[665,355,650,745],[1060,385,1050,1170]], cameras: [[610,335,-1,230],[800,260,1,265],[1005,350,-1,240]], exits: [[1120,375,"atlas"],[1210,375,"nita"]],
     coins: [[130,605,"atlas"],[155,605,"nita"],[260,525,"atlas"],[320,525,"nita"],[455,440,"atlas"],[515,440,"nita"],[655,355,"atlas"],[715,355,"nita"],[550,575,"atlas"],[600,575,"nita"],[850,470,"atlas"],[925,470,"nita"],[830,275,"atlas"],[890,275,"nita"],[1060,385,"atlas"],[1110,385,"nita"],[1160,385,"atlas"],[1210,385,"nita"],[1060,335,"atlas"],[1110,335,"nita"],[1160,335,"atlas"],[1210,335,"nita"],[750,355,"atlas"],[765,355,"nita"]],
@@ -108,10 +110,20 @@ const state = {
 const network = { role: "solo", peer: null, connection: null, lastSync: 0 };
 
 function makePlayer(type, x, y) {
-  return { type, x, y, w: 34, h: 50, vx: 0, vy: 0, speed: type === "atlas" ? 260 : 270, jump: type === "atlas" ? 515 : 525, onGround: false, facing: 1, atExit: false, coyote: 0, jumpBuffer: 0, shotCooldown: 0, beamCharge: 0, beamFired: true, invisible: 0, cloakCooldown: 0, actionTimer: 0 };
+  return { type, x, y, w: 34, h: 50, vx: 0, vy: 0, speed: type === "atlas" ? 260 : 270, jump: type === "atlas" ? 515 : 525, onGround: false, facing: 1, atExit: false, coyote: 0, jumpBuffer: 0, shotCooldown: 0, beamCharge: 0, beamFired: true, beamTarget: -1, invisible: 0, cloakCooldown: 0, actionTimer: 0 };
 }
 let atlas = makePlayer("atlas", 0, 0);
 let nita = makePlayer("nita", 0, 0);
+
+function spreadCoinLayout(coins,platforms) {
+  const output=coins.map(coin=>[...coin]),groups=new Map();
+  output.forEach((coin,index)=>{
+    const support=platforms.map((p,platformIndex)=>({p,platformIndex,d:p[1]-coin[1]})).filter(({p,d})=>d>0&&d<=120&&coin[0]+18>=p[0]-10&&coin[0]<=p[0]+p[2]+10).sort((a,b)=>a.d-b.d)[0];
+    if(!support)return;const group=groups.get(support.platformIndex)||[];group.push(index);groups.set(support.platformIndex,group);
+  });
+  for(const [platformIndex,indices] of groups){const p=platforms[platformIndex],padding=Math.min(28,p[2]*.16);indices.forEach((coinIndex,slot)=>{const ratio=indices.length===1?.5:slot/(indices.length-1);output[coinIndex][0]=Math.round(p[0]+padding+(p[2]-padding*2)*ratio-9);output[coinIndex][1]=p[1]-46-(slot%2)*18;});}
+  return output;
+}
 
 function loadLevel(index) {
   const data = levels[index];
@@ -120,7 +132,7 @@ function loadLevel(index) {
   state.hazards = data.hazards.map(([x,y,w,h]) => ({x,y,w,h}));
   state.enemies = data.enemies.map(([x,y,minX,maxX], i) => ({x,y,w:46,h:50,minX,maxX,vx:(i%2?1:-1)*(54+index*5),hp:ENEMY_HP,maxHp:ENEMY_HP,flash:0,dead:false,tier:Math.min(3,index)}));
   state.cameras = data.cameras.map(([x,y,facing,range],i) => ({x,y,w:30,h:22,facing,range,charge:0,pulse:i*.7}));
-  state.coins = data.coins.map(([x,y,type],i) => ({x,y,w:18,h:18,type,collected:false,bob:i*.63}));
+  state.coins = spreadCoinLayout(data.coins,data.platforms).map(([x,y,type],i) => ({x,y,w:18,h:18,type,collected:false,bob:i*.63}));
   state.exits = data.exits.map(([x,y,type]) => ({x,y,w:48,h:60,type}));
   state.projectiles = [];
   state.particles = [];
@@ -143,7 +155,7 @@ function updateHud() {
   const glove = GEAR[state.gear.atlas], cloak = GEAR[state.gear.nita];
   atlasGoldLabel.textContent = state.gold.atlas;
   nitaGoldLabel.textContent = state.gold.nita;
-  atlasGearLabel.textContent = `${glove.name.toUpperCase()} ELDİVEN · ${glove.hits} VURUŞ`;
+  atlasGearLabel.textContent = `${glove.name.toUpperCase()} YÜZÜK · ${glove.damage} HASAR`;
   nitaGearLabel.textContent = `${cloak.name.toUpperCase()} PELERİN · ${cloak.cloak} sn`;
   document.documentElement.style.setProperty("--glove", glove.color);
   document.documentElement.style.setProperty("--cloak", cloak.color);
@@ -204,6 +216,9 @@ function updatePlayer(p,left,right,jump,action,dt) {
 
 function fireAtlas() {
   if (atlas.shotCooldown > 0) return;
+  const target=findNearestVisibleEnemy();
+  atlas.beamTarget=target?state.enemies.indexOf(target):-1;
+  if(target)atlas.facing=target.x+target.w/2>=atlas.x+atlas.w/2?1:-1;
   atlas.shotCooldown = .46;
   atlas.actionTimer = .38;
   atlas.beamCharge = .14;
@@ -215,9 +230,23 @@ function releaseAtlasBeam() {
   atlas.beamFired = true;
   const color = GEAR[state.gear.atlas].color;
   const palmX=atlas.x+atlas.w/2+atlas.facing*28,palmY=atlas.y+18;
-  state.projectiles.push({x:palmX,y:palmY,w:30,h:6,vx:atlas.facing*760,life:.9,color});
+  const target=state.enemies[atlas.beamTarget],targetX=target&&!target.dead?target.x+target.w/2:palmX+atlas.facing*500,targetY=target&&!target.dead?target.y+target.h*.45:palmY;
+  let dx=targetX-palmX,dy=targetY-palmY,length=Math.hypot(dx,dy)||1;dx/=length;dy/=length;
+  if(target&&!beamLineClear(palmX,palmY,targetX,targetY)){dx=atlas.facing;dy=0;atlas.beamTarget=-1;}
+  state.projectiles.push({x:palmX,y:palmY,w:20,h:8,vx:dx*760,vy:dy*760,life:.9,color,target:atlas.beamTarget});
   burst(palmX,palmY+3,color,13,atlas.facing*155);
   tone(610+state.gear.atlas*100,.11);
+}
+
+function beamLineClear(x1,y1,x2,y2) {
+  const distance=Math.hypot(x2-x1,y2-y1),steps=Math.max(3,Math.ceil(distance/10));
+  for(let i=1;i<steps;i++){const t=i/steps,x=x1+(x2-x1)*t,y=y1+(y2-y1)*t;if(state.platforms.some(p=>x>p.x+2&&x<p.x+p.w-2&&y>p.y+2&&y<p.y+p.h-2))return false;}
+  return true;
+}
+
+function findNearestVisibleEnemy() {
+  const palmX=atlas.x+atlas.w/2,palmY=atlas.y+18;
+  return state.enemies.filter(enemy=>!enemy.dead).map(enemy=>({enemy,distance:Math.hypot(enemy.x+enemy.w/2-palmX,enemy.y+enemy.h*.45-palmY)})).filter(({enemy,distance})=>distance<=540&&beamLineClear(palmX,palmY,enemy.x+enemy.w/2,enemy.y+enemy.h*.45)).sort((a,b)=>a.distance-b.distance)[0]?.enemy||null;
 }
 
 function activateCloak() {
@@ -243,13 +272,14 @@ function updateEnemies(dt) {
     if (intersects(atlas,enemy)) { resetLevel("Atlas bir gölge yaratığa yakalandı."); return; }
     if (nita.invisible<=0 && intersects(nita,enemy)) { resetLevel("Nita görünürken bir gölge yaratığa yakalandı."); return; }
   }
-  const damage = ENEMY_HP / GEAR[state.gear.atlas].hits;
+  const damage = GEAR[state.gear.atlas].damage;
   for (const shot of state.projectiles) {
-    shot.x += shot.vx*dt;shot.life-=dt;
+    const previousX=shot.x,previousY=shot.y;shot.x += shot.vx*dt;shot.y += (shot.vy||0)*dt;shot.life-=dt;
+    if(!beamLineClear(previousX,previousY,shot.x,shot.y)){shot.life=0;burst(shot.x,shot.y,shot.color,6,0);continue;}
     const enemy=state.enemies.find(e=>!e.dead&&intersects(shot,e));
     if(enemy){enemy.hp=Math.max(0,enemy.hp-damage);enemy.flash=.13;shot.life=0;burst(shot.x,shot.y,shot.color,10,shot.vx*.08);tone(enemy.hp<=0?140:210,.1);if(enemy.hp<=0){enemy.dead=true;burst(enemy.x+enemy.w/2,enemy.y+enemy.h/2,shot.color,24,0);}}
   }
-  state.projectiles=state.projectiles.filter(s=>s.life>0&&s.x>-40&&s.x<WORLD.width+40);
+  state.projectiles=state.projectiles.filter(s=>s.life>0&&s.x>-40&&s.x<WORLD.width+40&&s.y>-40&&s.y<WORLD.height+40);
 }
 
 function cameraCanSee(camera) {
@@ -293,15 +323,19 @@ function completeLevel(){
 
 function showMarket(){
   marketSummary.textContent=`Bu bölüm: Atlas +${state.collectedThisLevel.atlas} · Nita +${state.collectedThisLevel.nita} altın`;
-  continueButton.innerHTML=state.level===levels.length-1?'YOLCULUĞU TAMAMLA <span>✓</span>':'SONRAKİ BÖLÜME GEÇ <span>→</span>';
+  marketGrid.hidden=true;marketToggle.innerHTML='MARKET <span>◇</span>';marketToggle.setAttribute("aria-expanded","false");
+  continueButton.innerHTML=state.level===levels.length-1?'YOLCULUĞU TAMAMLA <span>✓</span>':'DEVAM ET <span>→</span>';
   continueButton.hidden=network.role==="guest";buyGloveButton.hidden=network.role==="guest";buyCloakButton.hidden=network.role==="host";refreshMarket();market.classList.add("active");market.setAttribute("aria-hidden","false");
 }
+
+function toggleMarket(){const opening=marketGrid.hidden;marketGrid.hidden=!opening;marketToggle.innerHTML=opening?'MARKETİ KAPAT <span>×</span>':'MARKET <span>◇</span>';marketToggle.setAttribute("aria-expanded",String(opening));tone(opening?520:330,.06);}
 
 function refreshMarket(){
   for(const [owner,button,nameEl,detailEl,costEl] of [["atlas",buyGloveButton,gloveName,gloveDetail,gloveCost],["nita",buyCloakButton,cloakName,cloakDetail,cloakCost]]){
     const current=state.gear[owner],next=GEAR[current+1],card=button.closest(".shop-card");
-    if(!next){nameEl.textContent=`${GEAR[current].name} ekipman tamamlandı`;detailEl.textContent=owner==="atlas"?"Legendary eldiven düşmanlara tek atar.":"Legendary pelerin 5 saniye görünmezlik verir.";costEl.textContent="—";button.textContent="MAKSİMUM SEVİYE";button.disabled=true;card.classList.add("maxed");continue;}
-    card.classList.remove("maxed");nameEl.textContent=`${next.name} ${owner==="atlas"?"Güç Eldiveni":"Görünmezlik Pelerini"}`;detailEl.textContent=owner==="atlas"?`Düşmanları ${next.hits===1?"tek":next.hits} vuruşta yok eder.`:`Görünmezlik süresi ${next.cloak} saniye olur.`;costEl.textContent=next.cost;button.innerHTML=`<span>${next.cost}</span> ${owner.toUpperCase()} ALTINI`;button.disabled=state.gold[owner]<next.cost;
+    card.style.setProperty("--item-color",next?.color||GEAR[current].color);
+    if(!next){nameEl.textContent=`${GEAR[current].name} ekipman tamamlandı`;detailEl.textContent=owner==="atlas"?`Hasar: ${GEAR[current].damage} / ${ENEMY_HP} · Tek vuruş · Otomatik hedefleme`:`Görünmezlik: ${GEAR[current].cloak} saniye · Legendary pelerin`;costEl.textContent="—";button.textContent="MAKSİMUM SEVİYE";button.disabled=true;card.classList.add("maxed");continue;}
+    card.classList.remove("maxed");nameEl.textContent=`${next.name} ${owner==="atlas"?"Güç Yüzüğü":"Görünmezlik Pelerini"}`;detailEl.textContent=owner==="atlas"?`Hasar: ${next.damage} / ${ENEMY_HP} · ${next.hits===1?"Tek":next.hits} vuruş · Otomatik hedefleme`:`Görünmezlik: ${next.cloak} saniye · Kamera ve yaratıklar algılamaz`;costEl.textContent=next.cost;button.innerHTML=`<span>${next.cost}</span> ${owner.toUpperCase()} ALTINI`;button.disabled=state.gold[owner]<next.cost;
   }
   updateHud();
 }
@@ -356,7 +390,7 @@ function drawPlayer(p){
   if(p.type==="atlas"){
     const gearColor=GEAR[state.gear.atlas].color,palmX=16+shotProgress*12,palmY=-31-shotProgress*5;
     if(shooting){ctx.lineCap="round";ctx.strokeStyle="#32352d";ctx.lineWidth=10;ctx.beginPath();ctx.moveTo(7,-47);ctx.lineTo(13+shotProgress*5,-40);ctx.stroke();ctx.strokeStyle="#d58a60";ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(13+shotProgress*5,-40);ctx.lineTo(palmX,palmY);ctx.stroke();}
-    ctx.fillStyle=gearColor;ctx.shadowColor=gearColor;ctx.shadowBlur=shooting?28:18;ctx.beginPath();ctx.arc(palmX,palmY,shooting?6:4.5,0,Math.PI*2);ctx.fill();ctx.fillStyle="#fff";ctx.globalAlpha=shooting?.72:0;ctx.beginPath();ctx.arc(palmX,palmY,2.2,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+    ctx.shadowColor=gearColor;ctx.shadowBlur=shooting?24:7;ctx.strokeStyle="#c6cad2";ctx.lineWidth=1.6;ctx.beginPath();ctx.ellipse(palmX-1,palmY+1,3.2,2.2,.25,0,Math.PI*2);ctx.stroke();ctx.fillStyle=gearColor;ctx.beginPath();ctx.arc(palmX+1,palmY-1.5,shooting?3.2:2,0,Math.PI*2);ctx.fill();if(shooting){ctx.fillStyle="rgba(255,255,255,.68)";ctx.beginPath();ctx.arc(palmX+1,palmY-1.5,1.3,0,Math.PI*2);ctx.fill();}
     if(shooting&&!p.beamFired){ctx.strokeStyle=gearColor;ctx.lineWidth=1.5;for(let r=9;r<19;r+=5){ctx.globalAlpha=.75-r*.025;ctx.beginPath();ctx.arc(palmX,palmY,r*(.6+shotProgress*.4),-.7,.7);ctx.stroke();}ctx.globalAlpha=1;}
   }
   if(p.type==="nita"&&p.invisible>0){ctx.strokeStyle=GEAR[state.gear.nita].color;ctx.lineWidth=2;ctx.setLineDash([4,5]);ctx.strokeRect(-drawW/2,-drawH,drawW,drawH);}
@@ -378,12 +412,17 @@ function drawCamera(camera){
 
 function drawExit(e){const color=COLORS[e.type],x=e.x-3;ctx.fillStyle="#242b35";ctx.fillRect(x-5,e.y-8,e.w+10,e.h+8);const grad=ctx.createLinearGradient(x,e.y,x+e.w,e.y);grad.addColorStop(0,"#1e252e");grad.addColorStop(.5,color+"88");grad.addColorStop(1,"#1e252e");ctx.fillStyle=grad;ctx.fillRect(x,e.y,e.w,e.h);ctx.strokeStyle=color;ctx.lineWidth=4;ctx.shadowColor=color;ctx.shadowBlur=14;ctx.strokeRect(x,e.y,e.w,e.h);ctx.shadowBlur=0;ctx.fillStyle="#f7dc92";ctx.beginPath();ctx.arc(x+e.w-10,e.y+e.h/2,3,0,Math.PI*2);ctx.fill();}
 
-function drawHazard(h){ctx.fillStyle="#1a2027";ctx.fillRect(h.x,h.y,h.w,h.h);const g=ctx.createLinearGradient(h.x,h.y,h.x,h.y+h.h);g.addColorStop(0,"#e85f52");g.addColorStop(1,"#3a1c22");ctx.fillStyle=g;for(let x=h.x;x<h.x+h.w;x+=18){ctx.beginPath();ctx.moveTo(x,h.y+18);ctx.lineTo(x+9,h.y);ctx.lineTo(x+18,h.y+18);ctx.fill();}}
+function drawHazard(h){
+  const time=performance.now()*.003;ctx.save();ctx.shadowColor="#ff4a1c";ctx.shadowBlur=18;const lava=ctx.createLinearGradient(0,h.y,0,h.y+h.h);lava.addColorStop(0,"#ffb21c");lava.addColorStop(.16,"#ff5a18");lava.addColorStop(.55,"#a91e19");lava.addColorStop(1,"#351016");ctx.fillStyle=lava;ctx.fillRect(h.x,h.y+4,h.w,h.h-4);
+  ctx.fillStyle="#ffcf4a";ctx.beginPath();ctx.moveTo(h.x,h.y+7);for(let x=h.x;x<=h.x+h.w;x+=8)ctx.lineTo(x,h.y+5+Math.sin(x*.09+time)*3);ctx.lineTo(h.x+h.w,h.y+15);ctx.lineTo(h.x,h.y+15);ctx.closePath();ctx.fill();
+  ctx.strokeStyle="rgba(255,235,132,.85)";ctx.lineWidth=2;ctx.beginPath();for(let x=h.x;x<=h.x+h.w;x+=10){const y=h.y+8+Math.sin(x*.12-time*1.3)*2;if(x===h.x)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();
+  ctx.shadowBlur=8;for(let i=0;i<Math.max(1,Math.floor(h.w/38));i++){const bx=h.x+12+(i*41+time*13)%Math.max(14,h.w-24),phase=(time*.42+i*.37)%1,by=h.y+h.h-10-phase*(h.h-20),r=2+phase*3;ctx.globalAlpha=1-phase;ctx.fillStyle=i%2?"#ffd75d":"#ff6a21";ctx.beginPath();ctx.arc(bx,by,r,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;ctx.restore();
+}
 
 function draw(){
   const rect=canvas.getBoundingClientRect(),scale=Math.min(rect.width/WORLD.width,rect.height/WORLD.height),ox=(rect.width-WORLD.width*scale)/2,oy=(rect.height-WORLD.height*scale)/2,level=levels[state.level]||levels[0];ctx.fillStyle=COLORS.dark;ctx.fillRect(0,0,rect.width,rect.height);ctx.save();ctx.translate(ox,oy);ctx.scale(scale,scale);drawBackground(level);
   for(const p of state.platforms)drawPlatform(p,level.theme);for(const h of state.hazards)drawHazard(h);for(const e of state.exits)drawExit(e);for(const c of state.cameras)drawCamera(c);for(const coin of state.coins)drawCoin(coin);for(const enemy of state.enemies)drawEnemy(enemy);
-  for(const shot of state.projectiles){const direction=Math.sign(shot.vx),tail=shot.x-direction*76,tip=shot.x+direction*shot.w,beam=ctx.createLinearGradient(tail,shot.y,tip,shot.y);beam.addColorStop(0,"rgba(255,255,255,0)");beam.addColorStop(.45,shot.color);beam.addColorStop(1,"#ffffff");ctx.strokeStyle=beam;ctx.lineCap="round";ctx.lineWidth=8;ctx.shadowColor=shot.color;ctx.shadowBlur=22;ctx.beginPath();ctx.moveTo(tail,shot.y+3);ctx.lineTo(tip,shot.y+3);ctx.stroke();ctx.strokeStyle="#fff";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(shot.x-direction*32,shot.y+3);ctx.lineTo(tip,shot.y+3);ctx.stroke();ctx.shadowBlur=0;}
+  for(const shot of state.projectiles){const speed=Math.hypot(shot.vx,shot.vy||0)||1,ux=shot.vx/speed,uy=(shot.vy||0)/speed,cx=shot.x+shot.w/2,cy=shot.y+shot.h/2,tailX=cx-ux*76,tailY=cy-uy*76,tipX=cx+ux*24,tipY=cy+uy*24,beam=ctx.createLinearGradient(tailX,tailY,tipX,tipY);beam.addColorStop(0,"rgba(255,255,255,0)");beam.addColorStop(.45,shot.color);beam.addColorStop(1,"#ffffff");ctx.strokeStyle=beam;ctx.lineCap="round";ctx.lineWidth=8;ctx.shadowColor=shot.color;ctx.shadowBlur=22;ctx.beginPath();ctx.moveTo(tailX,tailY);ctx.lineTo(tipX,tipY);ctx.stroke();ctx.strokeStyle="#fff";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx-ux*30,cy-uy*30);ctx.lineTo(tipX,tipY);ctx.stroke();ctx.shadowBlur=0;}
   drawPlayer(atlas);drawPlayer(nita);for(const p of state.particles){ctx.globalAlpha=Math.max(0,p.life*2);ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,p.size,p.size);}ctx.globalAlpha=1;ctx.restore();
 }
 
@@ -397,7 +436,7 @@ window.addEventListener("keyup",e=>setControl(e.key.toLowerCase(),false));
 startButton.addEventListener("click",()=>{if(startButton.dataset.action==="restart")resetCampaign();state.running=true;state.paused=false;state.last=performance.now();startButton.dataset.action="";startButton.hidden=true;overlay.classList.add("hidden");sendPacket({type:"start",level:state.level,gold:state.gold,gear:state.gear});});
 pauseButton.addEventListener("click",()=>{if(!state.running)return;state.paused=!state.paused;pauseButton.textContent=state.paused?"DEVAM ET":"DURAKLAT";showMessage(state.paused?"Oyun duraklatıldı.":"Yola devam!",1.2);});
 soundButton.addEventListener("click",()=>{state.audio=!state.audio;soundButton.textContent=state.audio?"SES AÇIK":"SES KAPALI";soundButton.setAttribute("aria-label",state.audio?"Sesi kapat":"Sesi aç");});
-buyGloveButton.addEventListener("click",()=>buyUpgrade("atlas"));buyCloakButton.addEventListener("click",()=>buyUpgrade("nita"));continueButton.addEventListener("click",finishOrContinue);
+marketToggle.addEventListener("click",toggleMarket);buyGloveButton.addEventListener("click",()=>buyUpgrade("atlas"));buyCloakButton.addEventListener("click",()=>buyUpgrade("nita"));continueButton.addEventListener("click",finishOrContinue);
 document.addEventListener("visibilitychange",()=>{if(document.hidden&&state.running&&!state.paused){state.paused=true;pauseButton.textContent="DEVAM ET";}});window.addEventListener("resize",resize);
 
 document.querySelectorAll(".touch-controls button").forEach(button=>{const key=button.dataset.key;const press=e=>{e.preventDefault();button.classList.add("active");setControl(key,true);};const release=e=>{e.preventDefault();button.classList.remove("active");setControl(key,false);};button.addEventListener("pointerdown",press);button.addEventListener("pointerup",release);button.addEventListener("pointercancel",release);button.addEventListener("pointerleave",e=>{if(e.buttons)release(e);});});

@@ -83,21 +83,22 @@
 
       <section id="market" class="market" aria-labelledby="market-title" aria-hidden="true">
         <p class="eyebrow">BÖLÜM SONU PAZARI</p>
-        <h2 id="market-title">Ekipmanını güçlendir</h2>
+        <h2 id="market-title">Bölüm tamamlandı</h2>
         <p id="market-summary" class="market-summary"></p>
-        <div class="market-grid">
+        <button id="market-toggle" class="market-toggle" type="button" aria-expanded="false" aria-controls="market-grid">MARKET <span>◇</span></button>
+        <div id="market-grid" class="market-grid" hidden>
           <article class="shop-card atlas-shop">
-            <div class="shop-icon glove-icon" aria-hidden="true">✦</div>
-            <div><small>ATLAS</small><h3 id="glove-name">Mavi Güç Eldiveni</h3><p id="glove-detail">Düşmanları 3 vuruşta yok eder.</p></div>
+            <div class="shop-icon ring-icon" aria-hidden="true"><i><b></b></i></div>
+            <div><small>ATLAS</small><h3 id="glove-name">Mavi Güç Yüzüğü</h3><p id="glove-detail">Hasar: 4 / 12 · 3 vuruş</p></div>
             <button id="buy-glove" type="button"><span id="glove-cost">4</span> ATLAS ALTINI</button>
           </article>
           <article class="shop-card nita-shop">
-            <div class="shop-icon cloak-icon" aria-hidden="true">◒</div>
-            <div><small>NITA</small><h3 id="cloak-name">Mavi Görünmezlik Pelerini</h3><p id="cloak-detail">Görünmezlik süresi 2 saniye olur.</p></div>
+            <div class="shop-icon cloak-icon" aria-hidden="true"><i><b></b></i></div>
+            <div><small>NITA</small><h3 id="cloak-name">Mavi Görünmezlik Pelerini</h3><p id="cloak-detail">Görünmezlik: 2 saniye</p></div>
             <button id="buy-cloak" type="button"><span id="cloak-cost">4</span> NITA ALTINI</button>
           </article>
         </div>
-        <button id="continue-button" class="continue-button" type="button">SONRAKİ BÖLÜME GEÇ <span>→</span></button>
+        <button id="continue-button" class="continue-button" type="button">DEVAM ET <span>→</span></button>
         <p class="market-note">Yükseltmeler avantaj sağlar; bölümler yetenek kullanmadan da tamamlanabilir.</p>
       </section>
     </main>

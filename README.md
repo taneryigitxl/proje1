@@ -14,7 +14,7 @@ Mobil yatay ekranda iki karakter için dokunmatik kontroller görünür.
 
 Her bölümde Atlas ve Nita kendi kapı renkleriyle eşleşen altınları toplar. Bölüm sonu pazarında:
 
-- Atlas'ın eldiveni beyaz, mavi, mor ve sarı/Legendary seviyelerinde sırasıyla 4, 3, 2 ve 1 vuruş gücü verir.
+- Atlas'ın güç yüzüğü beyaz, mavi, mor ve sarı/Legendary seviyelerinde sırasıyla 3, 4, 6 ve 12 hasar verir; görünür en yakın düşmanı otomatik hedefler.
 - Nita'nın pelerini aynı seviyelerde 1, 2, 3 ve 5 saniye görünmezlik verir.
 
 Yükseltmeler bölümleri kolaylaştırır; düşmanlar ve kameralar alternatif hareket rotalarıyla da aşılabilir.
