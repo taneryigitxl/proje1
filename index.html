@@ -19,7 +19,11 @@
 
       <header class="hud">
         <div class="brand"><span>NITA</span> YOLLARDA <b id="connection-badge">ÇEVRİMDIŞI</b></div>
-        <div class="level-info"><small>BÖLÜM</small><strong id="level-number">1 / 5</strong><span id="level-name">İlk Adımlar</span></div>
+        <div class="level-info"><small>BÖLÜM</small><strong id="level-number">1 / 5</strong><span id="level-name">İlk Temas</span></div>
+        <div class="economy" aria-label="Altın ve ekipman durumu">
+          <span class="atlas-wallet"><i></i><b id="atlas-gold">0</b><small id="atlas-gear">BEYAZ ELDİVEN</small></span>
+          <span class="nita-wallet"><i></i><b id="nita-gold">0</b><small id="nita-gear">BEYAZ PELERİN · 1 sn</small></span>
+        </div>
         <div class="hud-actions">
           <button id="sound-button" type="button" aria-label="Sesi kapat">SES AÇIK</button>
           <button id="pause-button" type="button">DURAKLAT</button>
@@ -29,11 +33,11 @@
       <aside class="controls" aria-label="Kontroller">
         <div class="player-control atlas-control">
           <span class="player-dot"></span><strong>ATLAS</strong>
-          <span><kbd>W</kbd> zıpla</span><span><kbd>A</kbd><kbd>D</kbd> yürü</span><span><kbd>S</kbd> kaldır / fırlat</span>
+          <span><kbd>W</kbd> zıpla</span><span><kbd>A</kbd><kbd>D</kbd> yürü</span><span><kbd>S</kbd> güç ışını</span>
         </div>
         <div class="player-control nita-control">
           <span class="player-dot"></span><strong>NITA</strong>
-          <span><kbd>↑</kbd> zıpla</span><span><kbd>←</kbd><kbd>→</kbd> yürü</span><span><kbd>↓</kbd> eğil</span>
+          <span><kbd>↑</kbd> zıpla</span><span><kbd>←</kbd><kbd>→</kbd> yürü</span><span><kbd>↓</kbd> görünmezlik</span>
         </div>
       </aside>
 
@@ -49,11 +53,11 @@
 
       <div class="touch-controls atlas-touch" aria-label="Atlas dokunmatik kontrolleri">
         <div class="joystick" data-left="a" data-right="d" data-up="w" aria-label="Atlas hareket joystick’i"><i></i><span></span></div>
-        <div class="touch-actions"><button data-key="w" class="jump" aria-label="Atlas zıpla">ZIPLA</button><button data-key="s" class="action" aria-label="Sandık kaldır veya fırlat">KALDIR<br />FIRLAT</button></div>
+        <div class="touch-actions"><button data-key="w" class="jump" aria-label="Atlas zıpla">ZIPLA</button><button data-key="s" class="action" aria-label="Atlas güç ışını">GÜÇ<br />IŞINI</button></div>
       </div>
       <div class="touch-controls nita-touch" aria-label="Nita dokunmatik kontrolleri">
         <div class="joystick" data-left="arrowleft" data-right="arrowright" data-up="arrowup" data-down="arrowdown" aria-label="Nita hareket joystick’i"><i></i><span></span></div>
-        <div class="touch-actions"><button data-key="arrowup" class="jump" aria-label="Nita zıpla">ZIPLA</button><button data-key="arrowdown" class="action" aria-label="Nita eğil">EĞİL</button></div>
+        <div class="touch-actions"><button data-key="arrowup" class="jump" aria-label="Nita zıpla">ZIPLA</button><button data-key="arrowdown" class="action" aria-label="Nita görünmezlik pelerini">GÖRÜNMEZ</button></div>
       </div>
 
       <div class="rotate-device"><div class="phone-icon">↻</div><strong>TELEFONU YATAY ÇEVİR</strong><span>Nita Yollarda yatay ekranda oynanır.</span></div>
@@ -75,6 +79,26 @@
         <div id="room-wait" class="room-wait" hidden><span>ODA KODU</span><strong id="room-code-display">------</strong><button id="copy-code" type="button">KODU KOPYALA</button><p>İkinci oyuncu bekleniyor…</p></div>
         <button id="start-button" type="button" hidden>SONRAKİ BÖLÜM <span>→</span></button>
         <p class="restart-hint"><kbd>R</kbd> bölümü yeniden başlatır</p>
+      </section>
+
+      <section id="market" class="market" aria-labelledby="market-title" aria-hidden="true">
+        <p class="eyebrow">BÖLÜM SONU PAZARI</p>
+        <h2 id="market-title">Ekipmanını güçlendir</h2>
+        <p id="market-summary" class="market-summary"></p>
+        <div class="market-grid">
+          <article class="shop-card atlas-shop">
+            <div class="shop-icon glove-icon" aria-hidden="true">✦</div>
+            <div><small>ATLAS</small><h3 id="glove-name">Mavi Güç Eldiveni</h3><p id="glove-detail">Düşmanları 3 vuruşta yok eder.</p></div>
+            <button id="buy-glove" type="button"><span id="glove-cost">4</span> ATLAS ALTINI</button>
+          </article>
+          <article class="shop-card nita-shop">
+            <div class="shop-icon cloak-icon" aria-hidden="true">◒</div>
+            <div><small>NITA</small><h3 id="cloak-name">Mavi Görünmezlik Pelerini</h3><p id="cloak-detail">Görünmezlik süresi 2 saniye olur.</p></div>
+            <button id="buy-cloak" type="button"><span id="cloak-cost">4</span> NITA ALTINI</button>
+          </article>
+        </div>
+        <button id="continue-button" class="continue-button" type="button">SONRAKİ BÖLÜME GEÇ <span>→</span></button>
+        <p class="market-note">Yükseltmeler avantaj sağlar; bölümler yetenek kullanmadan da tamamlanabilir.</p>
       </section>
     </main>
   </body>
