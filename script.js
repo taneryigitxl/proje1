@@ -6,6 +6,7 @@ const overlayText = document.getElementById("overlay-text");
 const startButton = document.getElementById("start-button");
 const pauseButton = document.getElementById("pause-button");
 const soundButton = document.getElementById("sound-button");
+const hudMarketButton = document.getElementById("hud-market-button");
 const message = document.getElementById("message");
 const levelNumber = document.getElementById("level-number");
 const levelName = document.getElementById("level-name");
@@ -14,6 +15,7 @@ const nitaGoldLabel = document.getElementById("nita-gold");
 const atlasGearLabel = document.getElementById("atlas-gear");
 const nitaGearLabel = document.getElementById("nita-gear");
 const market = document.getElementById("market");
+const marketTitle = document.getElementById("market-title");
 const marketSummary = document.getElementById("market-summary");
 const marketToggle = document.getElementById("market-toggle");
 const marketGrid = document.getElementById("market-grid");
@@ -95,7 +97,7 @@ const levels = [
   },
   {
     name: "Gökyüzü Tapınağı", theme: "temple", sky: ["#271b3e", "#934d70"], starts: [[40,590],[92,590]],
-    platforms: [[0,650,145,70],[195,570,125,30],[370,485,125,30],[545,400,130,30],[735,495,125,30],[910,410,140,30],[1095,500,185,220],[470,610,85,40],[825,595,80,55]],
+    platforms: [[0,650,145,70],[195,570,125,30],[370,485,125,30],[545,400,130,30],[735,495,125,30],[910,410,140,30],[1095,500,185,220],[470,610,85,40],[825,595,80,55],[620,555,95,24],[965,540,90,24]],
     hazards: [[145,648,50,72],[320,648,50,72],[555,648,180,72],[905,648,190,72]],
     enemies: [[215,520,210,290],[565,350,555,635],[755,445,750,825],[1125,450,1110,1215]], cameras: [[350,385,-1,225],[705,320,-1,250],[880,315,-1,235],[1080,350,-1,250]], exits: [[970,350,"atlas"],[1210,440,"nita"]],
     coins: [[105,605,"atlas"],[220,520,"nita"],[395,435,"atlas"],[450,435,"nita"],[495,560,"atlas"],[530,560,"nita"],[570,350,"atlas"],[630,350,"nita"],[755,445,"atlas"],[815,445,"nita"],[850,545,"atlas"],[885,545,"nita"],[930,360,"atlas"],[990,360,"nita"],[1120,450,"atlas"],[1170,450,"nita"],[1215,450,"atlas"],[1240,450,"nita"],[1140,400,"atlas"],[1200,400,"nita"]],
@@ -105,7 +107,7 @@ const levels = [
 
 const state = {
   running: false, paused: false, level: 0, keys: {}, keysPressed: {}, platforms: [], hazards: [], enemies: [], cameras: [], coins: [], exits: [], projectiles: [], particles: [],
-  gold: { atlas: 0, nita: 0 }, gear: { atlas: 0, nita: 0 }, collectedThisLevel: { atlas: 0, nita: 0 }, last: 0, audio: true, messageTimer: 0, transitionTimer: null
+  gold: { atlas: 0, nita: 0 }, gear: { atlas: 0, nita: 0 }, collectedThisLevel: { atlas: 0, nita: 0 }, last: 0, audio: true, messageTimer: 0, transitionTimer: null, marketInGame: false, marketWasPaused: false
 };
 const network = { role: "solo", peer: null, connection: null, lastSync: 0 };
 
@@ -115,12 +117,15 @@ function makePlayer(type, x, y) {
 let atlas = makePlayer("atlas", 0, 0);
 let nita = makePlayer("nita", 0, 0);
 
-function spreadCoinLayout(coins,platforms) {
-  const output=coins.map(coin=>[...coin]),groups=new Map();
+function spreadCoinLayout(coins,platforms,exits) {
+  const output=coins.map(coin=>[...coin]),groups=new Map(),pending=[];
+  const exitPlatforms=new Set(exits.map(exit=>platforms.findIndex(p=>exit[0]>=p[0]-10&&exit[0]<=p[0]+p[2]+10&&Math.abs(exit[1]+60-p[1])<=3)).filter(index=>index>=0));
   output.forEach((coin,index)=>{
     const support=platforms.map((p,platformIndex)=>({p,platformIndex,d:p[1]-coin[1]})).filter(({p,d})=>d>0&&d<=120&&coin[0]+18>=p[0]-10&&coin[0]<=p[0]+p[2]+10).sort((a,b)=>a.d-b.d)[0];
-    if(!support)return;const group=groups.get(support.platformIndex)||[];group.push(index);groups.set(support.platformIndex,group);
+    if(!support)return;if(exitPlatforms.has(support.platformIndex)){pending.push({index,source:support.p});return;}const group=groups.get(support.platformIndex)||[];group.push(index);groups.set(support.platformIndex,group);
   });
+  const safePlatforms=platforms.map((p,index)=>({p,index})).filter(({p,index})=>p[2]>=70&&!exitPlatforms.has(index));
+  pending.forEach(({index,source})=>{const target=safePlatforms.map(({p,index:platformIndex})=>({platformIndex,score:Math.abs(p[0]+p[2]/2-(source[0]+source[2]/2))+Math.abs(p[1]-source[1])*.35+(groups.get(platformIndex)?.length||0)*170})).sort((a,b)=>a.score-b.score)[0];if(!target)return;const group=groups.get(target.platformIndex)||[];group.push(index);groups.set(target.platformIndex,group);});
   for(const [platformIndex,indices] of groups){const p=platforms[platformIndex],padding=Math.min(28,p[2]*.16);indices.forEach((coinIndex,slot)=>{const ratio=indices.length===1?.5:slot/(indices.length-1);output[coinIndex][0]=Math.round(p[0]+padding+(p[2]-padding*2)*ratio-9);output[coinIndex][1]=p[1]-46-(slot%2)*18;});}
   return output;
 }
@@ -132,7 +137,7 @@ function loadLevel(index) {
   state.hazards = data.hazards.map(([x,y,w,h]) => ({x,y,w,h}));
   state.enemies = data.enemies.map(([x,y,minX,maxX], i) => ({x,y,w:46,h:50,minX,maxX,vx:(i%2?1:-1)*(54+index*5),hp:ENEMY_HP,maxHp:ENEMY_HP,flash:0,dead:false,tier:Math.min(3,index)}));
   state.cameras = data.cameras.map(([x,y,facing,range],i) => ({x,y,w:30,h:22,facing,range,charge:0,pulse:i*.7}));
-  state.coins = spreadCoinLayout(data.coins,data.platforms).map(([x,y,type],i) => ({x,y,w:18,h:18,type,collected:false,bob:i*.63}));
+  state.coins = spreadCoinLayout(data.coins,data.platforms,data.exits).map(([x,y,type],i) => ({x,y,w:18,h:18,type,collected:false,bob:i*.63}));
   state.exits = data.exits.map(([x,y,type]) => ({x,y,w:48,h:60,type}));
   state.projectiles = [];
   state.particles = [];
@@ -322,10 +327,19 @@ function completeLevel(){
 }
 
 function showMarket(){
+  state.marketInGame=false;marketTitle.textContent="Bölüm tamamlandı";
   marketSummary.textContent=`Bu bölüm: Atlas +${state.collectedThisLevel.atlas} · Nita +${state.collectedThisLevel.nita} altın`;
-  marketGrid.hidden=true;marketToggle.innerHTML='MARKET <span>◇</span>';marketToggle.setAttribute("aria-expanded","false");
+  marketToggle.hidden=false;marketGrid.hidden=true;marketToggle.innerHTML='MARKET <span>◇</span>';marketToggle.setAttribute("aria-expanded","false");
   continueButton.innerHTML=state.level===levels.length-1?'YOLCULUĞU TAMAMLA <span>✓</span>':'DEVAM ET <span>→</span>';
   continueButton.hidden=network.role==="guest";buyGloveButton.hidden=network.role==="guest";buyCloakButton.hidden=network.role==="host";refreshMarket();market.classList.add("active");market.setAttribute("aria-hidden","false");
+}
+
+function openInGameMarket(){
+  if(!state.running||market.classList.contains("active"))return;
+  state.marketInGame=true;state.marketWasPaused=state.paused;state.paused=true;
+  marketTitle.textContent="Market";marketSummary.textContent=`Atlas ${state.gold.atlas} · Nita ${state.gold.nita} altın`;
+  marketToggle.hidden=true;marketGrid.hidden=false;continueButton.hidden=false;continueButton.innerHTML='OYUNA DÖN <span>←</span>';
+  buyGloveButton.hidden=network.role==="guest";buyCloakButton.hidden=network.role==="host";refreshMarket();market.classList.add("active");market.setAttribute("aria-hidden","false");
 }
 
 function toggleMarket(){const opening=marketGrid.hidden;marketGrid.hidden=!opening;marketToggle.innerHTML=opening?'MARKETİ KAPAT <span>×</span>':'MARKET <span>◇</span>';marketToggle.setAttribute("aria-expanded",String(opening));tone(opening?520:330,.06);}
@@ -347,6 +361,7 @@ function buyUpgrade(owner){
 
 function finishOrContinue(){
   market.classList.remove("active");market.setAttribute("aria-hidden","true");
+  if(state.marketInGame){state.marketInGame=false;state.paused=state.marketWasPaused;state.last=performance.now();return;}
   if(state.level<levels.length-1){loadLevel(state.level+1);state.running=true;state.paused=false;state.last=performance.now();sendPacket({type:"start",level:state.level,gold:state.gold,gear:state.gear});return;}
   overlayTitle.innerHTML="Yol<br><em>Tamamlandı</em>";overlayText.textContent="Atlas ve Nita beş bölümü de aştı. Topladığın ekipmanlarla yolculuğu yeniden oynayabilirsin.";lobbyActions.hidden=true;startButton.hidden=network.role==="guest";startButton.innerHTML='YENİDEN OYNA <span>↻</span>';startButton.dataset.action="restart";overlay.classList.remove("hidden");
 }
@@ -436,6 +451,7 @@ window.addEventListener("keyup",e=>setControl(e.key.toLowerCase(),false));
 startButton.addEventListener("click",()=>{if(startButton.dataset.action==="restart")resetCampaign();state.running=true;state.paused=false;state.last=performance.now();startButton.dataset.action="";startButton.hidden=true;overlay.classList.add("hidden");sendPacket({type:"start",level:state.level,gold:state.gold,gear:state.gear});});
 pauseButton.addEventListener("click",()=>{if(!state.running)return;state.paused=!state.paused;pauseButton.textContent=state.paused?"DEVAM ET":"DURAKLAT";showMessage(state.paused?"Oyun duraklatıldı.":"Yola devam!",1.2);});
 soundButton.addEventListener("click",()=>{state.audio=!state.audio;soundButton.textContent=state.audio?"SES AÇIK":"SES KAPALI";soundButton.setAttribute("aria-label",state.audio?"Sesi kapat":"Sesi aç");});
+hudMarketButton.addEventListener("click",openInGameMarket);
 marketToggle.addEventListener("click",toggleMarket);buyGloveButton.addEventListener("click",()=>buyUpgrade("atlas"));buyCloakButton.addEventListener("click",()=>buyUpgrade("nita"));continueButton.addEventListener("click",finishOrContinue);
 document.addEventListener("visibilitychange",()=>{if(document.hidden&&state.running&&!state.paused){state.paused=true;pauseButton.textContent="DEVAM ET";}});window.addEventListener("resize",resize);
 
