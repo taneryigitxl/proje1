@@ -25,7 +25,7 @@ Nita'nın anıt ritüeli dört saniye sürer ve tek başına hasar vermez. Ritü
 
 Boss savaşında düşen takım arkadaşı oyunu bitirmez. Dokuz saniye sonra beliren revive kupasını hayatta kalan oyuncu alırsa takım arkadaşı iki canla geri döner. `Ctrl` + `ı` gizli test kısayolu mevcut bölümü doğrudan geçirir.
 
-Test sırasında `Ctrl` + `O`, Atlas ve Nita'nın altınlarını 99'a tamamlar ve marketi anında günceller.
+Test sırasında `Shift` + `ı`, Atlas ve Nita'nın altınlarını 99'a tamamlar ve marketi anında günceller.
 
 ## Çalıştırma
 
