@@ -19,6 +19,8 @@ Her bölümde Atlas ve Nita kendi kapı renkleriyle eşleşen altınları toplar
 
 Yükseltmeler bölümleri kolaylaştırır; düşmanlar ve kameralar alternatif hareket rotalarıyla da aşılabilir.
 
+Beşinci bölüm karanlık bir boss arenasıdır. Mario 10 can slotuna sahiptir; Atlas'ın her beş isabeti bir slot kırar, son slot ise yalnızca Nita'nın 20 saniyede bir açılan anıt ritüeliyle kırılabilir. Mario karakterleri dört isabette yener ve her iki isabetten sonra bir can orbu bırakır.
+
 ## Çalıştırma
 
 `index.html` dosyasını doğrudan açabilir veya VS Code Live Server gibi bir statik sunucuyla klasörü yayınlayabilirsin.

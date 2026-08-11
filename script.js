@@ -96,23 +96,21 @@ const levels = [
     hint: "Sarı Legendary ekipman tek atış ve 5 saniye görünmezlik sağlar; alternatif rotalar hâlâ açık."
   },
   {
-    name: "Gökyüzü Tapınağı", theme: "temple", sky: ["#271b3e", "#934d70"], starts: [[40,590],[92,590]],
-    platforms: [[0,650,145,70],[195,570,125,30],[370,485,125,30],[545,400,130,30],[735,495,125,30],[910,410,140,30],[1095,500,185,220],[470,610,85,40],[825,595,80,55],[560,575,85,24],[650,535,85,24],[900,585,80,24],[990,545,85,24],[1065,510,55,24]],
-    hazards: [[145,648,50,72],[320,648,50,72],[555,648,180,72],[905,648,190,72]],
-    enemies: [[215,520,210,290],[565,350,555,635],[755,445,750,825],[1125,450,1110,1215]], cameras: [[350,385,-1,225],[705,320,-1,250],[880,315,-1,235],[1080,350,-1,250]], exits: [[970,350,"atlas"],[1210,440,"nita"]],
-    coins: [[105,605,"atlas"],[220,520,"nita"],[395,435,"atlas"],[450,435,"nita"],[495,560,"atlas"],[530,560,"nita"],[570,350,"atlas"],[630,350,"nita"],[755,445,"atlas"],[815,445,"nita"],[850,545,"atlas"],[885,545,"nita"],[930,360,"atlas"],[990,360,"nita"],[1120,450,"atlas"],[1170,450,"nita"],[1215,450,"atlas"],[1240,450,"nita"],[1140,400,"atlas"],[1200,400,"nita"]],
-    hint: "Son yol: yaratıkları temizle veya üzerinden atla; kamera görüşünü pelerinle ya da siperlerle aş."
+    name: "MARIO ??", theme: "boss", boss: true, sky: ["#06070a", "#11141a"], starts: [[110,590],[175,590]],
+    platforms: [[0,650,1280,70]], hazards: [], enemies: [], cameras: [], exits: [], coins: [],
+    shrines: [[285,590],[625,590],[940,590]],
+    hint: "BOSS: Atlas ışınla savaşsın; Nita parlayan anıtta ↓ ile ritüeli tamamlasın. Ritüel penceresi 20 saniyede bir açılır."
   }
 ];
 
 const state = {
-  running: false, paused: false, level: 0, keys: {}, keysPressed: {}, platforms: [], hazards: [], enemies: [], cameras: [], coins: [], exits: [], projectiles: [], particles: [],
+  running: false, paused: false, level: 0, keys: {}, keysPressed: {}, platforms: [], hazards: [], enemies: [], cameras: [], coins: [], exits: [], projectiles: [], particles: [], healthOrbs: [], boss: null,
   gold: { atlas: 0, nita: 0 }, gear: { atlas: 0, nita: 0 }, collectedThisLevel: { atlas: 0, nita: 0 }, last: 0, audio: true, messageTimer: 0, transitionTimer: null, marketInGame: false, marketWasPaused: false
 };
 const network = { role: "solo", peer: null, connection: null, lastSync: 0 };
 
 function makePlayer(type, x, y) {
-  return { type, x, y, w: 34, h: 50, vx: 0, vy: 0, speed: type === "atlas" ? 260 : 270, jump: type === "atlas" ? 515 : 525, onGround: false, facing: 1, atExit: false, coyote: 0, jumpBuffer: 0, shotCooldown: 0, beamCharge: 0, beamFired: true, beamTarget: -1, invisible: 0, cloakCooldown: 0, actionTimer: 0 };
+  return { type, x, y, w: 34, h: 50, vx: 0, vy: 0, speed: type === "atlas" ? 260 : 270, jump: type === "atlas" ? 515 : 525, onGround: false, facing: 1, atExit: false, coyote: 0, jumpBuffer: 0, shotCooldown: 0, beamCharge: 0, beamFired: true, beamTarget: -1, invisible: 0, cloakCooldown: 0, actionTimer: 0, hp: 4, maxHp: 4, invulnerable: 0 };
 }
 let atlas = makePlayer("atlas", 0, 0);
 let nita = makePlayer("nita", 0, 0);
@@ -141,10 +139,12 @@ function loadLevel(index) {
   state.exits = data.exits.map(([x,y,type]) => ({x,y,w:48,h:60,type}));
   state.projectiles = [];
   state.particles = [];
+  state.healthOrbs = [];
+  state.boss = data.boss ? {x:1055,y:465,w:125,h:185,hp:10,maxHp:10,atlasHits:0,attackTimer:1.8,hitCount:0,flash:0,ritualWait:4,ritualWindow:0,activeShrine:-1,ritualProgress:0,ritualDone:false,dead:false} : null;
   state.collectedThisLevel = { atlas: 0, nita: 0 };
   atlas = makePlayer("atlas", data.starts[0][0], data.starts[0][1]);
   nita = makePlayer("nita", data.starts[1][0], data.starts[1][1]);
-  levelNumber.textContent = `${index + 1} / ${levels.length}`;
+  levelNumber.textContent = data.boss ? "?? / ??" : `${index + 1} / ${levels.length}`;
   levelName.textContent = data.name;
   updateHud();
   showMessage(data.hint, 5);
@@ -205,6 +205,7 @@ function updatePlayer(p,left,right,jump,action,dt) {
   p.shotCooldown = Math.max(0,p.shotCooldown-dt);
   p.cloakCooldown = Math.max(0,p.cloakCooldown-dt);
   p.invisible = Math.max(0,p.invisible-dt);
+  p.invulnerable = Math.max(0,p.invulnerable-dt);
   p.actionTimer = Math.max(0,p.actionTimer-dt);
   if (p.type === "atlas" && p.beamCharge > 0) {
     p.beamCharge = Math.max(0,p.beamCharge-dt);
@@ -221,8 +222,8 @@ function updatePlayer(p,left,right,jump,action,dt) {
 
 function fireAtlas() {
   if (atlas.shotCooldown > 0) return;
-  const target=findNearestVisibleEnemy();
-  atlas.beamTarget=target?state.enemies.indexOf(target):-1;
+  const target=state.boss&&!state.boss.dead?state.boss:findNearestVisibleEnemy();
+  atlas.beamTarget=target===state.boss?-2:target?state.enemies.indexOf(target):-1;
   if(target)atlas.facing=target.x+target.w/2>=atlas.x+atlas.w/2?1:-1;
   atlas.shotCooldown = .46;
   atlas.actionTimer = .38;
@@ -231,11 +232,16 @@ function fireAtlas() {
   tone(310+state.gear.atlas*55,.08);
 }
 
+function atlasPalmPosition(){
+  const charging=atlas.actionTimer>0,raw=charging?Math.min(1,Math.max(0,(.38-atlas.actionTimer)/.14)):0,ease=raw*raw*(3-2*raw);
+  return {x:atlas.x+atlas.w/2+atlas.facing*(16+ease*12),y:atlas.y+atlas.h-31-ease*5};
+}
+
 function releaseAtlasBeam() {
   atlas.beamFired = true;
   const color = GEAR[state.gear.atlas].color;
-  const palmX=atlas.x+atlas.w/2+atlas.facing*28,palmY=atlas.y+18;
-  const target=state.enemies[atlas.beamTarget],targetX=target&&!target.dead?target.x+target.w/2:palmX+atlas.facing*500,targetY=target&&!target.dead?target.y+target.h*.45:palmY;
+  const palm=atlasPalmPosition(),palmX=palm.x,palmY=palm.y;
+  const target=atlas.beamTarget===-2?state.boss:state.enemies[atlas.beamTarget],targetX=target&&!target.dead?target.x+target.w/2:palmX+atlas.facing*500,targetY=target&&!target.dead?target.y+target.h*.45:palmY;
   let dx=targetX-palmX,dy=targetY-palmY,length=Math.hypot(dx,dy)||1;dx/=length;dy/=length;
   if(target&&!beamLineClear(palmX,palmY,targetX,targetY)){dx=atlas.facing;dy=0;atlas.beamTarget=-1;}
   state.projectiles.push({x:palmX,y:palmY,w:20,h:8,vx:dx*760,vy:dy*760,life:.9,color,target:atlas.beamTarget});
@@ -255,6 +261,7 @@ function findNearestVisibleEnemy() {
 }
 
 function activateCloak() {
+  if(state.boss&&tryStartRitual())return;
   if (nita.cloakCooldown > 0) { showMessage(`Pelerin ${nita.cloakCooldown.toFixed(1)} sn sonra hazır.`,1); return; }
   nita.invisible = GEAR[state.gear.nita].cloak;
   nita.cloakCooldown = nita.invisible + 1.15;
@@ -269,6 +276,36 @@ function collectCoins(p) {
   }
 }
 
+function damagePlayer(player){
+  if(player.invulnerable>0||!state.boss)return;
+  player.hp=Math.max(0,player.hp-1);player.invulnerable=1.15;state.boss.hitCount++;burst(player.x+player.w/2,player.y+player.h/2,"#ff4b4b",16,-player.facing*80);tone(105,.18);
+  if(state.boss.hitCount%2===0)state.healthOrbs.push({x:180+Math.random()*850,y:620,w:22,h:22,bob:Math.random()*6.2});
+  if(player.hp<=0)resetLevel(`${player.type==="atlas"?"Atlas":"Nita"} Mario tarafından yenildi.`);
+}
+
+function tryStartRitual(){
+  const boss=state.boss;if(!boss||boss.ritualWindow<=0||boss.ritualDone)return false;
+  const shrine=levels[state.level].shrines[boss.activeShrine];if(!shrine||Math.hypot(nita.x+nita.w/2-shrine[0],nita.y+nita.h-shrine[1])>72){showMessage("Ritüel için parlayan anıta yaklaş.",1.2);return false;}
+  boss.ritualProgress=.01;nita.invisible=Math.max(nita.invisible,2.6);nita.cloakCooldown=Math.max(nita.cloakCooldown,3.5);nita.actionTimer=.35;showMessage("Ritüel başladı — anıtın yanında kal!",1.8);tone(680,.14);return true;
+}
+
+function damageBossSlot(source){
+  const boss=state.boss;if(!boss||boss.dead)return;if(source==="atlas"&&boss.hp<=1){showMessage("Son can slotunu yalnızca Nita'nın ritüeli kırabilir!",2);return;}boss.hp=Math.max(0,boss.hp-1);boss.flash=.22;burst(boss.x+boss.w/2,boss.y+70,source==="ritual"?COLORS.nita:COLORS.atlas,28,0);tone(boss.hp?150:80,.2);
+  if(boss.hp<=0){boss.dead=true;showMessage("MARIO YENİLDİ!",3);setTimeout(()=>completeLevel(),1200);}
+}
+
+function updateBoss(dt){
+  const boss=state.boss;if(!boss||boss.dead)return;boss.flash=Math.max(0,boss.flash-dt);
+  if(boss.ritualWindow>0){boss.ritualWindow=Math.max(0,boss.ritualWindow-dt);if(boss.ritualProgress>0&&!boss.ritualDone){const shrine=levels[state.level].shrines[boss.activeShrine],near=Math.hypot(nita.x+nita.w/2-shrine[0],nita.y+nita.h-shrine[1])<=78;if(near&&nita.invisible>0){boss.ritualProgress+=dt;if(boss.ritualProgress>=2){boss.ritualDone=true;boss.ritualProgress=0;damageBossSlot("ritual");showMessage("Ritüel başarılı: Mario 1 can kaybetti.",2);}}else{boss.ritualProgress=0;showMessage("Ritüel bozuldu.",1);}}
+    if(boss.ritualWindow===0){boss.ritualWait=20;boss.activeShrine=-1;boss.ritualProgress=0;}
+  }else{boss.ritualWait-=dt;if(boss.ritualWait<=0){boss.ritualWindow=8;boss.ritualDone=false;boss.activeShrine=(boss.activeShrine+1+Math.floor(Math.random()*2))%3;showMessage("RİTÜEL PENCERESİ AÇILDI — parlayan anıta git!",3);tone(760,.2);}}
+  boss.attackTimer-=dt;if(boss.attackTimer<=0){boss.attackTimer=1.75+Math.random()*.55;const target=Math.random()<.5?atlas:nita,dx=target.x+target.w/2-(boss.x+20),dy=target.y+target.h/2-(boss.y+75),len=Math.hypot(dx,dy)||1;state.projectiles.push({x:boss.x+18,y:boss.y+70,w:18,h:18,vx:dx/len*360,vy:dy/len*360,life:4,color:"#ff3e2f",bossShot:true});tone(125,.08);}
+  if(intersects(atlas,boss))damagePlayer(atlas);if(intersects(nita,boss))damagePlayer(nita);
+  for(const shot of state.projectiles)if(shot.bossShot){shot.x+=shot.vx*dt;shot.y+=shot.vy*dt;shot.life-=dt;const victim=[atlas,nita].find(p=>intersects(shot,p));if(victim){shot.life=0;damagePlayer(victim);}}
+  for(const orb of state.healthOrbs){orb.y=Math.min(620,orb.y+180*dt);for(const player of [atlas,nita])if(player.hp<player.maxHp&&intersects(player,orb)){player.hp++;orb.used=true;burst(orb.x+11,orb.y+11,"#52ff86",14,0);tone(840,.12);break;}}
+  state.healthOrbs=state.healthOrbs.filter(o=>!o.used);
+}
+
 function updateEnemies(dt) {
   for (const enemy of state.enemies) {
     if (enemy.dead) continue;
@@ -279,8 +316,10 @@ function updateEnemies(dt) {
   }
   const damage = GEAR[state.gear.atlas].damage;
   for (const shot of state.projectiles) {
+    if(shot.bossShot)continue;
     const previousX=shot.x,previousY=shot.y;shot.x += shot.vx*dt;shot.y += (shot.vy||0)*dt;shot.life-=dt;
     if(!beamLineClear(previousX,previousY,shot.x,shot.y)){shot.life=0;burst(shot.x,shot.y,shot.color,6,0);continue;}
+    if(state.boss&&!state.boss.dead&&intersects(shot,state.boss)){state.boss.atlasHits++;state.boss.flash=.12;shot.life=0;burst(shot.x,shot.y,shot.color,10,shot.vx*.04);if(state.boss.atlasHits%5===0)damageBossSlot("atlas");continue;}
     const enemy=state.enemies.find(e=>!e.dead&&intersects(shot,e));
     if(enemy){enemy.hp=Math.max(0,enemy.hp-damage);enemy.flash=.13;shot.life=0;burst(shot.x,shot.y,shot.color,10,shot.vx*.08);tone(enemy.hp<=0?140:210,.1);if(enemy.hp<=0){enemy.dead=true;burst(enemy.x+enemy.w/2,enemy.y+enemy.h/2,shot.color,24,0);}}
   }
@@ -307,9 +346,9 @@ function update(dt) {
   state.messageTimer-=dt;if(state.messageTimer<=0)message.classList.remove("show");
   updatePlayer(atlas,"a","d","w","s",dt);
   updatePlayer(nita,"arrowleft","arrowright","arrowup","arrowdown",dt);
-  updateEnemies(dt);updateCameras(dt);
+  updateEnemies(dt);updateCameras(dt);updateBoss(dt);
   state.particles.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=150*dt;p.life-=dt;});state.particles=state.particles.filter(p=>p.life>0);
-  if(atlas.atExit&&nita.atExit)completeLevel();
+  if(!state.boss&&atlas.atExit&&nita.atExit)completeLevel();
   state.keysPressed={};
 }
 
@@ -369,6 +408,12 @@ function finishOrContinue(){
 function drawRounded(x,y,w,h,r,color){ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill();}
 
 function drawBackground(level){
+  if(level.boss){
+    const g=ctx.createLinearGradient(0,0,0,WORLD.height);g.addColorStop(0,"#030407");g.addColorStop(.72,"#0c1016");g.addColorStop(1,"#160b0b");ctx.fillStyle=g;ctx.fillRect(0,0,WORLD.width,WORLD.height);
+    const time=performance.now()*.001;ctx.strokeStyle="rgba(145,175,210,.24)";ctx.lineWidth=1.2;for(let i=0;i<95;i++){const x=(i*79+time*290)%1340-30,y=(i*137+time*520)%760-20;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-7,y+26);ctx.stroke();}
+    for(let i=0;i<7;i++){const x=70+i*195,flame=18+Math.sin(time*5+i)*9;const fire=ctx.createRadialGradient(x,635,2,x,635,48);fire.addColorStop(0,"rgba(255,230,90,.85)");fire.addColorStop(.3,"rgba(255,72,18,.5)");fire.addColorStop(1,"rgba(255,20,0,0)");ctx.fillStyle=fire;ctx.fillRect(x-55,580-flame,110,80+flame);}
+    return;
+  }
   const backdrop=backgrounds[state.level];
   if(backdrop?.complete&&backdrop.naturalWidth){
     const drift=Math.sin(performance.now()*.00008+state.level)*3;
@@ -390,7 +435,7 @@ function drawBackground(level){
 }
 
 function drawPlatform(p,theme){
-  const palette={meadow:["#69766a","#39443d"],ruins:["#a47d53","#5d4632"],mine:["#584b50","#2c272d"],storm:["#426771","#233f49"],temple:["#735b7b","#3e314c"]}[theme];
+  const palette={meadow:["#69766a","#39443d"],ruins:["#a47d53","#5d4632"],mine:["#584b50","#2c272d"],storm:["#426771","#233f49"],temple:["#735b7b","#3e314c"],boss:["#242830","#090b0f"]}[theme];
   ctx.fillStyle="rgba(0,0,0,.28)";ctx.beginPath();ctx.moveTo(p.x+8,p.y+p.h);ctx.lineTo(p.x+p.w+18,p.y+p.h+14);ctx.lineTo(p.x+p.w+18,p.y+18);ctx.lineTo(p.x+p.w,p.y);ctx.lineTo(p.x+p.w,p.y+p.h);ctx.closePath();ctx.fill();
   const grad=ctx.createLinearGradient(p.x,p.y,p.x,p.y+p.h);grad.addColorStop(0,palette[0]);grad.addColorStop(.3,palette[1]);grad.addColorStop(1,"#25272a");drawRounded(p.x,p.y,p.w,p.h,5,grad);
   ctx.fillStyle="rgba(255,255,255,.16)";ctx.fillRect(p.x+5,p.y+4,p.w-10,4);ctx.strokeStyle="rgba(0,0,0,.18)";ctx.lineWidth=2;for(let x=p.x+22;x<p.x+p.w;x+=42){ctx.beginPath();ctx.moveTo(x,p.y+10);ctx.lineTo(x-8,p.y+p.h);ctx.stroke();}
@@ -399,12 +444,12 @@ function drawPlatform(p,theme){
 function drawPlayer(p){
   const shooting=p.type==="atlas"&&p.actionTimer>0,color=COLORS[p.type],moving=!shooting&&p.onGround&&Math.abs(p.vx)>18,bob=moving?Math.sin(performance.now()*.018)*1.2:0;let sprite=sprites[p.type],frame=0,sheet=false,drawW=p.type==="atlas"?46:45,drawH=69;
   if(moving){sprite=p.type==="atlas"?sprites.atlasWalk:sprites.nitaWalk;frame=Math.floor(performance.now()*.009)%4;sheet=true;drawW=p.type==="atlas"?54:58;drawH=72;}
-  const shotProgress=shooting?Math.min(1,(.38-p.actionTimer)/.14):0,recoil=shooting&&p.beamFired?Math.sin(Math.min(1,(.24-p.actionTimer)/.24)*Math.PI)*3:0;
-  ctx.save();ctx.translate(p.x+p.w/2-recoil*p.facing,p.y+p.h);if(p.facing<0)ctx.scale(-1,1);ctx.rotate((p.onGround?0:p.vx*.00015)-(shooting?recoil*.012:0));ctx.globalAlpha=p.type==="nita"&&p.invisible>0?.27:1;ctx.shadowColor=p.type==="atlas"?GEAR[state.gear.atlas].color:GEAR[state.gear.nita].color;ctx.shadowBlur=p.actionTimer>0?24:9;
+  const rawProgress=shooting?Math.min(1,Math.max(0,(.38-p.actionTimer)/.14)):0,shotProgress=rawProgress*rawProgress*(3-2*rawProgress),recoil=shooting&&p.beamFired?Math.sin(Math.min(1,(.24-p.actionTimer)/.24)*Math.PI)*3:0,renderX=network.role==="guest"&&Number.isFinite(p.renderX)?p.renderX:p.x,renderY=network.role==="guest"&&Number.isFinite(p.renderY)?p.renderY:p.y;
+  ctx.save();ctx.translate(renderX+p.w/2-recoil*p.facing,renderY+p.h);if(p.facing<0)ctx.scale(-1,1);ctx.rotate(shooting?0:(p.onGround?0:p.vx*.00015));ctx.globalAlpha=p.type==="nita"&&p.invisible>0?.27:1;ctx.shadowColor=COLORS[p.type];ctx.shadowBlur=p.actionTimer>0?22:9;
   if(sprite.complete&&sprite.naturalWidth){if(sheet)ctx.drawImage(sprite,frame*256,0,256,512,-drawW/2,-drawH+bob,drawW,drawH);else ctx.drawImage(sprite,-drawW/2,-drawH+bob,drawW,drawH);}else drawRounded(-p.w/2,-p.h,p.w,p.h,10,color);
   if(p.type==="atlas"){
-    const gearColor=GEAR[state.gear.atlas].color,palmX=16+shotProgress*12,palmY=-31-shotProgress*5;
-    if(shooting){ctx.lineCap="round";ctx.strokeStyle="#32352d";ctx.lineWidth=10;ctx.beginPath();ctx.moveTo(7,-47);ctx.lineTo(13+shotProgress*5,-40);ctx.stroke();ctx.strokeStyle="#d58a60";ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(13+shotProgress*5,-40);ctx.lineTo(palmX,palmY);ctx.stroke();}
+    const gearColor=GEAR[state.gear.atlas].color,palmX=16+shotProgress*12,palmY=-31-shotProgress*5,elbowX=12+shotProgress*7,elbowY=-40+shotProgress*2;
+    if(shooting){ctx.lineCap="round";ctx.strokeStyle="#282c31";ctx.lineWidth=9;ctx.beginPath();ctx.moveTo(7,-46);ctx.lineTo(elbowX,elbowY);ctx.lineTo(palmX,palmY);ctx.stroke();ctx.strokeStyle="#d58a60";ctx.lineWidth=5.5;ctx.beginPath();ctx.moveTo(9,-45);ctx.lineTo(elbowX,elbowY);ctx.lineTo(palmX,palmY);ctx.stroke();}
     ctx.shadowColor=gearColor;ctx.shadowBlur=shooting?24:7;ctx.strokeStyle="#c6cad2";ctx.lineWidth=1.6;ctx.beginPath();ctx.ellipse(palmX-1,palmY+1,3.2,2.2,.25,0,Math.PI*2);ctx.stroke();ctx.fillStyle=gearColor;ctx.beginPath();ctx.arc(palmX+1,palmY-1.5,shooting?3.2:2,0,Math.PI*2);ctx.fill();if(shooting){ctx.fillStyle="rgba(255,255,255,.68)";ctx.beginPath();ctx.arc(palmX+1,palmY-1.5,1.3,0,Math.PI*2);ctx.fill();}
     if(shooting&&!p.beamFired){ctx.strokeStyle=gearColor;ctx.lineWidth=1.5;for(let r=9;r<19;r+=5){ctx.globalAlpha=.75-r*.025;ctx.beginPath();ctx.arc(palmX,palmY,r*(.6+shotProgress*.4),-.7,.7);ctx.stroke();}ctx.globalAlpha=1;}
   }
@@ -413,7 +458,7 @@ function drawPlayer(p){
 }
 
 function drawEnemy(enemy){
-  if(enemy.dead)return;const color=GEAR[enemy.tier].color,walkTime=performance.now()*.008+enemy.x*.018,frame=Math.floor(walkTime)%4,step=Math.sin(walkTime*Math.PI*.5);ctx.save();ctx.translate(enemy.x+enemy.w/2,enemy.y+enemy.h);ctx.globalAlpha=.28;ctx.fillStyle="#05070a";ctx.beginPath();ctx.ellipse(0,2,24-Math.abs(step)*2,5,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;if(enemy.vx<0)ctx.scale(-1,1);ctx.rotate(step*.018);ctx.shadowColor=color;ctx.shadowBlur=enemy.flash>0?28:11;ctx.globalAlpha=enemy.flash>0?.62:1;if(sprites.enemyWalk.complete&&sprites.enemyWalk.naturalWidth)ctx.drawImage(sprites.enemyWalk,frame*256,30,256,385,-34,-68,68,68);else if(sprites.enemy.complete&&sprites.enemy.naturalWidth)ctx.drawImage(sprites.enemy,28,42,202,292,-27,-68,54,68);else drawRounded(-23,-50,46,50,12,"#30343b");ctx.restore();
+  if(enemy.dead)return;const ex=network.role==="guest"&&Number.isFinite(enemy.renderX)?enemy.renderX:enemy.x,ey=network.role==="guest"&&Number.isFinite(enemy.renderY)?enemy.renderY:enemy.y,color=GEAR[enemy.tier].color,walkTime=performance.now()*.008+ex*.018,frame=Math.floor(walkTime)%4,step=Math.sin(walkTime*Math.PI*.5);ctx.save();ctx.translate(ex+enemy.w/2,ey+enemy.h);ctx.globalAlpha=.28;ctx.fillStyle="#05070a";ctx.beginPath();ctx.ellipse(0,2,24-Math.abs(step)*2,5,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;if(enemy.vx<0)ctx.scale(-1,1);ctx.rotate(step*.018);ctx.shadowColor=color;ctx.shadowBlur=enemy.flash>0?28:11;ctx.globalAlpha=enemy.flash>0?.62:1;if(sprites.enemyWalk.complete&&sprites.enemyWalk.naturalWidth)ctx.drawImage(sprites.enemyWalk,frame*256,30,256,385,-34,-68,68,68);else if(sprites.enemy.complete&&sprites.enemy.naturalWidth)ctx.drawImage(sprites.enemy,28,42,202,292,-27,-68,54,68);else drawRounded(-23,-50,46,50,12,"#30343b");ctx.restore();
   ctx.fillStyle="rgba(8,10,14,.66)";ctx.fillRect(enemy.x,enemy.y-9,enemy.w,4);ctx.fillStyle=color;ctx.fillRect(enemy.x,enemy.y-9,enemy.w*(enemy.hp/enemy.maxHp),4);
 }
 
@@ -434,15 +479,30 @@ function drawHazard(h){
   ctx.shadowBlur=8;for(let i=0;i<Math.max(1,Math.floor(h.w/38));i++){const bx=h.x+12+(i*41+time*13)%Math.max(14,h.w-24),phase=(time*.42+i*.37)%1,by=h.y+h.h-10-phase*(h.h-20),r=2+phase*3;ctx.globalAlpha=1-phase;ctx.fillStyle=i%2?"#ffd75d":"#ff6a21";ctx.beginPath();ctx.arc(bx,by,r,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;ctx.restore();
 }
 
+function drawKurdistanFlag(x,y,w,h){
+  ctx.save();ctx.fillStyle="#df2838";ctx.fillRect(x,y,w,h/3);ctx.fillStyle="#fff";ctx.fillRect(x,y+h/3,w,h/3);ctx.fillStyle="#169b62";ctx.fillRect(x,y+h*2/3,w,h/3);ctx.translate(x+w/2,y+h/2);ctx.fillStyle="#ffd12a";for(let i=0;i<21;i++){ctx.rotate(Math.PI*2/21);ctx.fillRect(-1,-h*.28,2,h*.18);}ctx.beginPath();ctx.arc(0,0,h*.13,0,Math.PI*2);ctx.fill();ctx.restore();
+}
+
+function drawBoss(){
+  const boss=state.boss;if(!boss)return;const time=performance.now()*.001;
+  for(const [index,shrine] of (levels[state.level].shrines||[]).entries()){const active=boss.ritualWindow>0&&boss.activeShrine===index&&!boss.ritualDone;ctx.save();ctx.translate(shrine[0],shrine[1]);ctx.shadowColor=active?"#5cfff0":"#3f5257";ctx.shadowBlur=active?25:5;ctx.fillStyle=active?"#4fe7d8":"#293136";ctx.fillRect(-18,-55,36,55);ctx.fillStyle=active?"#d9fffb":"#536268";ctx.beginPath();ctx.moveTo(0,-72);ctx.lineTo(16,-53);ctx.lineTo(0,-39);ctx.lineTo(-16,-53);ctx.closePath();ctx.fill();if(active){ctx.strokeStyle="rgba(92,255,240,.55)";ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,-53,29+Math.sin(time*4)*5,0,Math.PI*2);ctx.stroke();}ctx.restore();}
+  if(!boss.dead){ctx.save();ctx.translate(boss.x+boss.w/2,boss.y+boss.h);ctx.shadowColor="#000";ctx.shadowBlur=30;ctx.fillStyle=boss.flash>0?"#493c45":"#050608";ctx.beginPath();ctx.moveTo(-55,0);ctx.quadraticCurveTo(-80,-95,-47,-162);ctx.quadraticCurveTo(0,-205,47,-162);ctx.quadraticCurveTo(82,-88,55,0);ctx.closePath();ctx.fill();ctx.fillStyle="#101319";ctx.beginPath();ctx.arc(0,-138,46,0,Math.PI*2);ctx.fill();ctx.fillStyle="#ef3c32";ctx.shadowColor="#ff2d22";ctx.shadowBlur=18;ctx.beginPath();ctx.arc(-17,-145,6,0,Math.PI*2);ctx.arc(17,-145,6,0,Math.PI*2);ctx.fill();ctx.restore();}
+  ctx.fillStyle="rgba(0,0,0,.72)";ctx.fillRect(410,90,460,66);ctx.fillStyle="#fff";ctx.font='800 19px "Manrope"';ctx.textAlign="center";ctx.fillText("MARIO",620,116);drawKurdistanFlag(665,99,38,22);for(let i=0;i<boss.maxHp;i++){ctx.fillStyle=i<boss.hp?"#e84536":"#272b31";ctx.fillRect(435+i*40,130,32,10);}ctx.textAlign="left";
+  for(const player of [atlas,nita]){const x=player.type==="atlas"?35:190,color=COLORS[player.type];ctx.fillStyle="rgba(0,0,0,.65)";ctx.fillRect(x,92,125,32);ctx.fillStyle="#fff";ctx.font='700 10px "Manrope"';ctx.fillText(player.type.toUpperCase(),x+8,105);for(let i=0;i<player.maxHp;i++){ctx.fillStyle=i<player.hp?color:"#343941";ctx.fillRect(x+8+i*27,111,21,6);}}
+  if(boss.ritualWindow>0){ctx.fillStyle="#61fff0";ctx.font='700 12px "Manrope"';ctx.textAlign="center";ctx.fillText(`RİTÜEL ${boss.ritualWindow.toFixed(1)} sn${boss.ritualProgress>0?` · ${Math.min(100,Math.round(boss.ritualProgress/2*100))}%`:""}`,640,178);ctx.textAlign="left";}
+  for(const orb of state.healthOrbs){const y=orb.y+Math.sin(time*5+orb.bob)*4;ctx.shadowColor="#4dff82";ctx.shadowBlur=18;ctx.fillStyle="#50f080";ctx.beginPath();ctx.arc(orb.x+11,y+11,10,0,Math.PI*2);ctx.fill();ctx.fillStyle="#eaffef";ctx.fillRect(orb.x+8,y+4,6,14);ctx.fillRect(orb.x+4,y+8,14,6);ctx.shadowBlur=0;}
+}
+
 function draw(){
   const rect=canvas.getBoundingClientRect(),scale=Math.min(rect.width/WORLD.width,rect.height/WORLD.height),ox=(rect.width-WORLD.width*scale)/2,oy=(rect.height-WORLD.height*scale)/2,level=levels[state.level]||levels[0];ctx.fillStyle=COLORS.dark;ctx.fillRect(0,0,rect.width,rect.height);ctx.save();ctx.translate(ox,oy);ctx.scale(scale,scale);drawBackground(level);
-  for(const p of state.platforms)drawPlatform(p,level.theme);for(const h of state.hazards)drawHazard(h);for(const e of state.exits)drawExit(e);for(const c of state.cameras)drawCamera(c);for(const coin of state.coins)drawCoin(coin);for(const enemy of state.enemies)drawEnemy(enemy);
-  for(const shot of state.projectiles){const speed=Math.hypot(shot.vx,shot.vy||0)||1,ux=shot.vx/speed,uy=(shot.vy||0)/speed,cx=shot.x+shot.w/2,cy=shot.y+shot.h/2,tailX=cx-ux*76,tailY=cy-uy*76,tipX=cx+ux*24,tipY=cy+uy*24,beam=ctx.createLinearGradient(tailX,tailY,tipX,tipY);beam.addColorStop(0,"rgba(255,255,255,0)");beam.addColorStop(.45,shot.color);beam.addColorStop(1,"#ffffff");ctx.strokeStyle=beam;ctx.lineCap="round";ctx.lineWidth=8;ctx.shadowColor=shot.color;ctx.shadowBlur=22;ctx.beginPath();ctx.moveTo(tailX,tailY);ctx.lineTo(tipX,tipY);ctx.stroke();ctx.strokeStyle="#fff";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx-ux*30,cy-uy*30);ctx.lineTo(tipX,tipY);ctx.stroke();ctx.shadowBlur=0;}
+  for(const p of state.platforms)drawPlatform(p,level.theme);for(const h of state.hazards)drawHazard(h);for(const e of state.exits)drawExit(e);for(const c of state.cameras)drawCamera(c);for(const coin of state.coins)drawCoin(coin);for(const enemy of state.enemies)drawEnemy(enemy);if(state.boss)drawBoss();
+  for(const shot of state.projectiles){if(shot.bossShot){ctx.save();ctx.shadowColor="#ff2418";ctx.shadowBlur=18;ctx.fillStyle="#ff493c";ctx.beginPath();ctx.arc(shot.x+9,shot.y+9,9,0,Math.PI*2);ctx.fill();ctx.fillStyle="#ffd2a1";ctx.beginPath();ctx.arc(shot.x+7,shot.y+6,3,0,Math.PI*2);ctx.fill();ctx.restore();continue;}const speed=Math.hypot(shot.vx,shot.vy||0)||1,ux=shot.vx/speed,uy=(shot.vy||0)/speed,cx=shot.x+shot.w/2,cy=shot.y+shot.h/2,tailX=cx-ux*76,tailY=cy-uy*76,tipX=cx+ux*24,tipY=cy+uy*24,beam=ctx.createLinearGradient(tailX,tailY,tipX,tipY);beam.addColorStop(0,"rgba(255,255,255,0)");beam.addColorStop(.45,shot.color);beam.addColorStop(1,"#ffffff");ctx.strokeStyle=beam;ctx.lineCap="round";ctx.lineWidth=8;ctx.shadowColor=shot.color;ctx.shadowBlur=22;ctx.beginPath();ctx.moveTo(tailX,tailY);ctx.lineTo(tipX,tipY);ctx.stroke();ctx.strokeStyle="#fff";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx-ux*30,cy-uy*30);ctx.lineTo(tipX,tipY);ctx.stroke();ctx.shadowBlur=0;}
   drawPlayer(atlas);drawPlayer(nita);for(const p of state.particles){ctx.globalAlpha=Math.max(0,p.life*2);ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,p.size,p.size);}ctx.globalAlpha=1;ctx.restore();
 }
 
 function resize(){const dpr=Math.min(devicePixelRatio||1,2),r=canvas.getBoundingClientRect();canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);draw();}
-function loop(time){const dt=Math.min((time-state.last)/1000,.032);state.last=time;if(state.running&&!state.paused&&network.role!=="guest")update(dt);if(network.role==="host"&&state.running&&time-network.lastSync>50){sendSnapshot();network.lastSync=time;}draw();requestAnimationFrame(loop);}
+function smoothGuest(dt){const factor=1-Math.exp(-dt*18);for(const body of [atlas,nita,...state.enemies]){body.renderX=Number.isFinite(body.renderX)?body.renderX+(body.x-body.renderX)*factor:body.x;body.renderY=Number.isFinite(body.renderY)?body.renderY+(body.y-body.renderY)*factor:body.y;}}
+function loop(time){const dt=Math.min((time-state.last)/1000,.032);state.last=time;if(state.running&&!state.paused&&network.role!=="guest")update(dt);if(network.role==="guest")smoothGuest(dt);if(network.role==="host"&&state.running&&time-network.lastSync>30){sendSnapshot();network.lastSync=time;}draw();requestAnimationFrame(loop);}
 function tone(freq,duration){if(!state.audio)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;state.ac||=new AC();const o=state.ac.createOscillator(),g=state.ac.createGain();o.frequency.value=freq;o.type="triangle";g.gain.setValueAtTime(.04,state.ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,state.ac.currentTime+duration);o.connect(g);g.connect(state.ac.destination);o.start();o.stop(state.ac.currentTime+duration);}
 
 function setControl(key,down){if(network.role==="guest"){sendPacket({type:"key",key,down});return;}if(down&&!state.keys[key])state.keysPressed[key]=true;state.keys[key]=down;}
@@ -460,13 +520,13 @@ document.querySelectorAll(".joystick").forEach(stick=>{const knob=stick.querySel
 
 function roomCode(){const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";return Array.from({length:6},()=>chars[Math.floor(Math.random()*chars.length)]).join("");}
 function sendPacket(packet){if(network.connection?.open)network.connection.send(packet);}
-function sendSnapshot(){sendPacket({type:"state",level:state.level,atlas:{...atlas},nita:{...nita},enemies:state.enemies.map(e=>({...e})),coins:state.coins.map(c=>c.collected),projectiles:state.projectiles.map(s=>({...s})),cameras:state.cameras.map(c=>({charge:c.charge,pulse:c.pulse})),gold:{...state.gold},gear:{...state.gear}});}
+function sendSnapshot(){sendPacket({type:"state",level:state.level,atlas:{...atlas,renderX:undefined,renderY:undefined},nita:{...nita,renderX:undefined,renderY:undefined},enemies:state.enemies.map(e=>({...e,renderX:undefined,renderY:undefined})),coins:state.coins.map(c=>c.collected),projectiles:state.projectiles.map(s=>({...s})),cameras:state.cameras.map(c=>({charge:c.charge,pulse:c.pulse})),gold:{...state.gold},gear:{...state.gear},boss:state.boss?{...state.boss}:null,healthOrbs:state.healthOrbs.map(o=>({...o}))});}
 function beginMultiplayer(role){network.role=role;document.body.classList.remove("multiplayer-host","multiplayer-guest");document.body.classList.add(`multiplayer-${role}`);connectionBadge.textContent=role==="host"?"ATLAS · BAĞLI":"NITA · BAĞLI";connectionBadge.style.color=role==="host"?COLORS.atlas:COLORS.nita;resetCampaign();state.running=role==="host";state.paused=false;state.last=performance.now();overlay.classList.add("hidden");if(role==="host")sendPacket({type:"start",level:0,gold:state.gold,gear:state.gear});}
 function receivePacket(data){
   if(data.type==="key"&&network.role==="host"){if(data.down&&!state.keys[data.key])state.keysPressed[data.key]=true;state.keys[data.key]=data.down;}
   if(data.type==="buy"&&network.role==="host"&&data.owner==="nita")buyUpgrade("nita");
   if(data.type==="start"&&network.role==="guest"){state.gold={...data.gold};state.gear={...data.gear};loadLevel(data.level);state.running=true;state.paused=false;market.classList.remove("active");overlay.classList.add("hidden");}
-  if(data.type==="state"&&network.role==="guest"){if(state.level!==data.level)loadLevel(data.level);Object.assign(atlas,data.atlas);Object.assign(nita,data.nita);state.enemies=data.enemies;state.projectiles=data.projectiles;data.coins.forEach((collected,i)=>{if(state.coins[i])state.coins[i].collected=collected;});data.cameras.forEach((c,i)=>{if(state.cameras[i])Object.assign(state.cameras[i],c);});state.gold={...data.gold};state.gear={...data.gear};updateHud();if(market.classList.contains("active"))refreshMarket();}
+  if(data.type==="state"&&network.role==="guest"){if(state.level!==data.level)loadLevel(data.level);const oldAtlas=[atlas.renderX??atlas.x,atlas.renderY??atlas.y],oldNita=[nita.renderX??nita.x,nita.renderY??nita.y],oldEnemies=state.enemies.map(e=>[e.renderX??e.x,e.renderY??e.y]);Object.assign(atlas,data.atlas);Object.assign(nita,data.nita);atlas.renderX=oldAtlas[0];atlas.renderY=oldAtlas[1];nita.renderX=oldNita[0];nita.renderY=oldNita[1];state.enemies=data.enemies.map((e,i)=>({...e,renderX:oldEnemies[i]?.[0]??e.x,renderY:oldEnemies[i]?.[1]??e.y}));state.projectiles=data.projectiles;data.coins.forEach((collected,i)=>{if(state.coins[i])state.coins[i].collected=collected;});data.cameras.forEach((c,i)=>{if(state.cameras[i])Object.assign(state.cameras[i],c);});state.gold={...data.gold};state.gear={...data.gear};state.boss=data.boss?{...data.boss}:null;state.healthOrbs=(data.healthOrbs||[]).map(o=>({...o}));updateHud();if(market.classList.contains("active"))refreshMarket();}
   if(data.type==="complete"&&network.role==="guest"){state.running=false;state.gold={...data.gold};state.gear={...data.gear};state.collectedThisLevel={...data.collected};updateHud();playLevelTransition(levels[data.level]?.name||"Bölüm",data.final,showMarket);}
 }
 function bindConnection(connection,role){network.connection=connection;connection.on("data",receivePacket);connection.on("open",()=>beginMultiplayer(role));connection.on("close",()=>{state.running=false;connectionBadge.textContent="BAĞLANTI KOPTU";showMessage("Diğer oyuncuyla bağlantı kesildi.",4);});}
