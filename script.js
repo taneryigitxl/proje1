@@ -99,7 +99,7 @@ const levels = [
     name: "MARIO ??", theme: "boss", boss: true, sky: ["#06070a", "#11141a"], starts: [[110,565],[175,565]],
     platforms: [[0,625,1280,25]], hazards: [[0,650,1280,70]], enemies: [], cameras: [], exits: [], coins: [],
     shrines: [[285,625],[625,625],[940,625]],
-    hint: "BOSS: Atlas ışınla savaşsın; Nita parlayan anıtta ↓ ile ritüeli tamamlasın. Ritüel penceresi 20 saniyede bir açılır."
+    hint: "BOSS: Atlas ışınla savaşsın; Nita anıtta ↓ ile 4 sn ritüel yapsın, sonra SHIFT ile yıldırım alanını patlatsın."
   }
 ];
 
@@ -110,7 +110,7 @@ const state = {
 const network = { role: "solo", peer: null, connection: null, lastSync: 0 };
 
 function makePlayer(type, x, y) {
-  return { type, x, y, w: 34, h: 50, vx: 0, vy: 0, speed: type === "atlas" ? 260 : 270, jump: type === "atlas" ? 515 : 525, onGround: false, facing: 1, atExit: false, coyote: 0, jumpBuffer: 0, shotCooldown: 0, beamCharge: 0, beamFired: true, beamTarget: -1, invisible: 0, cloakCooldown: 0, actionTimer: 0, hp: 4, maxHp: 4, invulnerable: 0, dead: false, reviveTimer: 0 };
+  return { type, x, y, w: 34, h: 50, vx: 0, vy: 0, speed: type === "atlas" ? 260 : 270, jump: type === "atlas" ? 515 : 525, onGround: false, facing: 1, atExit: false, coyote: 0, jumpBuffer: 0, shotCooldown: 0, beamCharge: 0, beamFired: true, beamTarget: -1, invisible: 0, cloakCooldown: 0, actionTimer: 0, castTimer: 0, hp: 4, maxHp: 4, invulnerable: 0, dead: false, reviveTimer: 0 };
 }
 let atlas = makePlayer("atlas", 0, 0);
 let nita = makePlayer("nita", 0, 0);
@@ -141,7 +141,7 @@ function loadLevel(index) {
   state.particles = [];
   state.healthOrbs = [];
   state.reviveCups = [];
-  state.boss = data.boss ? {x:1035,y:470,w:105,h:155,vx:-68,vy:0,minX:610,maxX:1190,groundY:470,hp:10,maxHp:10,attackTimer:1.8,minionTimer:15,jumpTimer:10,slamPulse:0,hitCount:0,flash:0,ritualWait:4,ritualWindow:0,activeShrine:-1,ritualProgress:0,ritualDone:false,dead:false} : null;
+  state.boss = data.boss ? {x:1035,y:470,w:105,h:155,vx:-68,vy:0,minX:610,maxX:1190,groundY:470,hp:10,maxHp:10,attackTimer:1.8,minionTimer:15,jumpTimer:10,slamPulse:0,hitCount:0,flash:0,ritualWait:10,ritualWindow:0,activeShrine:-1,ritualProgress:0,ritualDone:false,ritualCharge:0,lightningTimer:0,lightningX:0,dead:false} : null;
   state.collectedThisLevel = { atlas: 0, nita: 0 };
   atlas = makePlayer("atlas", data.starts[0][0], data.starts[0][1]);
   nita = makePlayer("nita", data.starts[1][0], data.starts[1][1]);
@@ -209,6 +209,7 @@ function updatePlayer(p,left,right,jump,action,dt) {
   p.invisible = Math.max(0,p.invisible-dt);
   p.invulnerable = Math.max(0,p.invulnerable-dt);
   p.actionTimer = Math.max(0,p.actionTimer-dt);
+  p.castTimer = Math.max(0,p.castTimer-dt);
   if (p.type === "atlas" && p.beamCharge > 0) {
     p.beamCharge = Math.max(0,p.beamCharge-dt);
     if (p.beamCharge === 0 && !p.beamFired) releaseAtlasBeam();
@@ -224,7 +225,7 @@ function updatePlayer(p,left,right,jump,action,dt) {
 
 function fireAtlas() {
   if (atlas.shotCooldown > 0) return;
-  const target=state.boss&&!state.boss.dead?state.boss:findNearestVisibleEnemy();
+  const target=findNearestVisibleEnemy()||(state.boss&&!state.boss.dead?state.boss:null);
   atlas.beamTarget=target===state.boss?-2:target?state.enemies.indexOf(target):-1;
   if(target)atlas.facing=target.x+target.w/2>=atlas.x+atlas.w/2?1:-1;
   atlas.shotCooldown = .46;
@@ -259,7 +260,7 @@ function beamLineClear(x1,y1,x2,y2) {
 
 function findNearestVisibleEnemy() {
   const palmX=atlas.x+atlas.w/2,palmY=atlas.y+18;
-  return state.enemies.filter(enemy=>!enemy.dead).map(enemy=>({enemy,distance:Math.hypot(enemy.x+enemy.w/2-palmX,enemy.y+enemy.h*.45-palmY)})).filter(({enemy,distance})=>distance<=540&&beamLineClear(palmX,palmY,enemy.x+enemy.w/2,enemy.y+enemy.h*.45)).sort((a,b)=>a.distance-b.distance)[0]?.enemy||null;
+  return state.enemies.filter(enemy=>!enemy.dead).map(enemy=>({enemy,distance:Math.hypot(enemy.x+enemy.w/2-palmX,enemy.y+enemy.h*.45-palmY)})).filter(({enemy,distance})=>distance<=540&&beamLineClear(palmX,palmY,enemy.x+enemy.w/2,enemy.y+enemy.h*.45)).sort((a,b)=>(a.enemy.hp/a.enemy.maxHp-b.enemy.hp/b.enemy.maxHp)*220+(a.distance-b.distance))[0]?.enemy||null;
 }
 
 function activateCloak() {
@@ -288,7 +289,12 @@ function damagePlayer(player,amount=1){
 function tryStartRitual(){
   const boss=state.boss;if(!boss||boss.ritualWindow<=0||boss.ritualDone)return false;
   const shrine=levels[state.level].shrines[boss.activeShrine];if(!shrine||Math.hypot(nita.x+nita.w/2-shrine[0],nita.y+nita.h-shrine[1])>72){showMessage("Ritüel için parlayan anıta yaklaş.",1.2);return false;}
-  boss.ritualProgress=.01;nita.invisible=Math.max(nita.invisible,2.6);nita.cloakCooldown=Math.max(nita.cloakCooldown,3.5);nita.actionTimer=.35;showMessage("Ritüel başladı — anıtın yanında kal!",1.8);tone(680,.14);return true;
+  boss.ritualProgress=.01;nita.invisible=Math.max(nita.invisible,4.8);nita.cloakCooldown=Math.max(nita.cloakCooldown,5.5);nita.actionTimer=.35;showMessage("4 saniyelik ritüel başladı — anıtın yanında kal!",2);tone(680,.14);return true;
+}
+
+function castRitualLightning(){
+  const boss=state.boss;if(!boss||boss.ritualCharge<=0||nita.dead)return;boss.ritualCharge--;boss.lightningTimer=.9;boss.lightningX=nita.x+nita.w/2;nita.castTimer=.85;nita.actionTimer=.85;nita.vx=0;
+  const radius=260;for(const enemy of state.enemies)if(!enemy.dead&&Math.abs(enemy.x+enemy.w/2-boss.lightningX)<=radius){enemy.hp=0;enemy.dead=true;burst(enemy.x+enemy.w/2,enemy.y+enemy.h/2,"#8ffcff",22,0);}if(!boss.dead&&Math.abs(boss.x+boss.w/2-boss.lightningX)<=radius)damageBossSlot("lightning");burst(boss.lightningX,600,"#b8ffff",42,0);showMessage("ŞAMAN KÜKREMESİ — yıldırım alanı patladı!",2);tone(1040,.25);
 }
 
 function damageBossSlot(source){
@@ -310,9 +316,10 @@ function updateBoss(dt){
   boss.x+=boss.vx*dt;if(boss.x<boss.minX){boss.x=boss.minX;boss.vx=Math.abs(boss.vx);}if(boss.x+boss.w>boss.maxX){boss.x=boss.maxX-boss.w;boss.vx=-Math.abs(boss.vx);}
   boss.jumpTimer-=dt;boss.slamPulse=Math.max(0,boss.slamPulse-dt);if(boss.jumpTimer<=0&&boss.y>=boss.groundY){boss.jumpTimer=10;boss.vy=-610;tone(85,.16);}if(boss.y<boss.groundY||boss.vy<0){const wasAirborne=boss.y<boss.groundY;boss.vy+=1320*dt;boss.y+=boss.vy*dt;if(wasAirborne&&boss.y>=boss.groundY){boss.y=boss.groundY;boss.vy=0;boss.slamPulse=.75;for(const player of [atlas,nita])if(!player.dead&&player.onGround)damagePlayer(player,2);burst(boss.x+boss.w/2,625,"#ff6a24",38,0);tone(62,.3);}}
   boss.minionTimer-=dt;if(boss.minionTimer<=0){boss.minionTimer=15;spawnSuperSoldiers();}
-  if(boss.ritualWindow>0){boss.ritualWindow=Math.max(0,boss.ritualWindow-dt);if(boss.ritualProgress>0&&!boss.ritualDone){const shrine=levels[state.level].shrines[boss.activeShrine],near=Math.hypot(nita.x+nita.w/2-shrine[0],nita.y+nita.h-shrine[1])<=78;if(near&&nita.invisible>0){boss.ritualProgress+=dt;if(boss.ritualProgress>=2){boss.ritualDone=true;boss.ritualProgress=0;damageBossSlot("ritual");showMessage("Ritüel başarılı: Mario 1 can kaybetti.",2);}}else{boss.ritualProgress=0;showMessage("Ritüel bozuldu.",1);}}
-    if(boss.ritualWindow===0){boss.ritualWait=20;boss.activeShrine=-1;boss.ritualProgress=0;}
-  }else{boss.ritualWait-=dt;if(boss.ritualWait<=0){boss.ritualWindow=8;boss.ritualDone=false;boss.activeShrine=(boss.activeShrine+1+Math.floor(Math.random()*2))%3;showMessage("RİTÜEL PENCERESİ AÇILDI — parlayan anıta git!",3);tone(760,.2);}}
+  boss.lightningTimer=Math.max(0,boss.lightningTimer-dt);
+  if(boss.ritualWindow>0){boss.ritualWindow=Math.max(0,boss.ritualWindow-dt);if(boss.ritualProgress>0&&!boss.ritualDone){const shrine=levels[state.level].shrines[boss.activeShrine],near=Math.hypot(nita.x+nita.w/2-shrine[0],nita.y+nita.h-shrine[1])<=78;if(near&&nita.invisible>0){boss.ritualProgress+=dt;if(boss.ritualProgress>=4){boss.ritualDone=true;boss.ritualProgress=0;boss.ritualCharge=Math.min(2,boss.ritualCharge+1);showMessage("Ritüel hazır: SHIFT ile yıldırım alanını patlat!",3);tone(920,.22);}}else{boss.ritualProgress=0;showMessage("Ritüel bozuldu.",1);}}
+    if(boss.ritualWindow===0){boss.ritualWait=4;boss.activeShrine=-1;boss.ritualProgress=0;}
+  }else{boss.ritualWait-=dt;if(boss.ritualWait<=0){boss.ritualWindow=6;boss.ritualDone=false;boss.activeShrine=(boss.activeShrine+1+Math.floor(Math.random()*2))%3;showMessage("RİTÜEL PENCERESİ AÇILDI — parlayan anıta git!",3);tone(760,.2);}}
   boss.attackTimer-=dt;if(boss.attackTimer<=0){boss.attackTimer=1.75+Math.random()*.55;const target=Math.random()<.5?atlas:nita,originX=boss.x+boss.w/2,originY=boss.y+72,dx=target.x+target.w/2-originX,dy=target.y+target.h/2-originY,len=Math.hypot(dx,dy)||1;state.projectiles.push({x:originX-9,y:originY-9,w:18,h:18,vx:dx/len*360,vy:dy/len*360,life:4,color:"#ff3e2f",bossShot:true,phase:Math.random()*6.2});burst(originX,originY,"#ff5a20",14,-boss.vx);tone(125,.08);}
   if(!atlas.dead&&intersects(atlas,boss))damagePlayer(atlas);if(!nita.dead&&intersects(nita,boss))damagePlayer(nita);
   for(const shot of state.projectiles)if(shot.bossShot){shot.x+=shot.vx*dt;shot.y+=shot.vy*dt;shot.life-=dt;const victim=[atlas,nita].find(p=>intersects(shot,p));if(victim){shot.life=0;damagePlayer(victim);}}
@@ -327,10 +334,12 @@ function updateBoss(dt){
 function updateEnemies(dt) {
   for (const enemy of state.enemies) {
     if (enemy.dead) continue;
-    enemy.flash=Math.max(0,enemy.flash-dt);enemy.contactCooldown=Math.max(0,(enemy.contactCooldown||0)-dt);enemy.x+=enemy.vx*dt;
+    enemy.flash=Math.max(0,enemy.flash-dt);enemy.contactCooldown=Math.max(0,(enemy.contactCooldown||0)-dt);enemy.attackCooldown=Math.max(0,(enemy.attackCooldown||0)-dt);const previousAttack=enemy.attackTimer||0;enemy.attackTimer=Math.max(0,previousAttack-dt);
+    if(enemy.superSoldier){const targets=[atlas,nita].filter(p=>!p.dead&&(p.type!=="nita"||p.invisible<=0)),target=targets.sort((a,b)=>Math.abs(a.x-enemy.x)-Math.abs(b.x-enemy.x))[0];if(target){const dx=target.x+target.w/2-(enemy.x+enemy.w/2),distance=Math.abs(dx);enemy.facing=Math.sign(dx)||enemy.facing||1;if(distance<=68){enemy.vx=0;if(enemy.attackCooldown<=0){enemy.attackCooldown=1.15;enemy.attackTimer=.48;}if(previousAttack>.2&&enemy.attackTimer<=.2&&distance<=78)damagePlayer(target);}else enemy.vx=enemy.facing*92;}}
+    enemy.x+=enemy.vx*dt;
     if (enemy.x<enemy.minX) {enemy.x=enemy.minX;enemy.vx=Math.abs(enemy.vx);} if(enemy.x+enemy.w>enemy.maxX){enemy.x=enemy.maxX-enemy.w;enemy.vx=-Math.abs(enemy.vx);}
-    if (intersects(atlas,enemy)&&!atlas.dead) {if(state.boss){if(enemy.contactCooldown<=0){damagePlayer(atlas);enemy.contactCooldown=1;enemy.vx*=-1;}}else{resetLevel("Atlas bir gölge yaratığa yakalandı.");return;}}
-    if (nita.invisible<=0&&intersects(nita,enemy)&&!nita.dead) {if(state.boss){if(enemy.contactCooldown<=0){damagePlayer(nita);enemy.contactCooldown=1;enemy.vx*=-1;}}else{resetLevel("Nita görünürken bir gölge yaratığa yakalandı.");return;}}
+    if(!enemy.superSoldier&&intersects(atlas,enemy)&&!atlas.dead) {if(state.boss){if(enemy.contactCooldown<=0){damagePlayer(atlas);enemy.contactCooldown=1;enemy.vx*=-1;}}else{resetLevel("Atlas bir gölge yaratığa yakalandı.");return;}}
+    if(!enemy.superSoldier&&nita.invisible<=0&&intersects(nita,enemy)&&!nita.dead) {if(state.boss){if(enemy.contactCooldown<=0){damagePlayer(nita);enemy.contactCooldown=1;enemy.vx*=-1;}}else{resetLevel("Nita görünürken bir gölge yaratığa yakalandı.");return;}}
   }
   const damage = GEAR[state.gear.atlas].damage;
   for (const shot of state.projectiles) {
@@ -364,6 +373,7 @@ function update(dt) {
   state.messageTimer-=dt;if(state.messageTimer<=0)message.classList.remove("show");
   updatePlayer(atlas,"a","d","w","s",dt);
   updatePlayer(nita,"arrowleft","arrowright","arrowup","arrowdown",dt);
+  if(state.boss&&state.keysPressed.shift)castRitualLightning();
   updateEnemies(dt);updateCameras(dt);updateBoss(dt);
   state.particles.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=150*dt;p.life-=dt;});state.particles=state.particles.filter(p=>p.life>0);
   if(!state.boss&&atlas.atExit&&nita.atExit)completeLevel();
@@ -464,7 +474,7 @@ function drawPlatform(p,theme){
 
 function drawPlayer(p){
   if(p.dead){const dx=network.role==="guest"&&Number.isFinite(p.renderX)?p.renderX:p.x,dy=network.role==="guest"&&Number.isFinite(p.renderY)?p.renderY:p.y;ctx.save();ctx.globalAlpha=.5;ctx.fillStyle=COLORS[p.type];ctx.beginPath();ctx.ellipse(dx+17,dy+48,24,7,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.fillStyle="#fff";ctx.font='800 10px "Manrope"';ctx.textAlign="center";ctx.fillText(`KO · ${Math.ceil(p.reviveTimer)} sn`,dx+17,dy+33);ctx.textAlign="left";ctx.restore();return;}
-  const shooting=p.type==="atlas"&&p.actionTimer>0,color=COLORS[p.type],moving=!shooting&&p.onGround&&Math.abs(p.vx)>18,bob=moving?Math.sin(performance.now()*.018)*1.2:0;let sprite=sprites[p.type],frame=0,sheet=false,drawW=p.type==="atlas"?46:45,drawH=69;
+  const shooting=p.type==="atlas"&&p.actionTimer>0,casting=p.type==="nita"&&p.castTimer>0,color=COLORS[p.type],moving=!shooting&&!casting&&p.onGround&&Math.abs(p.vx)>18,bob=moving?Math.sin(performance.now()*.018)*1.2:0;let sprite=sprites[p.type],frame=0,sheet=false,drawW=p.type==="atlas"?46:45,drawH=69;
   if(moving){sprite=p.type==="atlas"?sprites.atlasWalk:sprites.nitaWalk;frame=Math.floor(performance.now()*.009)%4;sheet=true;drawW=p.type==="atlas"?54:58;drawH=72;}
   const rawProgress=shooting?Math.min(1,Math.max(0,(.38-p.actionTimer)/.14)):0,shotProgress=rawProgress*rawProgress*(3-2*rawProgress),recoil=shooting&&p.beamFired?Math.sin(Math.min(1,(.24-p.actionTimer)/.24)*Math.PI)*3:0,renderX=network.role==="guest"&&Number.isFinite(p.renderX)?p.renderX:p.x,renderY=network.role==="guest"&&Number.isFinite(p.renderY)?p.renderY:p.y;
   ctx.save();ctx.translate(renderX+p.w/2-recoil*p.facing,renderY+p.h);if(p.facing<0)ctx.scale(-1,1);ctx.rotate(shooting?0:(p.onGround?0:p.vx*.00015));ctx.globalAlpha=p.type==="nita"&&p.invisible>0?.27:1;ctx.shadowColor=COLORS[p.type];ctx.shadowBlur=p.actionTimer>0?22:9;
@@ -475,12 +485,14 @@ function drawPlayer(p){
     const ringX=shooting?palmX-2:10,ringY=shooting?palmY+1:-29;ctx.shadowColor=gearColor;ctx.shadowBlur=shooting?12:3;ctx.strokeStyle=gearColor;ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(ringX,ringY,2.2,1.15,.18,0,Math.PI*2);ctx.stroke();if(shooting){ctx.fillStyle=gearColor;ctx.shadowBlur=20;ctx.beginPath();ctx.arc(palmX+1,palmY-1,2.25,0,Math.PI*2);ctx.fill();ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(palmX+1,palmY-1,.8,0,Math.PI*2);ctx.fill();}
     if(shooting&&!p.beamFired){ctx.strokeStyle=gearColor;ctx.lineWidth=1.5;for(let r=9;r<19;r+=5){ctx.globalAlpha=.75-r*.025;ctx.beginPath();ctx.arc(palmX,palmY,r*(.6+shotProgress*.4),-.7,.7);ctx.stroke();}ctx.globalAlpha=1;}
   }
+  if(casting){const lift=1-p.castTimer/.85;ctx.strokeStyle="#d58a60";ctx.lineWidth=6;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(-7,-43);ctx.lineTo(-15-lift*4,-58);ctx.lineTo(-18,-68);ctx.moveTo(7,-43);ctx.lineTo(15+lift*4,-58);ctx.lineTo(18,-68);ctx.stroke();ctx.fillStyle="#aefcff";ctx.shadowColor="#72edff";ctx.shadowBlur=18;ctx.beginPath();ctx.arc(-18,-70,3,0,Math.PI*2);ctx.arc(18,-70,3,0,Math.PI*2);ctx.fill();}
   ctx.restore();
   if(state.boss){ctx.fillStyle="rgba(0,0,0,.72)";ctx.fillRect(renderX-5,renderY-17,44,7);for(let i=0;i<p.maxHp;i++){ctx.fillStyle=i<p.hp?COLORS[p.type]:"#30343a";ctx.fillRect(renderX-2+i*10,renderY-15,8,3);}}
 }
 
 function drawEnemy(enemy){
   if(enemy.dead)return;const ex=network.role==="guest"&&Number.isFinite(enemy.renderX)?enemy.renderX:enemy.x,ey=network.role==="guest"&&Number.isFinite(enemy.renderY)?enemy.renderY:enemy.y,color=GEAR[enemy.tier].color,walkTime=performance.now()*.008+ex*.018,frame=Math.floor(walkTime)%4,step=Math.sin(walkTime*Math.PI*.5);ctx.save();ctx.translate(ex+enemy.w/2,ey+enemy.h);ctx.globalAlpha=.28;ctx.fillStyle="#05070a";ctx.beginPath();ctx.ellipse(0,2,24-Math.abs(step)*2,5,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;if(enemy.vx<0)ctx.scale(-1,1);ctx.rotate(step*.018);ctx.shadowColor=color;ctx.shadowBlur=enemy.flash>0?28:11;ctx.globalAlpha=enemy.flash>0?.62:1;if(sprites.enemyWalk.complete&&sprites.enemyWalk.naturalWidth)ctx.drawImage(sprites.enemyWalk,frame*256,30,256,385,-34,-68,68,68);else if(sprites.enemy.complete&&sprites.enemy.naturalWidth)ctx.drawImage(sprites.enemy,28,42,202,292,-27,-68,54,68);else drawRounded(-23,-50,46,50,12,"#30343b");ctx.restore();
+  if(enemy.superSoldier&&enemy.attackTimer>0){const progress=1-enemy.attackTimer/.48,direction=enemy.facing||1;ctx.save();ctx.translate(ex+enemy.w/2,ey+25);ctx.scale(direction,1);ctx.rotate(-1.1+progress*2);ctx.strokeStyle="#30343a";ctx.lineWidth=9;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(31,2);ctx.stroke();ctx.strokeStyle="#ffd34d";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(18,2);ctx.lineTo(42,2);ctx.stroke();ctx.globalAlpha=Math.sin(progress*Math.PI)*.7;ctx.strokeStyle="#fff0a0";ctx.lineWidth=4;ctx.beginPath();ctx.arc(0,0,48,-.65,.65);ctx.stroke();ctx.restore();}
   if(enemy.superSoldier){ctx.save();ctx.fillStyle="#d6a928";ctx.shadowColor="#ffd34d";ctx.shadowBlur=10;ctx.beginPath();ctx.moveTo(ex+3,ey+12);ctx.lineTo(ex-8,ey-2);ctx.lineTo(ex+11,ey+7);ctx.moveTo(ex+43,ey+12);ctx.lineTo(ex+54,ey-2);ctx.lineTo(ex+35,ey+7);ctx.fill();ctx.restore();ctx.fillStyle="rgba(8,10,14,.78)";ctx.fillRect(ex-2,ey-12,50,7);for(let i=0;i<3;i++){const amount=Math.max(0,Math.min(1,enemy.hp/8-i));ctx.fillStyle="#34302a";ctx.fillRect(ex+i*16,ey-10,14,3);if(amount>0){ctx.fillStyle="#ffd34d";ctx.fillRect(ex+i*16,ey-10,14*amount,3);}}}else{ctx.fillStyle="rgba(8,10,14,.66)";ctx.fillRect(ex,ey-9,enemy.w,4);ctx.fillStyle=color;ctx.fillRect(ex,ey-9,enemy.w*(enemy.hp/enemy.maxHp),4);}
 }
 
@@ -511,7 +523,8 @@ function drawBoss(){
   if(!boss.dead){ctx.save();ctx.translate(bx+boss.w/2,boss.y+boss.h);ctx.scale(boss.vx<0?-.82:.82,.82);const stride=Math.sin(time*5)*5;ctx.shadowColor="#000";ctx.shadowBlur=35;ctx.fillStyle="#030405";ctx.beginPath();ctx.ellipse(0,4,65,13,0,0,Math.PI*2);ctx.fill();ctx.lineCap="round";ctx.strokeStyle="#090b0d";ctx.lineWidth=24;ctx.beginPath();ctx.moveTo(-27,-78);ctx.lineTo(-39+stride,0);ctx.moveTo(27,-78);ctx.lineTo(41-stride,0);ctx.stroke();const body=ctx.createRadialGradient(-18,-115,8,0,-100,85);body.addColorStop(0,boss.flash>0?"#765a64":"#343941");body.addColorStop(.35,"#13171a");body.addColorStop(1,"#020304");ctx.fillStyle=body;ctx.beginPath();ctx.moveTo(-52,-48);ctx.quadraticCurveTo(-72,-118,-43,-158);ctx.quadraticCurveTo(0,-187,44,-155);ctx.quadraticCurveTo(72,-110,51,-48);ctx.quadraticCurveTo(0,-24,-52,-48);ctx.fill();ctx.strokeStyle="#07090b";ctx.lineWidth=20;ctx.beginPath();ctx.moveTo(-42,-132);ctx.lineTo(-72,-88+stride);ctx.lineTo(-66,-39);ctx.moveTo(42,-132);ctx.lineTo(72,-90-stride);ctx.lineTo(67,-40);ctx.stroke();ctx.fillStyle="#090b0d";ctx.beginPath();ctx.arc(0,-159,43,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.moveTo(-35,-180);ctx.lineTo(-61,-207);ctx.lineTo(-23,-191);ctx.moveTo(35,-180);ctx.lineTo(61,-207);ctx.lineTo(23,-191);ctx.fill();ctx.strokeStyle="rgba(140,150,155,.13)";ctx.lineWidth=2;for(let i=0;i<7;i++){ctx.beginPath();ctx.moveTo(-32+i*10,-143);ctx.lineTo(-23+i*7,-70);ctx.stroke();}ctx.fillStyle="#ff342a";ctx.shadowColor="#ff2017";ctx.shadowBlur=22;ctx.beginPath();ctx.ellipse(-15,-163,7,4,-.15,0,Math.PI*2);ctx.ellipse(15,-163,7,4,.15,0,Math.PI*2);ctx.fill();ctx.fillStyle="#b7bcc0";ctx.shadowBlur=0;ctx.beginPath();ctx.moveTo(-18,-143);ctx.lineTo(-9,-132);ctx.lineTo(-4,-145);ctx.moveTo(18,-143);ctx.lineTo(9,-132);ctx.lineTo(4,-145);ctx.fill();ctx.restore();}
   const labelX=bx+boss.w/2,labelY=boss.y-48;ctx.fillStyle="rgba(3,4,6,.82)";ctx.fillRect(labelX-112,labelY,224,40);ctx.fillStyle="#fff";ctx.font='800 13px "Manrope"';ctx.textAlign="center";ctx.fillText("MARIO",labelX-12,labelY+15);drawKurdistanFlag(labelX+28,labelY+4,30,16);for(let i=0;i<boss.maxHp;i++){const amount=Math.max(0,Math.min(1,boss.hp-i));ctx.fillStyle="#24282e";ctx.fillRect(labelX-103+i*21,labelY+25,18,7);if(amount>0){ctx.fillStyle="#e84536";ctx.fillRect(labelX-103+i*21,labelY+25,18*amount,7);}}ctx.textAlign="left";
   if(boss.slamPulse>0){const progress=1-boss.slamPulse/.75,radius=35+progress*330;ctx.save();ctx.globalAlpha=1-progress;ctx.strokeStyle="#ff7a2b";ctx.shadowColor="#ff421c";ctx.shadowBlur=22;ctx.lineWidth=10-progress*7;ctx.beginPath();ctx.ellipse(bx+boss.w/2,624,radius,radius*.12,0,0,Math.PI*2);ctx.stroke();ctx.restore();}
-  if(boss.ritualWindow>0){ctx.fillStyle="#61fff0";ctx.font='700 12px "Manrope"';ctx.textAlign="center";ctx.fillText(`RİTÜEL ${boss.ritualWindow.toFixed(1)} sn${boss.ritualProgress>0?` · ${Math.min(100,Math.round(boss.ritualProgress/2*100))}%`:""}`,640,178);ctx.textAlign="left";}
+  if(boss.lightningTimer>0){const fade=boss.lightningTimer/.9,x=boss.lightningX;ctx.save();ctx.globalCompositeOperation="lighter";ctx.globalAlpha=fade;ctx.shadowColor="#8ffcff";ctx.shadowBlur=28;for(let bolt=-2;bolt<=2;bolt++){ctx.strokeStyle=bolt?"rgba(105,225,255,.7)":"#ecffff";ctx.lineWidth=bolt?3:8;ctx.beginPath();ctx.moveTo(x+bolt*42,0);for(let y=0;y<590;y+=55)ctx.lineTo(x+bolt*32+Math.sin(y*.09+bolt*3+time*18)*22,y);ctx.lineTo(x+bolt*28,615);ctx.stroke();}ctx.fillStyle="rgba(88,235,255,.2)";ctx.beginPath();ctx.ellipse(x,620,260*(1-fade*.25),38,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#caffff";ctx.lineWidth=5;ctx.stroke();ctx.restore();}
+  if(boss.ritualWindow>0||boss.ritualCharge>0){ctx.fillStyle="#61fff0";ctx.font='700 12px "Manrope"';ctx.textAlign="center";ctx.fillText(boss.ritualCharge>0?`YILDIRIM HAZIR ×${boss.ritualCharge} · SHIFT`:`RİTÜEL ${boss.ritualWindow.toFixed(1)} sn${boss.ritualProgress>0?` · ${Math.min(100,Math.round(boss.ritualProgress/4*100))}%`:""}`,640,178);ctx.textAlign="left";}
   for(const orb of state.healthOrbs){const y=orb.y+Math.sin(time*5+orb.bob)*4;ctx.shadowColor="#4dff82";ctx.shadowBlur=18;ctx.fillStyle="#50f080";ctx.beginPath();ctx.arc(orb.x+11,y+11,10,0,Math.PI*2);ctx.fill();ctx.fillStyle="#eaffef";ctx.fillRect(orb.x+8,y+4,6,14);ctx.fillRect(orb.x+4,y+8,14,6);ctx.shadowBlur=0;}
   for(const cup of state.reviveCups){const y=cup.y+Math.sin(time*4+cup.bob)*4;ctx.save();ctx.shadowColor="#ffe66c";ctx.shadowBlur=18;ctx.fillStyle="#e5b83c";ctx.fillRect(cup.x+5,y+3,14,16);ctx.beginPath();ctx.arc(cup.x+12,y+4,9,Math.PI,0);ctx.fill();ctx.strokeStyle="#fff1a8";ctx.lineWidth=3;ctx.beginPath();ctx.arc(cup.x+20,y+9,7,-Math.PI/2,Math.PI/2);ctx.stroke();ctx.fillRect(cup.x+10,y+19,4,7);ctx.fillRect(cup.x+5,y+26,14,4);ctx.restore();}
 }
