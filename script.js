@@ -46,9 +46,9 @@ const WORLD = { width: 1280, height: 720 };
 const COLORS = { atlas: "#ff704d", nita: "#54d8e8", cream: "#f5efe3", dark: "#10141d" };
 const GEAR = [
   { name: "Beyaz", color: "#f7f4e8", hits: 4, damage: 3, cloak: 1, cost: 0 },
-  { name: "Mavi", color: "#4ea8ff", hits: 3, damage: 4, cloak: 2, cost: 4 },
-  { name: "Mor", color: "#c36cff", hits: 2, damage: 6, cloak: 3, cost: 8 },
-  { name: "Sarı · Legendary", color: "#ffd34d", hits: 1, damage: 12, cloak: 5, cost: 12 }
+  { name: "Mavi", color: "#4ea8ff", hits: 3, damage: 4, cloak: 2, cost: 3 },
+  { name: "Mor", color: "#c36cff", hits: 2, damage: 6, cloak: 3, cost: 4 },
+  { name: "Sarı · Legendary", color: "#ffd34d", hits: 1, damage: 12, cloak: 5, cost: 5 }
 ];
 const ENEMY_HP = 12;
 const sprites = {
@@ -68,7 +68,7 @@ const levels = [
     platforms: [[0,650,250,70],[310,585,150,30],[520,515,165,30],[750,580,155,30],[965,505,155,30],[1170,650,110,70]],
     hazards: [[250,648,60,72],[460,648,60,72],[685,648,65,72],[905,648,60,72],[1120,648,50,72]],
     enemies: [[350,535,320,430]], cameras: [[715,350,1,230]], exits: [[1024,445,"atlas"],[1206,590,"nita"]],
-    coins: [[185,605,"atlas"],[357,535,"nita"],[570,465,"atlas"],[635,465,"nita"],[802,530,"atlas"],[1000,455,"nita"],[1070,455,"atlas"],[1215,600,"nita"]],
+    coins: [[185,605,"atlas"],[357,535,"nita"],[570,465,"atlas"],[635,465,"nita"],[802,530,"atlas"],[1000,455,"nita"]],
     hint: "Altınları topla. Atlas S ile güç ışını atar; Nita ↓ ile 1 saniye görünmez olur."
   },
   {
@@ -76,7 +76,7 @@ const levels = [
     platforms: [[0,650,205,70],[265,565,170,30],[490,480,155,30],[700,565,160,30],[915,480,155,30],[1130,565,150,155],[360,395,165,26],[650,395,145,26]],
     hazards: [[205,648,60,72],[435,648,55,72],[645,648,55,72],[860,648,55,72],[1070,648,60,72]],
     enemies: [[300,515,280,390],[735,515,720,820]], cameras: [[835,330,-1,235],[1095,330,-1,235]], exits: [[982,420,"atlas"],[1208,505,"nita"]],
-    coins: [[150,605,"atlas"],[295,515,"nita"],[385,515,"atlas"],[400,345,"nita"],[505,430,"atlas"],[590,430,"nita"],[720,515,"atlas"],[800,515,"nita"],[685,345,"atlas"],[750,345,"nita"],[945,430,"atlas"],[1018,430,"nita"],[1160,515,"atlas"],[1225,515,"nita"],[1185,490,"atlas"],[1240,490,"nita"]],
+    coins: [[150,605,"atlas"],[295,515,"nita"],[385,515,"atlas"],[400,345,"nita"],[505,430,"atlas"],[590,430,"nita"],[720,515,"atlas"],[800,515,"nita"]],
     hint: "Mavi pelerin 2 saniye sürer. Kamerayı zamanlayabilir veya üst rotadan dolaşabilirsin."
   },
   {
@@ -84,7 +84,7 @@ const levels = [
     platforms: [[0,650,180,70],[235,575,145,30],[435,490,145,30],[635,405,150,30],[835,520,145,30],[1030,435,250,285],[530,625,100,25],[805,325,135,26],[650,565,100,24]],
     hazards: [[180,648,55,72],[380,648,55,72],[630,648,205,72],[980,648,50,72]],
     enemies: [[260,525,250,350],[665,355,650,745],[1060,385,1050,1170]], cameras: [[610,335,-1,230],[800,260,1,265],[1005,350,-1,240]], exits: [[1120,375,"atlas"],[1210,375,"nita"]],
-    coins: [[130,605,"atlas"],[155,605,"nita"],[260,525,"atlas"],[320,525,"nita"],[455,440,"atlas"],[515,440,"nita"],[655,355,"atlas"],[715,355,"nita"],[550,575,"atlas"],[600,575,"nita"],[850,470,"atlas"],[925,470,"nita"],[830,275,"atlas"],[890,275,"nita"],[1060,385,"atlas"],[1110,385,"nita"],[1160,385,"atlas"],[1210,385,"nita"],[1060,335,"atlas"],[1110,335,"nita"],[1160,335,"atlas"],[1210,335,"nita"],[750,355,"atlas"],[765,355,"nita"]],
+    coins: [[130,605,"atlas"],[155,605,"nita"],[260,525,"atlas"],[320,525,"nita"],[455,440,"atlas"],[515,440,"nita"],[655,355,"atlas"],[715,355,"nita"],[550,575,"atlas"],[600,575,"nita"]],
     hint: "Mor ekipman bu bölümü kolaylaştırır: 3 saniye görünmezlik, düşmanlara 2 atış."
   },
   {
@@ -92,25 +92,25 @@ const levels = [
     platforms: [[0,650,160,70],[215,565,130,30],[400,480,145,30],[600,560,150,30],[805,475,145,30],[1010,555,270,165],[545,395,150,26],[870,390,150,26]],
     hazards: [[160,648,55,72],[345,648,55,72],[545,648,55,72],[750,648,55,72],[950,648,60,72]],
     enemies: [[240,515,225,315],[625,510,615,710],[830,425,820,910]], cameras: [[380,375,-1,210],[780,360,-1,245],[1035,310,-1,280]], exits: [[930,330,"atlas"],[1205,495,"nita"]],
-    coins: [[120,605,"atlas"],[250,515,"nita"],[430,430,"atlas"],[490,430,"nita"],[570,345,"atlas"],[630,345,"nita"],[630,510,"atlas"],[700,510,"nita"],[835,425,"atlas"],[900,425,"nita"],[920,340,"atlas"],[970,340,"nita"],[1060,505,"atlas"],[1120,505,"nita"],[1180,505,"atlas"],[1230,505,"nita"]],
+    coins: [[120,605,"atlas"],[250,515,"nita"],[430,430,"atlas"],[490,430,"nita"]],
     hint: "Sarı Legendary ekipman tek atış ve 5 saniye görünmezlik sağlar; alternatif rotalar hâlâ açık."
   },
   {
-    name: "MARIO ??", theme: "boss", boss: true, sky: ["#06070a", "#11141a"], starts: [[110,590],[175,590]],
-    platforms: [[0,650,1280,70]], hazards: [], enemies: [], cameras: [], exits: [], coins: [],
-    shrines: [[285,650],[625,650],[940,650]],
+    name: "MARIO ??", theme: "boss", boss: true, sky: ["#06070a", "#11141a"], starts: [[110,565],[175,565]],
+    platforms: [[0,625,1280,25]], hazards: [[0,650,1280,70]], enemies: [], cameras: [], exits: [], coins: [],
+    shrines: [[285,625],[625,625],[940,625]],
     hint: "BOSS: Atlas ışınla savaşsın; Nita parlayan anıtta ↓ ile ritüeli tamamlasın. Ritüel penceresi 20 saniyede bir açılır."
   }
 ];
 
 const state = {
-  running: false, paused: false, level: 0, keys: {}, keysPressed: {}, platforms: [], hazards: [], enemies: [], cameras: [], coins: [], exits: [], projectiles: [], particles: [], healthOrbs: [], boss: null,
+  running: false, paused: false, level: 0, keys: {}, keysPressed: {}, platforms: [], hazards: [], enemies: [], cameras: [], coins: [], exits: [], projectiles: [], particles: [], healthOrbs: [], reviveCups: [], boss: null,
   gold: { atlas: 0, nita: 0 }, gear: { atlas: 0, nita: 0 }, collectedThisLevel: { atlas: 0, nita: 0 }, last: 0, audio: true, messageTimer: 0, transitionTimer: null, marketInGame: false, marketWasPaused: false
 };
 const network = { role: "solo", peer: null, connection: null, lastSync: 0 };
 
 function makePlayer(type, x, y) {
-  return { type, x, y, w: 34, h: 50, vx: 0, vy: 0, speed: type === "atlas" ? 260 : 270, jump: type === "atlas" ? 515 : 525, onGround: false, facing: 1, atExit: false, coyote: 0, jumpBuffer: 0, shotCooldown: 0, beamCharge: 0, beamFired: true, beamTarget: -1, invisible: 0, cloakCooldown: 0, actionTimer: 0, hp: 4, maxHp: 4, invulnerable: 0 };
+  return { type, x, y, w: 34, h: 50, vx: 0, vy: 0, speed: type === "atlas" ? 260 : 270, jump: type === "atlas" ? 515 : 525, onGround: false, facing: 1, atExit: false, coyote: 0, jumpBuffer: 0, shotCooldown: 0, beamCharge: 0, beamFired: true, beamTarget: -1, invisible: 0, cloakCooldown: 0, actionTimer: 0, hp: 4, maxHp: 4, invulnerable: 0, dead: false, reviveTimer: 0 };
 }
 let atlas = makePlayer("atlas", 0, 0);
 let nita = makePlayer("nita", 0, 0);
@@ -140,7 +140,8 @@ function loadLevel(index) {
   state.projectiles = [];
   state.particles = [];
   state.healthOrbs = [];
-  state.boss = data.boss ? {x:1035,y:465,w:125,h:185,vx:-62,minX:760,maxX:1190,hp:10,maxHp:10,attackTimer:1.8,hitCount:0,flash:0,ritualWait:4,ritualWindow:0,activeShrine:-1,ritualProgress:0,ritualDone:false,dead:false} : null;
+  state.reviveCups = [];
+  state.boss = data.boss ? {x:1035,y:470,w:105,h:155,vx:-68,vy:0,minX:610,maxX:1190,groundY:470,hp:10,maxHp:10,attackTimer:1.8,minionTimer:15,jumpTimer:10,slamPulse:0,hitCount:0,flash:0,ritualWait:4,ritualWindow:0,activeShrine:-1,ritualProgress:0,ritualDone:false,dead:false} : null;
   state.collectedThisLevel = { atlas: 0, nita: 0 };
   atlas = makePlayer("atlas", data.starts[0][0], data.starts[0][1]);
   nita = makePlayer("nita", data.starts[1][0], data.starts[1][1]);
@@ -192,6 +193,7 @@ function moveBody(body, dt) {
 }
 
 function updatePlayer(p,left,right,jump,action,dt) {
+  if(p.dead){p.vx=0;p.vy=0;p.reviveTimer=Math.max(0,p.reviveTimer-dt);return;}
   const direction = (state.keys[left]?-1:0)+(state.keys[right]?1:0);
   const accel = p.onGround ? 1900 : 1050;
   p.vx = approach(p.vx,direction*p.speed,accel*dt);
@@ -276,11 +278,11 @@ function collectCoins(p) {
   }
 }
 
-function damagePlayer(player){
+function damagePlayer(player,amount=1){
   if(player.invulnerable>0||!state.boss)return;
-  player.hp=Math.max(0,player.hp-1);player.invulnerable=1.15;state.boss.hitCount++;burst(player.x+player.w/2,player.y+player.h/2,"#ff4b4b",16,-player.facing*80);tone(105,.18);
+  player.hp=Math.max(0,player.hp-amount);player.invulnerable=1.15;state.boss.hitCount++;burst(player.x+player.w/2,player.y+player.h/2,"#ff4b4b",16,-player.facing*80);tone(105,.18);
   if(state.boss.hitCount%2===0)state.healthOrbs.push({x:180+Math.random()*850,y:620,w:22,h:22,bob:Math.random()*6.2});
-  if(player.hp<=0)resetLevel(`${player.type==="atlas"?"Atlas":"Nita"} Mario tarafından yenildi.`);
+  if(player.hp<=0&&!player.dead){player.dead=true;player.reviveTimer=9;showMessage(`${player.type==="atlas"?"Atlas":"Nita"} düştü — 9 saniye sonra revive kupası gelecek.`,3);}
 }
 
 function tryStartRitual(){
@@ -295,31 +297,40 @@ function damageBossSlot(source){
 }
 
 function damageBossFromAtlas(){
-  const boss=state.boss;if(!boss||boss.dead)return;const slotDamage=GEAR[state.gear.atlas].damage/48;
-  if(boss.hp<=1){showMessage("Son can slotunu yalnızca Nita'nın ritüeli kırabilir!",1.4);return;}
-  boss.hp=Math.max(1,boss.hp-slotDamage);boss.flash=.14;burst(boss.x+boss.w/2,boss.y+75,GEAR[state.gear.atlas].color,12,0);tone(175,.08);
+  const boss=state.boss;if(!boss||boss.dead)return;const normalDamage=GEAR[state.gear.atlas].damage/48,slotDamage=boss.hp<=1?GEAR[state.gear.atlas].damage/240:normalDamage;
+  boss.hp=Math.max(0,boss.hp-slotDamage);boss.flash=.14;burst(boss.x+boss.w/2,boss.y+75,GEAR[state.gear.atlas].color,12,0);tone(175,.08);if(boss.hp<=0){boss.dead=true;showMessage("MARIO YENİLDİ!",3);setTimeout(()=>completeLevel(),1200);}
+}
+
+function spawnSuperSoldiers(){
+  const boss=state.boss;if(!boss)return;for(const direction of [-1,1]){const x=Math.max(40,Math.min(1190,boss.x+boss.w/2+direction*75));state.enemies.push({x,y:575,w:46,h:50,minX:20,maxX:1260,vx:direction*105,hp:24,maxHp:24,flash:0,dead:false,tier:3,superSoldier:true,contactCooldown:0});}showMessage("Mario iki süper asker çağırdı!",2);tone(95,.2);
 }
 
 function updateBoss(dt){
   const boss=state.boss;if(!boss||boss.dead)return;boss.flash=Math.max(0,boss.flash-dt);
   boss.x+=boss.vx*dt;if(boss.x<boss.minX){boss.x=boss.minX;boss.vx=Math.abs(boss.vx);}if(boss.x+boss.w>boss.maxX){boss.x=boss.maxX-boss.w;boss.vx=-Math.abs(boss.vx);}
+  boss.jumpTimer-=dt;boss.slamPulse=Math.max(0,boss.slamPulse-dt);if(boss.jumpTimer<=0&&boss.y>=boss.groundY){boss.jumpTimer=10;boss.vy=-610;tone(85,.16);}if(boss.y<boss.groundY||boss.vy<0){const wasAirborne=boss.y<boss.groundY;boss.vy+=1320*dt;boss.y+=boss.vy*dt;if(wasAirborne&&boss.y>=boss.groundY){boss.y=boss.groundY;boss.vy=0;boss.slamPulse=.75;for(const player of [atlas,nita])if(!player.dead&&player.onGround)damagePlayer(player,2);burst(boss.x+boss.w/2,625,"#ff6a24",38,0);tone(62,.3);}}
+  boss.minionTimer-=dt;if(boss.minionTimer<=0){boss.minionTimer=15;spawnSuperSoldiers();}
   if(boss.ritualWindow>0){boss.ritualWindow=Math.max(0,boss.ritualWindow-dt);if(boss.ritualProgress>0&&!boss.ritualDone){const shrine=levels[state.level].shrines[boss.activeShrine],near=Math.hypot(nita.x+nita.w/2-shrine[0],nita.y+nita.h-shrine[1])<=78;if(near&&nita.invisible>0){boss.ritualProgress+=dt;if(boss.ritualProgress>=2){boss.ritualDone=true;boss.ritualProgress=0;damageBossSlot("ritual");showMessage("Ritüel başarılı: Mario 1 can kaybetti.",2);}}else{boss.ritualProgress=0;showMessage("Ritüel bozuldu.",1);}}
     if(boss.ritualWindow===0){boss.ritualWait=20;boss.activeShrine=-1;boss.ritualProgress=0;}
   }else{boss.ritualWait-=dt;if(boss.ritualWait<=0){boss.ritualWindow=8;boss.ritualDone=false;boss.activeShrine=(boss.activeShrine+1+Math.floor(Math.random()*2))%3;showMessage("RİTÜEL PENCERESİ AÇILDI — parlayan anıta git!",3);tone(760,.2);}}
   boss.attackTimer-=dt;if(boss.attackTimer<=0){boss.attackTimer=1.75+Math.random()*.55;const target=Math.random()<.5?atlas:nita,originX=boss.x+boss.w/2,originY=boss.y+72,dx=target.x+target.w/2-originX,dy=target.y+target.h/2-originY,len=Math.hypot(dx,dy)||1;state.projectiles.push({x:originX-9,y:originY-9,w:18,h:18,vx:dx/len*360,vy:dy/len*360,life:4,color:"#ff3e2f",bossShot:true,phase:Math.random()*6.2});burst(originX,originY,"#ff5a20",14,-boss.vx);tone(125,.08);}
-  if(intersects(atlas,boss))damagePlayer(atlas);if(intersects(nita,boss))damagePlayer(nita);
+  if(!atlas.dead&&intersects(atlas,boss))damagePlayer(atlas);if(!nita.dead&&intersects(nita,boss))damagePlayer(nita);
   for(const shot of state.projectiles)if(shot.bossShot){shot.x+=shot.vx*dt;shot.y+=shot.vy*dt;shot.life-=dt;const victim=[atlas,nita].find(p=>intersects(shot,p));if(victim){shot.life=0;damagePlayer(victim);}}
   for(const orb of state.healthOrbs){orb.y=Math.min(620,orb.y+180*dt);for(const player of [atlas,nita])if(player.hp<player.maxHp&&intersects(player,orb)){player.hp++;orb.used=true;burst(orb.x+11,orb.y+11,"#52ff86",14,0);tone(840,.12);break;}}
   state.healthOrbs=state.healthOrbs.filter(o=>!o.used);
+  for(const player of [atlas,nita])if(player.dead&&player.reviveTimer<=0&&!state.reviveCups.some(c=>c.owner===player.type)){state.reviveCups.push({x:260+Math.random()*700,y:595,w:24,h:30,owner:player.type,bob:Math.random()*6});showMessage("REVIVE KUPASI DÜŞTÜ!",2);}
+  for(const cup of state.reviveCups)for(const rescuer of [atlas,nita])if(!rescuer.dead&&intersects(rescuer,cup)){const fallen=cup.owner==="atlas"?atlas:nita;fallen.dead=false;fallen.hp=2;fallen.x=Math.max(20,Math.min(1220,rescuer.x+45));fallen.y=565;fallen.invulnerable=2;cup.used=true;burst(cup.x+12,cup.y+15,"#ffe26c",24,0);showMessage(`${fallen.type==="atlas"?"Atlas":"Nita"} yeniden savaşa döndü!`,2);tone(920,.2);break;}
+  state.reviveCups=state.reviveCups.filter(c=>!c.used);
+  if(atlas.dead&&nita.dead)resetLevel("İki kahraman da düştü — boss savaşı yeniden başladı.");
 }
 
 function updateEnemies(dt) {
   for (const enemy of state.enemies) {
     if (enemy.dead) continue;
-    enemy.flash=Math.max(0,enemy.flash-dt);enemy.x+=enemy.vx*dt;
+    enemy.flash=Math.max(0,enemy.flash-dt);enemy.contactCooldown=Math.max(0,(enemy.contactCooldown||0)-dt);enemy.x+=enemy.vx*dt;
     if (enemy.x<enemy.minX) {enemy.x=enemy.minX;enemy.vx=Math.abs(enemy.vx);} if(enemy.x+enemy.w>enemy.maxX){enemy.x=enemy.maxX-enemy.w;enemy.vx=-Math.abs(enemy.vx);}
-    if (intersects(atlas,enemy)) { resetLevel("Atlas bir gölge yaratığa yakalandı."); return; }
-    if (nita.invisible<=0 && intersects(nita,enemy)) { resetLevel("Nita görünürken bir gölge yaratığa yakalandı."); return; }
+    if (intersects(atlas,enemy)&&!atlas.dead) {if(state.boss){if(enemy.contactCooldown<=0){damagePlayer(atlas);enemy.contactCooldown=1;enemy.vx*=-1;}}else{resetLevel("Atlas bir gölge yaratığa yakalandı.");return;}}
+    if (nita.invisible<=0&&intersects(nita,enemy)&&!nita.dead) {if(state.boss){if(enemy.contactCooldown<=0){damagePlayer(nita);enemy.contactCooldown=1;enemy.vx*=-1;}}else{resetLevel("Nita görünürken bir gölge yaratığa yakalandı.");return;}}
   }
   const damage = GEAR[state.gear.atlas].damage;
   for (const shot of state.projectiles) {
@@ -416,9 +427,12 @@ function drawRounded(x,y,w,h,r,color){ctx.fillStyle=color;ctx.beginPath();ctx.ro
 
 function drawBackground(level){
   if(level.boss){
-    const g=ctx.createLinearGradient(0,0,0,WORLD.height);g.addColorStop(0,"#030407");g.addColorStop(.72,"#0c1016");g.addColorStop(1,"#160b0b");ctx.fillStyle=g;ctx.fillRect(0,0,WORLD.width,WORLD.height);
-    const time=performance.now()*.001;ctx.strokeStyle="rgba(145,175,210,.24)";ctx.lineWidth=1.2;for(let i=0;i<95;i++){const x=(i*79+time*290)%1340-30,y=(i*137+time*520)%760-20;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-7,y+26);ctx.stroke();}
-    for(let i=0;i<7;i++){const x=70+i*195,flame=18+Math.sin(time*5+i)*9;const fire=ctx.createRadialGradient(x,635,2,x,635,48);fire.addColorStop(0,"rgba(255,230,90,.85)");fire.addColorStop(.3,"rgba(255,72,18,.5)");fire.addColorStop(1,"rgba(255,20,0,0)");ctx.fillStyle=fire;ctx.fillRect(x-55,580-flame,110,80+flame);}
+    const g=ctx.createLinearGradient(0,0,0,WORLD.height);g.addColorStop(0,"#080308");g.addColorStop(.5,"#2a0909");g.addColorStop(1,"#060304");ctx.fillStyle=g;ctx.fillRect(0,0,WORLD.width,WORLD.height);const time=performance.now()*.001;
+    const glow=ctx.createRadialGradient(640,420,20,640,420,520);glow.addColorStop(0,"rgba(255,74,15,.32)");glow.addColorStop(.55,"rgba(115,15,8,.16)");glow.addColorStop(1,"rgba(0,0,0,0)");ctx.fillStyle=glow;ctx.fillRect(0,0,1280,650);
+    for(let layer=0;layer<3;layer++){ctx.fillStyle=["#160a0c","#10070a","#090609"][layer];ctx.beginPath();ctx.moveTo(0,520-layer*45);for(let x=0;x<=1280;x+=80){const peak=310-layer*28+Math.sin(x*.019+layer)*70;ctx.lineTo(x,peak);ctx.lineTo(x+40,520-layer*45);}ctx.lineTo(1280,650);ctx.lineTo(0,650);ctx.fill();}
+    for(let i=0;i<6;i++){const x=80+i*235,scale=.72+(i%3)*.14,top=165+(i%2)*70;ctx.fillStyle="#0b0709";ctx.fillRect(x,top,55*scale,455-top);ctx.beginPath();ctx.moveTo(x-14*scale,top);ctx.lineTo(x+27*scale,top-65*scale);ctx.lineTo(x+69*scale,top);ctx.fill();ctx.fillStyle="rgba(255,70,22,.2)";for(let y=top+45;y<560;y+=68)ctx.fillRect(x+18*scale,y,14*scale,25*scale);}
+    ctx.strokeStyle="rgba(255,125,70,.16)";ctx.lineWidth=1;for(let i=0;i<65;i++){const x=(i*91+time*42)%1300,y=80+(i*113)%510;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-4,y+12);ctx.stroke();}
+    const lava=ctx.createLinearGradient(0,650,0,720);lava.addColorStop(0,"#ffb125");lava.addColorStop(.18,"#ff4b15");lava.addColorStop(1,"#6d0908");ctx.fillStyle=lava;ctx.fillRect(0,650,1280,70);ctx.fillStyle="#ffd45a";ctx.beginPath();ctx.moveTo(0,655);for(let x=0;x<=1280;x+=18)ctx.lineTo(x,654+Math.sin(x*.045+time*3)*5);ctx.lineTo(1280,670);ctx.lineTo(0,670);ctx.fill();
     return;
   }
   const backdrop=backgrounds[state.level];
@@ -449,6 +463,7 @@ function drawPlatform(p,theme){
 }
 
 function drawPlayer(p){
+  if(p.dead){const dx=network.role==="guest"&&Number.isFinite(p.renderX)?p.renderX:p.x,dy=network.role==="guest"&&Number.isFinite(p.renderY)?p.renderY:p.y;ctx.save();ctx.globalAlpha=.5;ctx.fillStyle=COLORS[p.type];ctx.beginPath();ctx.ellipse(dx+17,dy+48,24,7,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.fillStyle="#fff";ctx.font='800 10px "Manrope"';ctx.textAlign="center";ctx.fillText(`KO · ${Math.ceil(p.reviveTimer)} sn`,dx+17,dy+33);ctx.textAlign="left";ctx.restore();return;}
   const shooting=p.type==="atlas"&&p.actionTimer>0,color=COLORS[p.type],moving=!shooting&&p.onGround&&Math.abs(p.vx)>18,bob=moving?Math.sin(performance.now()*.018)*1.2:0;let sprite=sprites[p.type],frame=0,sheet=false,drawW=p.type==="atlas"?46:45,drawH=69;
   if(moving){sprite=p.type==="atlas"?sprites.atlasWalk:sprites.nitaWalk;frame=Math.floor(performance.now()*.009)%4;sheet=true;drawW=p.type==="atlas"?54:58;drawH=72;}
   const rawProgress=shooting?Math.min(1,Math.max(0,(.38-p.actionTimer)/.14)):0,shotProgress=rawProgress*rawProgress*(3-2*rawProgress),recoil=shooting&&p.beamFired?Math.sin(Math.min(1,(.24-p.actionTimer)/.24)*Math.PI)*3:0,renderX=network.role==="guest"&&Number.isFinite(p.renderX)?p.renderX:p.x,renderY=network.role==="guest"&&Number.isFinite(p.renderY)?p.renderY:p.y;
@@ -466,7 +481,7 @@ function drawPlayer(p){
 
 function drawEnemy(enemy){
   if(enemy.dead)return;const ex=network.role==="guest"&&Number.isFinite(enemy.renderX)?enemy.renderX:enemy.x,ey=network.role==="guest"&&Number.isFinite(enemy.renderY)?enemy.renderY:enemy.y,color=GEAR[enemy.tier].color,walkTime=performance.now()*.008+ex*.018,frame=Math.floor(walkTime)%4,step=Math.sin(walkTime*Math.PI*.5);ctx.save();ctx.translate(ex+enemy.w/2,ey+enemy.h);ctx.globalAlpha=.28;ctx.fillStyle="#05070a";ctx.beginPath();ctx.ellipse(0,2,24-Math.abs(step)*2,5,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;if(enemy.vx<0)ctx.scale(-1,1);ctx.rotate(step*.018);ctx.shadowColor=color;ctx.shadowBlur=enemy.flash>0?28:11;ctx.globalAlpha=enemy.flash>0?.62:1;if(sprites.enemyWalk.complete&&sprites.enemyWalk.naturalWidth)ctx.drawImage(sprites.enemyWalk,frame*256,30,256,385,-34,-68,68,68);else if(sprites.enemy.complete&&sprites.enemy.naturalWidth)ctx.drawImage(sprites.enemy,28,42,202,292,-27,-68,54,68);else drawRounded(-23,-50,46,50,12,"#30343b");ctx.restore();
-  ctx.fillStyle="rgba(8,10,14,.66)";ctx.fillRect(enemy.x,enemy.y-9,enemy.w,4);ctx.fillStyle=color;ctx.fillRect(enemy.x,enemy.y-9,enemy.w*(enemy.hp/enemy.maxHp),4);
+  if(enemy.superSoldier){ctx.save();ctx.fillStyle="#d6a928";ctx.shadowColor="#ffd34d";ctx.shadowBlur=10;ctx.beginPath();ctx.moveTo(ex+3,ey+12);ctx.lineTo(ex-8,ey-2);ctx.lineTo(ex+11,ey+7);ctx.moveTo(ex+43,ey+12);ctx.lineTo(ex+54,ey-2);ctx.lineTo(ex+35,ey+7);ctx.fill();ctx.restore();ctx.fillStyle="rgba(8,10,14,.78)";ctx.fillRect(ex-2,ey-12,50,7);for(let i=0;i<3;i++){const amount=Math.max(0,Math.min(1,enemy.hp/8-i));ctx.fillStyle="#34302a";ctx.fillRect(ex+i*16,ey-10,14,3);if(amount>0){ctx.fillStyle="#ffd34d";ctx.fillRect(ex+i*16,ey-10,14*amount,3);}}}else{ctx.fillStyle="rgba(8,10,14,.66)";ctx.fillRect(ex,ey-9,enemy.w,4);ctx.fillStyle=color;ctx.fillRect(ex,ey-9,enemy.w*(enemy.hp/enemy.maxHp),4);}
 }
 
 function drawCoin(coin){if(coin.collected)return;const color=COLORS[coin.type],y=coin.y+Math.sin(performance.now()*.004+coin.bob)*4;ctx.save();ctx.translate(coin.x+9,y+9);ctx.rotate(performance.now()*.002+coin.bob);ctx.shadowColor=color;ctx.shadowBlur=14;ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(0,-10);ctx.lineTo(8,-5);ctx.lineTo(8,5);ctx.lineTo(0,10);ctx.lineTo(-8,5);ctx.lineTo(-8,-5);ctx.closePath();ctx.fill();ctx.fillStyle="rgba(255,255,255,.55)";ctx.fillRect(-2,-6,3,12);ctx.restore();}
@@ -493,17 +508,19 @@ function drawKurdistanFlag(x,y,w,h){
 function drawBoss(){
   const boss=state.boss;if(!boss)return;const time=performance.now()*.001,bx=network.role==="guest"&&Number.isFinite(boss.renderX)?boss.renderX:boss.x;
   for(const [index,shrine] of (levels[state.level].shrines||[]).entries()){const active=boss.ritualWindow>0&&boss.activeShrine===index&&!boss.ritualDone,pulse=.5+Math.sin(time*4+index)*.5;ctx.save();ctx.translate(shrine[0],shrine[1]);ctx.shadowColor=active?"#58ffe9":"#05070a";ctx.shadowBlur=active?18+8*pulse:9;ctx.fillStyle="rgba(0,0,0,.42)";ctx.beginPath();ctx.ellipse(0,0,46,10,0,0,Math.PI*2);ctx.fill();const base=ctx.createLinearGradient(-34,-28,35,2);base.addColorStop(0,"#171d22");base.addColorStop(.48,active?"#426d68":"#30373b");base.addColorStop(1,"#0a0d10");ctx.fillStyle=base;ctx.beginPath();ctx.moveTo(-36,0);ctx.lineTo(-28,-24);ctx.lineTo(28,-24);ctx.lineTo(38,0);ctx.closePath();ctx.fill();ctx.fillStyle="#11161a";ctx.beginPath();ctx.moveTo(-23,-24);ctx.lineTo(-16,-55);ctx.lineTo(17,-55);ctx.lineTo(24,-24);ctx.closePath();ctx.fill();ctx.strokeStyle=active?`rgba(91,255,235,${.65+.3*pulse})`:"#3f4b50";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,-48);ctx.lineTo(9,-38);ctx.lineTo(0,-29);ctx.lineTo(-9,-38);ctx.closePath();ctx.stroke();if(active){ctx.fillStyle="rgba(80,255,230,.13)";ctx.beginPath();ctx.ellipse(0,-5,48+6*pulse,13+2*pulse,0,0,Math.PI*2);ctx.fill();}ctx.restore();}
-  if(!boss.dead){ctx.save();ctx.translate(bx+boss.w/2,boss.y+boss.h);if(boss.vx<0)ctx.scale(-1,1);const stride=Math.sin(time*5)*5;ctx.shadowColor="#000";ctx.shadowBlur=35;ctx.fillStyle="#030405";ctx.beginPath();ctx.ellipse(0,4,65,13,0,0,Math.PI*2);ctx.fill();ctx.lineCap="round";ctx.strokeStyle="#090b0d";ctx.lineWidth=24;ctx.beginPath();ctx.moveTo(-27,-78);ctx.lineTo(-39+stride,0);ctx.moveTo(27,-78);ctx.lineTo(41-stride,0);ctx.stroke();const body=ctx.createRadialGradient(-18,-115,8,0,-100,85);body.addColorStop(0,boss.flash>0?"#765a64":"#343941");body.addColorStop(.35,"#13171a");body.addColorStop(1,"#020304");ctx.fillStyle=body;ctx.beginPath();ctx.moveTo(-52,-48);ctx.quadraticCurveTo(-72,-118,-43,-158);ctx.quadraticCurveTo(0,-187,44,-155);ctx.quadraticCurveTo(72,-110,51,-48);ctx.quadraticCurveTo(0,-24,-52,-48);ctx.fill();ctx.strokeStyle="#07090b";ctx.lineWidth=20;ctx.beginPath();ctx.moveTo(-42,-132);ctx.lineTo(-72,-88+stride);ctx.lineTo(-66,-39);ctx.moveTo(42,-132);ctx.lineTo(72,-90-stride);ctx.lineTo(67,-40);ctx.stroke();ctx.fillStyle="#090b0d";ctx.beginPath();ctx.arc(0,-159,43,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.moveTo(-35,-180);ctx.lineTo(-61,-207);ctx.lineTo(-23,-191);ctx.moveTo(35,-180);ctx.lineTo(61,-207);ctx.lineTo(23,-191);ctx.fill();ctx.strokeStyle="rgba(140,150,155,.13)";ctx.lineWidth=2;for(let i=0;i<7;i++){ctx.beginPath();ctx.moveTo(-32+i*10,-143);ctx.lineTo(-23+i*7,-70);ctx.stroke();}ctx.fillStyle="#ff342a";ctx.shadowColor="#ff2017";ctx.shadowBlur=22;ctx.beginPath();ctx.ellipse(-15,-163,7,4,-.15,0,Math.PI*2);ctx.ellipse(15,-163,7,4,.15,0,Math.PI*2);ctx.fill();ctx.fillStyle="#b7bcc0";ctx.shadowBlur=0;ctx.beginPath();ctx.moveTo(-18,-143);ctx.lineTo(-9,-132);ctx.lineTo(-4,-145);ctx.moveTo(18,-143);ctx.lineTo(9,-132);ctx.lineTo(4,-145);ctx.fill();ctx.restore();}
+  if(!boss.dead){ctx.save();ctx.translate(bx+boss.w/2,boss.y+boss.h);ctx.scale(boss.vx<0?-.82:.82,.82);const stride=Math.sin(time*5)*5;ctx.shadowColor="#000";ctx.shadowBlur=35;ctx.fillStyle="#030405";ctx.beginPath();ctx.ellipse(0,4,65,13,0,0,Math.PI*2);ctx.fill();ctx.lineCap="round";ctx.strokeStyle="#090b0d";ctx.lineWidth=24;ctx.beginPath();ctx.moveTo(-27,-78);ctx.lineTo(-39+stride,0);ctx.moveTo(27,-78);ctx.lineTo(41-stride,0);ctx.stroke();const body=ctx.createRadialGradient(-18,-115,8,0,-100,85);body.addColorStop(0,boss.flash>0?"#765a64":"#343941");body.addColorStop(.35,"#13171a");body.addColorStop(1,"#020304");ctx.fillStyle=body;ctx.beginPath();ctx.moveTo(-52,-48);ctx.quadraticCurveTo(-72,-118,-43,-158);ctx.quadraticCurveTo(0,-187,44,-155);ctx.quadraticCurveTo(72,-110,51,-48);ctx.quadraticCurveTo(0,-24,-52,-48);ctx.fill();ctx.strokeStyle="#07090b";ctx.lineWidth=20;ctx.beginPath();ctx.moveTo(-42,-132);ctx.lineTo(-72,-88+stride);ctx.lineTo(-66,-39);ctx.moveTo(42,-132);ctx.lineTo(72,-90-stride);ctx.lineTo(67,-40);ctx.stroke();ctx.fillStyle="#090b0d";ctx.beginPath();ctx.arc(0,-159,43,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.moveTo(-35,-180);ctx.lineTo(-61,-207);ctx.lineTo(-23,-191);ctx.moveTo(35,-180);ctx.lineTo(61,-207);ctx.lineTo(23,-191);ctx.fill();ctx.strokeStyle="rgba(140,150,155,.13)";ctx.lineWidth=2;for(let i=0;i<7;i++){ctx.beginPath();ctx.moveTo(-32+i*10,-143);ctx.lineTo(-23+i*7,-70);ctx.stroke();}ctx.fillStyle="#ff342a";ctx.shadowColor="#ff2017";ctx.shadowBlur=22;ctx.beginPath();ctx.ellipse(-15,-163,7,4,-.15,0,Math.PI*2);ctx.ellipse(15,-163,7,4,.15,0,Math.PI*2);ctx.fill();ctx.fillStyle="#b7bcc0";ctx.shadowBlur=0;ctx.beginPath();ctx.moveTo(-18,-143);ctx.lineTo(-9,-132);ctx.lineTo(-4,-145);ctx.moveTo(18,-143);ctx.lineTo(9,-132);ctx.lineTo(4,-145);ctx.fill();ctx.restore();}
   const labelX=bx+boss.w/2,labelY=boss.y-48;ctx.fillStyle="rgba(3,4,6,.82)";ctx.fillRect(labelX-112,labelY,224,40);ctx.fillStyle="#fff";ctx.font='800 13px "Manrope"';ctx.textAlign="center";ctx.fillText("MARIO",labelX-12,labelY+15);drawKurdistanFlag(labelX+28,labelY+4,30,16);for(let i=0;i<boss.maxHp;i++){const amount=Math.max(0,Math.min(1,boss.hp-i));ctx.fillStyle="#24282e";ctx.fillRect(labelX-103+i*21,labelY+25,18,7);if(amount>0){ctx.fillStyle="#e84536";ctx.fillRect(labelX-103+i*21,labelY+25,18*amount,7);}}ctx.textAlign="left";
+  if(boss.slamPulse>0){const progress=1-boss.slamPulse/.75,radius=35+progress*330;ctx.save();ctx.globalAlpha=1-progress;ctx.strokeStyle="#ff7a2b";ctx.shadowColor="#ff421c";ctx.shadowBlur=22;ctx.lineWidth=10-progress*7;ctx.beginPath();ctx.ellipse(bx+boss.w/2,624,radius,radius*.12,0,0,Math.PI*2);ctx.stroke();ctx.restore();}
   if(boss.ritualWindow>0){ctx.fillStyle="#61fff0";ctx.font='700 12px "Manrope"';ctx.textAlign="center";ctx.fillText(`RİTÜEL ${boss.ritualWindow.toFixed(1)} sn${boss.ritualProgress>0?` · ${Math.min(100,Math.round(boss.ritualProgress/2*100))}%`:""}`,640,178);ctx.textAlign="left";}
   for(const orb of state.healthOrbs){const y=orb.y+Math.sin(time*5+orb.bob)*4;ctx.shadowColor="#4dff82";ctx.shadowBlur=18;ctx.fillStyle="#50f080";ctx.beginPath();ctx.arc(orb.x+11,y+11,10,0,Math.PI*2);ctx.fill();ctx.fillStyle="#eaffef";ctx.fillRect(orb.x+8,y+4,6,14);ctx.fillRect(orb.x+4,y+8,14,6);ctx.shadowBlur=0;}
+  for(const cup of state.reviveCups){const y=cup.y+Math.sin(time*4+cup.bob)*4;ctx.save();ctx.shadowColor="#ffe66c";ctx.shadowBlur=18;ctx.fillStyle="#e5b83c";ctx.fillRect(cup.x+5,y+3,14,16);ctx.beginPath();ctx.arc(cup.x+12,y+4,9,Math.PI,0);ctx.fill();ctx.strokeStyle="#fff1a8";ctx.lineWidth=3;ctx.beginPath();ctx.arc(cup.x+20,y+9,7,-Math.PI/2,Math.PI/2);ctx.stroke();ctx.fillRect(cup.x+10,y+19,4,7);ctx.fillRect(cup.x+5,y+26,14,4);ctx.restore();}
 }
 
 function drawBossFireball(shot){const speed=Math.hypot(shot.vx,shot.vy)||1,ux=shot.vx/speed,uy=shot.vy/speed,cx=shot.x+9,cy=shot.y+9,t=performance.now()*.012+(shot.phase||0);ctx.save();ctx.globalCompositeOperation="lighter";for(let i=5;i>0;i--){const wobble=Math.sin(t+i)*3,tx=cx-ux*i*11-uy*wobble,ty=cy-uy*i*11+ux*wobble;ctx.globalAlpha=.12+i*.08;ctx.fillStyle=i%2?"#ff321c":"#ff9b22";ctx.beginPath();ctx.arc(tx,ty,4+i*1.6,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;const flame=ctx.createRadialGradient(cx-3,cy-3,1,cx,cy,13);flame.addColorStop(0,"#fff4b0");flame.addColorStop(.28,"#ffbd2e");flame.addColorStop(.65,"#ff3a16");flame.addColorStop(1,"rgba(120,0,0,0)");ctx.shadowColor="#ff3a16";ctx.shadowBlur=24;ctx.fillStyle=flame;ctx.beginPath();ctx.arc(cx,cy,13,0,Math.PI*2);ctx.fill();ctx.restore();}
 
 function draw(){
   const rect=canvas.getBoundingClientRect(),scale=Math.min(rect.width/WORLD.width,rect.height/WORLD.height),ox=(rect.width-WORLD.width*scale)/2,oy=(rect.height-WORLD.height*scale)/2,level=levels[state.level]||levels[0];ctx.fillStyle=COLORS.dark;ctx.fillRect(0,0,rect.width,rect.height);ctx.save();ctx.translate(ox,oy);ctx.scale(scale,scale);drawBackground(level);
-  for(const p of state.platforms)drawPlatform(p,level.theme);for(const h of state.hazards)drawHazard(h);for(const e of state.exits)drawExit(e);for(const c of state.cameras)drawCamera(c);for(const coin of state.coins)drawCoin(coin);for(const enemy of state.enemies)drawEnemy(enemy);if(state.boss)drawBoss();
+  if(!level.boss)drawHazard({x:0,y:648,w:1280,h:72});for(const p of state.platforms)drawPlatform(p,level.theme);if(level.boss)for(const h of state.hazards)drawHazard(h);for(const e of state.exits)drawExit(e);for(const c of state.cameras)drawCamera(c);for(const coin of state.coins)drawCoin(coin);for(const enemy of state.enemies)drawEnemy(enemy);if(state.boss)drawBoss();
   for(const shot of state.projectiles){if(shot.bossShot){drawBossFireball(shot);continue;}const speed=Math.hypot(shot.vx,shot.vy||0)||1,ux=shot.vx/speed,uy=(shot.vy||0)/speed,cx=shot.x+shot.w/2,cy=shot.y+shot.h/2,tailX=cx-ux*76,tailY=cy-uy*76,tipX=cx+ux*24,tipY=cy+uy*24,beam=ctx.createLinearGradient(tailX,tailY,tipX,tipY);beam.addColorStop(0,"rgba(255,255,255,0)");beam.addColorStop(.45,shot.color);beam.addColorStop(1,"#ffffff");ctx.strokeStyle=beam;ctx.lineCap="round";ctx.lineWidth=8;ctx.shadowColor=shot.color;ctx.shadowBlur=22;ctx.beginPath();ctx.moveTo(tailX,tailY);ctx.lineTo(tipX,tipY);ctx.stroke();ctx.strokeStyle="#fff";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx-ux*30,cy-uy*30);ctx.lineTo(tipX,tipY);ctx.stroke();ctx.shadowBlur=0;}
   drawPlayer(atlas);drawPlayer(nita);for(const p of state.particles){ctx.globalAlpha=Math.max(0,p.life*2);ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,p.size,p.size);}ctx.globalAlpha=1;ctx.restore();
 }
@@ -514,7 +531,7 @@ function loop(time){const dt=Math.min((time-state.last)/1000,.032);state.last=ti
 function tone(freq,duration){if(!state.audio)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;state.ac||=new AC();const o=state.ac.createOscillator(),g=state.ac.createGain();o.frequency.value=freq;o.type="triangle";g.gain.setValueAtTime(.04,state.ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,state.ac.currentTime+duration);o.connect(g);g.connect(state.ac.destination);o.start();o.stop(state.ac.currentTime+duration);}
 
 function setControl(key,down){if(network.role==="guest"){sendPacket({type:"key",key,down});return;}if(down&&!state.keys[key])state.keysPressed[key]=true;state.keys[key]=down;}
-window.addEventListener("keydown",e=>{const key=e.key.toLowerCase();if(["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright","r"].includes(key))e.preventDefault();setControl(key,true);if(key==="r"&&state.running&&network.role!=="guest")resetLevel("Bölüm yeniden başladı.");});
+window.addEventListener("keydown",e=>{const key=e.key.toLowerCase();if(e.ctrlKey&&(key==="ı"||key==="i")){e.preventDefault();if(state.running&&network.role!=="guest"){showMessage("GİZLİ GEÇİŞ KODU AKTİF",1);completeLevel();}return;}if(["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright","r"].includes(key))e.preventDefault();setControl(key,true);if(key==="r"&&state.running&&network.role!=="guest")resetLevel("Bölüm yeniden başladı.");});
 window.addEventListener("keyup",e=>setControl(e.key.toLowerCase(),false));
 startButton.addEventListener("click",()=>{if(startButton.dataset.action==="restart")resetCampaign();state.running=true;state.paused=false;state.last=performance.now();startButton.dataset.action="";startButton.hidden=true;overlay.classList.add("hidden");sendPacket({type:"start",level:state.level,gold:state.gold,gear:state.gear});});
 pauseButton.addEventListener("click",()=>{if(!state.running)return;state.paused=!state.paused;pauseButton.textContent=state.paused?"DEVAM ET":"DURAKLAT";showMessage(state.paused?"Oyun duraklatıldı.":"Yola devam!",1.2);});
@@ -528,13 +545,13 @@ document.querySelectorAll(".joystick").forEach(stick=>{const knob=stick.querySel
 
 function roomCode(){const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";return Array.from({length:6},()=>chars[Math.floor(Math.random()*chars.length)]).join("");}
 function sendPacket(packet){if(network.connection?.open)network.connection.send(packet);}
-function sendSnapshot(){sendPacket({type:"state",level:state.level,atlas:{...atlas,renderX:undefined,renderY:undefined},nita:{...nita,renderX:undefined,renderY:undefined},enemies:state.enemies.map(e=>({...e,renderX:undefined,renderY:undefined})),coins:state.coins.map(c=>c.collected),projectiles:state.projectiles.map(s=>({...s})),cameras:state.cameras.map(c=>({charge:c.charge,pulse:c.pulse})),gold:{...state.gold},gear:{...state.gear},boss:state.boss?{...state.boss}:null,healthOrbs:state.healthOrbs.map(o=>({...o}))});}
+function sendSnapshot(){sendPacket({type:"state",level:state.level,atlas:{...atlas,renderX:undefined,renderY:undefined},nita:{...nita,renderX:undefined,renderY:undefined},enemies:state.enemies.map(e=>({...e,renderX:undefined,renderY:undefined})),coins:state.coins.map(c=>c.collected),projectiles:state.projectiles.map(s=>({...s})),cameras:state.cameras.map(c=>({charge:c.charge,pulse:c.pulse})),gold:{...state.gold},gear:{...state.gear},boss:state.boss?{...state.boss}:null,healthOrbs:state.healthOrbs.map(o=>({...o})),reviveCups:state.reviveCups.map(c=>({...c}))});}
 function beginMultiplayer(role){network.role=role;document.body.classList.remove("multiplayer-host","multiplayer-guest");document.body.classList.add(`multiplayer-${role}`);connectionBadge.textContent=role==="host"?"ATLAS · BAĞLI":"NITA · BAĞLI";connectionBadge.style.color=role==="host"?COLORS.atlas:COLORS.nita;resetCampaign();state.running=role==="host";state.paused=false;state.last=performance.now();overlay.classList.add("hidden");if(role==="host")sendPacket({type:"start",level:0,gold:state.gold,gear:state.gear});}
 function receivePacket(data){
   if(data.type==="key"&&network.role==="host"){if(data.down&&!state.keys[data.key])state.keysPressed[data.key]=true;state.keys[data.key]=data.down;}
   if(data.type==="buy"&&network.role==="host"&&data.owner==="nita")buyUpgrade("nita");
   if(data.type==="start"&&network.role==="guest"){state.gold={...data.gold};state.gear={...data.gear};loadLevel(data.level);state.running=true;state.paused=false;market.classList.remove("active");overlay.classList.add("hidden");}
-  if(data.type==="state"&&network.role==="guest"){if(state.level!==data.level)loadLevel(data.level);const oldAtlas=[atlas.renderX??atlas.x,atlas.renderY??atlas.y],oldNita=[nita.renderX??nita.x,nita.renderY??nita.y],oldEnemies=state.enemies.map(e=>[e.renderX??e.x,e.renderY??e.y]),oldBoss=state.boss?[state.boss.renderX??state.boss.x,state.boss.renderY??state.boss.y]:null;Object.assign(atlas,data.atlas);Object.assign(nita,data.nita);atlas.renderX=oldAtlas[0];atlas.renderY=oldAtlas[1];nita.renderX=oldNita[0];nita.renderY=oldNita[1];state.enemies=data.enemies.map((e,i)=>({...e,renderX:oldEnemies[i]?.[0]??e.x,renderY:oldEnemies[i]?.[1]??e.y}));state.projectiles=data.projectiles;data.coins.forEach((collected,i)=>{if(state.coins[i])state.coins[i].collected=collected;});data.cameras.forEach((c,i)=>{if(state.cameras[i])Object.assign(state.cameras[i],c);});state.gold={...data.gold};state.gear={...data.gear};state.boss=data.boss?{...data.boss,renderX:oldBoss?.[0]??data.boss.x,renderY:oldBoss?.[1]??data.boss.y}:null;state.healthOrbs=(data.healthOrbs||[]).map(o=>({...o}));updateHud();if(market.classList.contains("active"))refreshMarket();}
+  if(data.type==="state"&&network.role==="guest"){if(state.level!==data.level)loadLevel(data.level);const oldAtlas=[atlas.renderX??atlas.x,atlas.renderY??atlas.y],oldNita=[nita.renderX??nita.x,nita.renderY??nita.y],oldEnemies=state.enemies.map(e=>[e.renderX??e.x,e.renderY??e.y]),oldBoss=state.boss?[state.boss.renderX??state.boss.x,state.boss.renderY??state.boss.y]:null;Object.assign(atlas,data.atlas);Object.assign(nita,data.nita);atlas.renderX=oldAtlas[0];atlas.renderY=oldAtlas[1];nita.renderX=oldNita[0];nita.renderY=oldNita[1];state.enemies=data.enemies.map((e,i)=>({...e,renderX:oldEnemies[i]?.[0]??e.x,renderY:oldEnemies[i]?.[1]??e.y}));state.projectiles=data.projectiles;data.coins.forEach((collected,i)=>{if(state.coins[i])state.coins[i].collected=collected;});data.cameras.forEach((c,i)=>{if(state.cameras[i])Object.assign(state.cameras[i],c);});state.gold={...data.gold};state.gear={...data.gear};state.boss=data.boss?{...data.boss,renderX:oldBoss?.[0]??data.boss.x,renderY:oldBoss?.[1]??data.boss.y}:null;state.healthOrbs=(data.healthOrbs||[]).map(o=>({...o}));state.reviveCups=(data.reviveCups||[]).map(c=>({...c}));updateHud();if(market.classList.contains("active"))refreshMarket();}
   if(data.type==="complete"&&network.role==="guest"){state.running=false;state.gold={...data.gold};state.gear={...data.gear};state.collectedThisLevel={...data.collected};updateHud();playLevelTransition(levels[data.level]?.name||"Bölüm",data.final,showMarket);}
 }
 function bindConnection(connection,role){network.connection=connection;connection.on("data",receivePacket);connection.on("open",()=>beginMultiplayer(role));connection.on("close",()=>{state.running=false;connectionBadge.textContent="BAĞLANTI KOPTU";showMessage("Diğer oyuncuyla bağlantı kesildi.",4);});}

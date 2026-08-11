@@ -19,7 +19,9 @@ Her bölümde Atlas ve Nita kendi kapı renkleriyle eşleşen altınları toplar
 
 Yükseltmeler bölümleri kolaylaştırır; düşmanlar ve kameralar alternatif hareket rotalarıyla da aşılabilir.
 
-Beşinci bölüm karanlık bir boss arenasıdır. Mario 10 can slotuna sahiptir; Legendary yüzüğün her iki isabeti bir slotun yarısını götürür, son slot ise yalnızca Nita'nın 20 saniyede bir açılan anıt ritüeliyle kırılabilir. Mario karakterleri dört isabette yener ve her iki isabetten sonra bir can orbu bırakır.
+Beşinci bölüm 3B cehennem atmosferli bir boss arenasıdır. Mario 10 can slotuna sahiptir; Legendary yüzüğün her iki isabeti bir slotun yarısını götürür, son slotu Atlas tek başına kırabilir ancak bu bölüm çok daha uzun sürer. Mario 10 saniyede bir sıçrayıp yerde kalanlara iki slot hasar verir ve 15 saniyede bir iki süper asker çağırır. Süper askerler üç slot can taşır ve Legendary yüzükle iki isabette yenilir.
+
+Boss savaşında düşen takım arkadaşı oyunu bitirmez. Dokuz saniye sonra beliren revive kupasını hayatta kalan oyuncu alırsa takım arkadaşı iki canla geri döner. `Ctrl` + `ı` gizli test kısayolu mevcut bölümü doğrudan geçirir.
 
 ## Çalıştırma
 
