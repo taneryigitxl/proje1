@@ -48,13 +48,14 @@ const GEAR = [
 ];
 const ENEMY_HP = 12;
 const sprites = {
-  atlas: new Image(), nita: new Image(), atlasWalk: new Image(), nitaWalk: new Image(), enemy: new Image()
+  atlas: new Image(), nita: new Image(), atlasWalk: new Image(), nitaWalk: new Image(), enemy: new Image(), enemyWalk: new Image()
 };
 sprites.atlas.src = "assets/atlas.png";
 sprites.nita.src = "assets/nita.png";
 sprites.atlasWalk.src = "assets/atlas-walk.png";
 sprites.nitaWalk.src = "assets/nita-walk.png";
 sprites.enemy.src = "assets/enemy.png";
+sprites.enemyWalk.src = "assets/enemy-walk.png";
 const backgrounds = Array.from({length:5},(_,i)=>{const image=new Image();image.src=`assets/level-${i+1}-bg.jpg`;return image;});
 
 const levels = [
@@ -68,34 +69,34 @@ const levels = [
   },
   {
     name: "Kanyon Devriyesi", theme: "ruins", sky: ["#d9a866", "#6b6657"], starts: [[55,590],[108,590]],
-    platforms: [[0,650,205,70],[265,565,170,30],[490,470,155,30],[700,565,160,30],[915,465,155,30],[1130,565,150,155],[360,390,165,26],[650,365,145,26]],
+    platforms: [[0,650,205,70],[265,565,170,30],[490,480,155,30],[700,565,160,30],[915,480,155,30],[1130,565,150,155],[360,395,165,26],[650,395,145,26]],
     hazards: [[205,648,60,72],[435,648,55,72],[645,648,55,72],[860,648,55,72],[1070,648,60,72]],
-    enemies: [[300,515,280,390],[735,515,720,820]], cameras: [[835,330,-1,235],[1095,330,-1,235]], exits: [[982,405,"atlas"],[1208,505,"nita"]],
-    coins: [[150,605,"atlas"],[295,515,"nita"],[385,515,"atlas"],[400,340,"nita"],[505,420,"atlas"],[590,420,"nita"],[720,515,"atlas"],[800,515,"nita"],[685,315,"atlas"],[750,315,"nita"],[945,415,"atlas"],[1018,415,"nita"],[1160,515,"atlas"],[1225,515,"nita"],[1150,610,"atlas"],[1200,610,"nita"]],
+    enemies: [[300,515,280,390],[735,515,720,820]], cameras: [[835,330,-1,235],[1095,330,-1,235]], exits: [[982,420,"atlas"],[1208,505,"nita"]],
+    coins: [[150,605,"atlas"],[295,515,"nita"],[385,515,"atlas"],[400,345,"nita"],[505,430,"atlas"],[590,430,"nita"],[720,515,"atlas"],[800,515,"nita"],[685,345,"atlas"],[750,345,"nita"],[945,430,"atlas"],[1018,430,"nita"],[1160,515,"atlas"],[1225,515,"nita"],[1185,490,"atlas"],[1240,490,"nita"]],
     hint: "Mavi pelerin 2 saniye sürer. Kamerayı zamanlayabilir veya üst rotadan dolaşabilirsin."
   },
   {
     name: "Derin Maden", theme: "mine", sky: ["#292735", "#574047"], starts: [[50,590],[105,590]],
-    platforms: [[0,650,180,70],[235,575,145,30],[435,490,145,30],[635,405,150,30],[835,520,145,30],[1030,430,250,290],[530,625,100,25],[805,300,135,26]],
+    platforms: [[0,650,180,70],[235,575,145,30],[435,490,145,30],[635,405,150,30],[835,520,145,30],[1030,435,250,285],[530,625,100,25],[805,325,135,26]],
     hazards: [[180,648,55,72],[380,648,55,72],[630,648,205,72],[980,648,50,72]],
-    enemies: [[260,525,250,350],[665,355,650,745],[1060,380,1050,1170]], cameras: [[610,335,-1,230],[800,235,1,265],[1005,350,-1,240]], exits: [[1120,370,"atlas"],[1210,370,"nita"]],
-    coins: [[130,605,"atlas"],[155,605,"nita"],[260,525,"atlas"],[320,525,"nita"],[455,440,"atlas"],[515,440,"nita"],[655,355,"atlas"],[715,355,"nita"],[550,575,"atlas"],[600,575,"nita"],[850,470,"atlas"],[925,470,"nita"],[830,250,"atlas"],[890,250,"nita"],[1060,380,"atlas"],[1110,380,"nita"],[1160,380,"atlas"],[1210,380,"nita"],[1060,585,"atlas"],[1110,585,"nita"],[1160,585,"atlas"],[1210,585,"nita"],[750,355,"atlas"],[765,355,"nita"]],
+    enemies: [[260,525,250,350],[665,355,650,745],[1060,385,1050,1170]], cameras: [[610,335,-1,230],[800,260,1,265],[1005,350,-1,240]], exits: [[1120,375,"atlas"],[1210,375,"nita"]],
+    coins: [[130,605,"atlas"],[155,605,"nita"],[260,525,"atlas"],[320,525,"nita"],[455,440,"atlas"],[515,440,"nita"],[655,355,"atlas"],[715,355,"nita"],[550,575,"atlas"],[600,575,"nita"],[850,470,"atlas"],[925,470,"nita"],[830,275,"atlas"],[890,275,"nita"],[1060,385,"atlas"],[1110,385,"nita"],[1160,385,"atlas"],[1210,385,"nita"],[1060,335,"atlas"],[1110,335,"nita"],[1160,335,"atlas"],[1210,335,"nita"],[750,355,"atlas"],[765,355,"nita"]],
     hint: "Mor ekipman bu bölümü kolaylaştırır: 3 saniye görünmezlik, düşmanlara 2 atış."
   },
   {
     name: "Fırtına Hattı", theme: "storm", sky: ["#153746", "#347a7f"], starts: [[45,590],[98,590]],
-    platforms: [[0,650,160,70],[215,565,130,30],[400,470,145,30],[600,560,150,30],[805,455,145,30],[1010,555,270,165],[545,335,150,26],[895,290,125,26]],
+    platforms: [[0,650,160,70],[215,565,130,30],[400,480,145,30],[600,560,150,30],[805,475,145,30],[1010,555,270,165],[545,395,150,26],[870,390,150,26]],
     hazards: [[160,648,55,72],[345,648,55,72],[545,648,55,72],[750,648,55,72],[950,648,60,72]],
-    enemies: [[240,515,225,315],[625,510,615,710],[830,405,820,910]], cameras: [[380,375,-1,210],[780,360,-1,245],[1035,310,-1,280]], exits: [[930,230,"atlas"],[1205,495,"nita"]],
-    coins: [[120,605,"atlas"],[250,515,"nita"],[430,420,"atlas"],[490,420,"nita"],[570,285,"atlas"],[630,285,"nita"],[630,510,"atlas"],[700,510,"nita"],[835,405,"atlas"],[900,405,"nita"],[920,240,"atlas"],[970,240,"nita"],[1060,505,"atlas"],[1120,505,"nita"],[1180,505,"atlas"],[1230,505,"nita"]],
+    enemies: [[240,515,225,315],[625,510,615,710],[830,425,820,910]], cameras: [[380,375,-1,210],[780,360,-1,245],[1035,310,-1,280]], exits: [[930,330,"atlas"],[1205,495,"nita"]],
+    coins: [[120,605,"atlas"],[250,515,"nita"],[430,430,"atlas"],[490,430,"nita"],[570,345,"atlas"],[630,345,"nita"],[630,510,"atlas"],[700,510,"nita"],[835,425,"atlas"],[900,425,"nita"],[920,340,"atlas"],[970,340,"nita"],[1060,505,"atlas"],[1120,505,"nita"],[1180,505,"atlas"],[1230,505,"nita"]],
     hint: "Sarı Legendary ekipman tek atış ve 5 saniye görünmezlik sağlar; alternatif rotalar hâlâ açık."
   },
   {
     name: "Gökyüzü Tapınağı", theme: "temple", sky: ["#271b3e", "#934d70"], starts: [[40,590],[92,590]],
-    platforms: [[0,650,145,70],[195,570,125,30],[370,485,125,30],[545,390,130,30],[735,495,125,30],[910,400,140,30],[1095,500,185,220],[470,610,85,40],[825,595,80,55]],
+    platforms: [[0,650,145,70],[195,570,125,30],[370,485,125,30],[545,400,130,30],[735,495,125,30],[910,410,140,30],[1095,500,185,220],[470,610,85,40],[825,595,80,55]],
     hazards: [[145,648,50,72],[320,648,50,72],[555,648,180,72],[905,648,190,72]],
-    enemies: [[215,520,210,290],[565,340,555,635],[755,445,750,825],[1125,450,1110,1215]], cameras: [[350,385,-1,225],[705,320,-1,250],[880,315,-1,235],[1080,350,-1,250]], exits: [[970,340,"atlas"],[1210,440,"nita"]],
-    coins: [[105,605,"atlas"],[220,520,"nita"],[395,435,"atlas"],[450,435,"nita"],[495,560,"atlas"],[530,560,"nita"],[570,340,"atlas"],[630,340,"nita"],[755,445,"atlas"],[815,445,"nita"],[850,545,"atlas"],[885,545,"nita"],[930,350,"atlas"],[990,350,"nita"],[1120,450,"atlas"],[1170,450,"nita"],[1215,450,"atlas"],[1240,450,"nita"],[1150,590,"atlas"],[1210,590,"nita"]],
+    enemies: [[215,520,210,290],[565,350,555,635],[755,445,750,825],[1125,450,1110,1215]], cameras: [[350,385,-1,225],[705,320,-1,250],[880,315,-1,235],[1080,350,-1,250]], exits: [[970,350,"atlas"],[1210,440,"nita"]],
+    coins: [[105,605,"atlas"],[220,520,"nita"],[395,435,"atlas"],[450,435,"nita"],[495,560,"atlas"],[530,560,"nita"],[570,350,"atlas"],[630,350,"nita"],[755,445,"atlas"],[815,445,"nita"],[850,545,"atlas"],[885,545,"nita"],[930,360,"atlas"],[990,360,"nita"],[1120,450,"atlas"],[1170,450,"nita"],[1215,450,"atlas"],[1240,450,"nita"],[1140,400,"atlas"],[1200,400,"nita"]],
     hint: "Son yol: yaratıkları temizle veya üzerinden atla; kamera görüşünü pelerinle ya da siperlerle aş."
   }
 ];
@@ -363,7 +364,7 @@ function drawPlayer(p){
 }
 
 function drawEnemy(enemy){
-  if(enemy.dead)return;const color=GEAR[enemy.tier].color,bob=Math.sin(performance.now()*.007+enemy.x)*2;ctx.save();ctx.translate(enemy.x+enemy.w/2,enemy.y+enemy.h);if(enemy.vx<0)ctx.scale(-1,1);ctx.shadowColor=color;ctx.shadowBlur=enemy.flash>0?28:11;ctx.globalAlpha=enemy.flash>0?.62:1;if(sprites.enemy.complete&&sprites.enemy.naturalWidth)ctx.drawImage(sprites.enemy,28,42,202,292,-27,-64+bob,54,68);else drawRounded(-23,-50,46,50,12,"#30343b");ctx.restore();
+  if(enemy.dead)return;const color=GEAR[enemy.tier].color,walkTime=performance.now()*.008+enemy.x*.018,frame=Math.floor(walkTime)%4,step=Math.sin(walkTime*Math.PI*.5);ctx.save();ctx.translate(enemy.x+enemy.w/2,enemy.y+enemy.h);ctx.globalAlpha=.28;ctx.fillStyle="#05070a";ctx.beginPath();ctx.ellipse(0,2,24-Math.abs(step)*2,5,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;if(enemy.vx<0)ctx.scale(-1,1);ctx.rotate(step*.018);ctx.shadowColor=color;ctx.shadowBlur=enemy.flash>0?28:11;ctx.globalAlpha=enemy.flash>0?.62:1;if(sprites.enemyWalk.complete&&sprites.enemyWalk.naturalWidth)ctx.drawImage(sprites.enemyWalk,frame*256,30,256,385,-34,-68,68,68);else if(sprites.enemy.complete&&sprites.enemy.naturalWidth)ctx.drawImage(sprites.enemy,28,42,202,292,-27,-68,54,68);else drawRounded(-23,-50,46,50,12,"#30343b");ctx.restore();
   ctx.fillStyle="rgba(8,10,14,.66)";ctx.fillRect(enemy.x,enemy.y-9,enemy.w,4);ctx.fillStyle=color;ctx.fillRect(enemy.x,enemy.y-9,enemy.w*(enemy.hp/enemy.maxHp),4);
 }
 
