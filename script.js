@@ -55,6 +55,7 @@ sprites.nita.src = "assets/nita.png";
 sprites.atlasWalk.src = "assets/atlas-walk.png";
 sprites.nitaWalk.src = "assets/nita-walk.png";
 sprites.enemy.src = "assets/enemy.png";
+const backgrounds = Array.from({length:5},(_,i)=>{const image=new Image();image.src=`assets/level-${i+1}-bg.jpg`;return image;});
 
 const levels = [
   {
@@ -67,10 +68,10 @@ const levels = [
   },
   {
     name: "Kanyon Devriyesi", theme: "ruins", sky: ["#d9a866", "#6b6657"], starts: [[55,590],[108,590]],
-    platforms: [[0,650,205,70],[265,565,170,30],[490,470,155,30],[700,565,160,30],[915,465,155,30],[1130,565,150,155],[360,335,165,26],[675,300,145,26]],
+    platforms: [[0,650,205,70],[265,565,170,30],[490,470,155,30],[700,565,160,30],[915,465,155,30],[1130,565,150,155],[360,390,165,26],[650,365,145,26]],
     hazards: [[205,648,60,72],[435,648,55,72],[645,648,55,72],[860,648,55,72],[1070,648,60,72]],
-    enemies: [[300,515,280,390],[735,515,720,820]], cameras: [[660,390,-1,250],[1095,330,-1,235]], exits: [[982,405,"atlas"],[1208,505,"nita"]],
-    coins: [[150,605,"atlas"],[295,515,"nita"],[385,515,"atlas"],[400,285,"nita"],[505,420,"atlas"],[590,420,"nita"],[720,515,"atlas"],[800,515,"nita"],[700,250,"atlas"],[760,250,"nita"],[945,415,"atlas"],[1018,415,"nita"],[1160,515,"atlas"],[1225,515,"nita"],[1150,610,"atlas"],[1200,610,"nita"]],
+    enemies: [[300,515,280,390],[735,515,720,820]], cameras: [[835,330,-1,235],[1095,330,-1,235]], exits: [[982,405,"atlas"],[1208,505,"nita"]],
+    coins: [[150,605,"atlas"],[295,515,"nita"],[385,515,"atlas"],[400,340,"nita"],[505,420,"atlas"],[590,420,"nita"],[720,515,"atlas"],[800,515,"nita"],[685,315,"atlas"],[750,315,"nita"],[945,415,"atlas"],[1018,415,"nita"],[1160,515,"atlas"],[1225,515,"nita"],[1150,610,"atlas"],[1200,610,"nita"]],
     hint: "Mavi pelerin 2 saniye sürer. Kamerayı zamanlayabilir veya üst rotadan dolaşabilirsin."
   },
   {
@@ -106,7 +107,7 @@ const state = {
 const network = { role: "solo", peer: null, connection: null, lastSync: 0 };
 
 function makePlayer(type, x, y) {
-  return { type, x, y, w: 34, h: 50, vx: 0, vy: 0, speed: type === "atlas" ? 260 : 270, jump: type === "atlas" ? 515 : 525, onGround: false, facing: 1, atExit: false, coyote: 0, jumpBuffer: 0, shotCooldown: 0, invisible: 0, cloakCooldown: 0, actionTimer: 0 };
+  return { type, x, y, w: 34, h: 50, vx: 0, vy: 0, speed: type === "atlas" ? 260 : 270, jump: type === "atlas" ? 515 : 525, onGround: false, facing: 1, atExit: false, coyote: 0, jumpBuffer: 0, shotCooldown: 0, beamCharge: 0, beamFired: true, invisible: 0, cloakCooldown: 0, actionTimer: 0 };
 }
 let atlas = makePlayer("atlas", 0, 0);
 let nita = makePlayer("nita", 0, 0);
@@ -187,6 +188,10 @@ function updatePlayer(p,left,right,jump,action,dt) {
   p.cloakCooldown = Math.max(0,p.cloakCooldown-dt);
   p.invisible = Math.max(0,p.invisible-dt);
   p.actionTimer = Math.max(0,p.actionTimer-dt);
+  if (p.type === "atlas" && p.beamCharge > 0) {
+    p.beamCharge = Math.max(0,p.beamCharge-dt);
+    if (p.beamCharge === 0 && !p.beamFired) releaseAtlasBeam();
+  }
   if (p.type === "atlas" && state.keysPressed[action]) fireAtlas();
   if (p.type === "nita" && state.keysPressed[action]) activateCloak();
   moveBody(p,dt);
@@ -198,12 +203,20 @@ function updatePlayer(p,left,right,jump,action,dt) {
 
 function fireAtlas() {
   if (atlas.shotCooldown > 0) return;
-  atlas.shotCooldown = .34;
-  atlas.actionTimer = .22;
+  atlas.shotCooldown = .46;
+  atlas.actionTimer = .38;
+  atlas.beamCharge = .14;
+  atlas.beamFired = false;
+  tone(310+state.gear.atlas*55,.08);
+}
+
+function releaseAtlasBeam() {
+  atlas.beamFired = true;
   const color = GEAR[state.gear.atlas].color;
-  state.projectiles.push({x:atlas.x+atlas.w/2+atlas.facing*22,y:atlas.y+20,w:18,h:8,vx:atlas.facing*690,life:1,color});
-  burst(atlas.x+atlas.w/2+atlas.facing*22,atlas.y+22,color,7,atlas.facing*120);
-  tone(520+state.gear.atlas*95,.09);
+  const palmX=atlas.x+atlas.w/2+atlas.facing*28,palmY=atlas.y+18;
+  state.projectiles.push({x:palmX,y:palmY,w:30,h:6,vx:atlas.facing*760,life:.9,color});
+  burst(palmX,palmY+3,color,13,atlas.facing*155);
+  tone(610+state.gear.atlas*100,.11);
 }
 
 function activateCloak() {
@@ -306,6 +319,13 @@ function finishOrContinue(){
 function drawRounded(x,y,w,h,r,color){ctx.fillStyle=color;ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.fill();}
 
 function drawBackground(level){
+  const backdrop=backgrounds[state.level];
+  if(backdrop?.complete&&backdrop.naturalWidth){
+    const drift=Math.sin(performance.now()*.00008+state.level)*3;
+    ctx.drawImage(backdrop,-5+drift,-3,1290,726);
+    const shade=ctx.createLinearGradient(0,0,0,WORLD.height);shade.addColorStop(0,"rgba(8,12,18,.08)");shade.addColorStop(.55,"rgba(8,12,18,.16)");shade.addColorStop(1,"rgba(8,12,18,.48)");ctx.fillStyle=shade;ctx.fillRect(0,0,WORLD.width,WORLD.height);
+    return;
+  }
   const g=ctx.createLinearGradient(0,0,0,WORLD.height);g.addColorStop(0,level.sky[0]);g.addColorStop(.58,level.sky[1]);g.addColorStop(1,"#171b22");ctx.fillStyle=g;ctx.fillRect(0,0,WORLD.width,WORLD.height);
   const sun=ctx.createRadialGradient(1040,135,8,1040,135,120);sun.addColorStop(0,"rgba(255,238,184,.7)");sun.addColorStop(1,"rgba(255,238,184,0)");ctx.fillStyle=sun;ctx.fillRect(900,0,300,280);
   const palettes={meadow:["#8fa98c","#617c68","#344f43"],ruins:["#a18361","#6d5d4b","#3d4039"],mine:["#554b57","#39333e","#211e27"],storm:["#4e7880","#315761","#1e3944"],temple:["#725d80","#4e405e","#2c273c"]}[level.theme];
@@ -327,11 +347,17 @@ function drawPlatform(p,theme){
 }
 
 function drawPlayer(p){
-  const color=COLORS[p.type],moving=p.onGround&&Math.abs(p.vx)>18,bob=moving?Math.sin(performance.now()*.018)*1.2:0;let sprite=sprites[p.type],frame=0,sheet=false,drawW=p.type==="atlas"?46:45,drawH=69;
+  const shooting=p.type==="atlas"&&p.actionTimer>0,color=COLORS[p.type],moving=!shooting&&p.onGround&&Math.abs(p.vx)>18,bob=moving?Math.sin(performance.now()*.018)*1.2:0;let sprite=sprites[p.type],frame=0,sheet=false,drawW=p.type==="atlas"?46:45,drawH=69;
   if(moving){sprite=p.type==="atlas"?sprites.atlasWalk:sprites.nitaWalk;frame=Math.floor(performance.now()*.009)%4;sheet=true;drawW=p.type==="atlas"?54:58;drawH=72;}
-  ctx.save();ctx.translate(p.x+p.w/2,p.y+p.h);if(p.facing<0)ctx.scale(-1,1);ctx.rotate(p.onGround?0:p.vx*.00015);ctx.globalAlpha=p.type==="nita"&&p.invisible>0?.27:1;ctx.shadowColor=p.type==="atlas"?GEAR[state.gear.atlas].color:GEAR[state.gear.nita].color;ctx.shadowBlur=p.actionTimer>0?24:9;
+  const shotProgress=shooting?Math.min(1,(.38-p.actionTimer)/.14):0,recoil=shooting&&p.beamFired?Math.sin(Math.min(1,(.24-p.actionTimer)/.24)*Math.PI)*3:0;
+  ctx.save();ctx.translate(p.x+p.w/2-recoil*p.facing,p.y+p.h);if(p.facing<0)ctx.scale(-1,1);ctx.rotate((p.onGround?0:p.vx*.00015)-(shooting?recoil*.012:0));ctx.globalAlpha=p.type==="nita"&&p.invisible>0?.27:1;ctx.shadowColor=p.type==="atlas"?GEAR[state.gear.atlas].color:GEAR[state.gear.nita].color;ctx.shadowBlur=p.actionTimer>0?24:9;
   if(sprite.complete&&sprite.naturalWidth){if(sheet)ctx.drawImage(sprite,frame*256,0,256,512,-drawW/2,-drawH+bob,drawW,drawH);else ctx.drawImage(sprite,-drawW/2,-drawH+bob,drawW,drawH);}else drawRounded(-p.w/2,-p.h,p.w,p.h,10,color);
-  if(p.type==="atlas"){ctx.fillStyle=GEAR[state.gear.atlas].color;ctx.shadowBlur=18;ctx.beginPath();ctx.arc(16,-31,4.5,0,Math.PI*2);ctx.fill();}
+  if(p.type==="atlas"){
+    const gearColor=GEAR[state.gear.atlas].color,palmX=16+shotProgress*12,palmY=-31-shotProgress*5;
+    if(shooting){ctx.lineCap="round";ctx.strokeStyle="#32352d";ctx.lineWidth=10;ctx.beginPath();ctx.moveTo(7,-47);ctx.lineTo(13+shotProgress*5,-40);ctx.stroke();ctx.strokeStyle="#d58a60";ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(13+shotProgress*5,-40);ctx.lineTo(palmX,palmY);ctx.stroke();}
+    ctx.fillStyle=gearColor;ctx.shadowColor=gearColor;ctx.shadowBlur=shooting?28:18;ctx.beginPath();ctx.arc(palmX,palmY,shooting?6:4.5,0,Math.PI*2);ctx.fill();ctx.fillStyle="#fff";ctx.globalAlpha=shooting?.72:0;ctx.beginPath();ctx.arc(palmX,palmY,2.2,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
+    if(shooting&&!p.beamFired){ctx.strokeStyle=gearColor;ctx.lineWidth=1.5;for(let r=9;r<19;r+=5){ctx.globalAlpha=.75-r*.025;ctx.beginPath();ctx.arc(palmX,palmY,r*(.6+shotProgress*.4),-.7,.7);ctx.stroke();}ctx.globalAlpha=1;}
+  }
   if(p.type==="nita"&&p.invisible>0){ctx.strokeStyle=GEAR[state.gear.nita].color;ctx.lineWidth=2;ctx.setLineDash([4,5]);ctx.strokeRect(-drawW/2,-drawH,drawW,drawH);}
   ctx.restore();
 }
@@ -356,7 +382,7 @@ function drawHazard(h){ctx.fillStyle="#1a2027";ctx.fillRect(h.x,h.y,h.w,h.h);con
 function draw(){
   const rect=canvas.getBoundingClientRect(),scale=Math.min(rect.width/WORLD.width,rect.height/WORLD.height),ox=(rect.width-WORLD.width*scale)/2,oy=(rect.height-WORLD.height*scale)/2,level=levels[state.level]||levels[0];ctx.fillStyle=COLORS.dark;ctx.fillRect(0,0,rect.width,rect.height);ctx.save();ctx.translate(ox,oy);ctx.scale(scale,scale);drawBackground(level);
   for(const p of state.platforms)drawPlatform(p,level.theme);for(const h of state.hazards)drawHazard(h);for(const e of state.exits)drawExit(e);for(const c of state.cameras)drawCamera(c);for(const coin of state.coins)drawCoin(coin);for(const enemy of state.enemies)drawEnemy(enemy);
-  for(const shot of state.projectiles){ctx.strokeStyle=shot.color;ctx.lineWidth=5;ctx.shadowColor=shot.color;ctx.shadowBlur=18;ctx.beginPath();ctx.moveTo(shot.x-shot.vx*.025,shot.y+4);ctx.lineTo(shot.x+shot.w,shot.y+4);ctx.stroke();ctx.shadowBlur=0;}
+  for(const shot of state.projectiles){const direction=Math.sign(shot.vx),tail=shot.x-direction*76,tip=shot.x+direction*shot.w,beam=ctx.createLinearGradient(tail,shot.y,tip,shot.y);beam.addColorStop(0,"rgba(255,255,255,0)");beam.addColorStop(.45,shot.color);beam.addColorStop(1,"#ffffff");ctx.strokeStyle=beam;ctx.lineCap="round";ctx.lineWidth=8;ctx.shadowColor=shot.color;ctx.shadowBlur=22;ctx.beginPath();ctx.moveTo(tail,shot.y+3);ctx.lineTo(tip,shot.y+3);ctx.stroke();ctx.strokeStyle="#fff";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(shot.x-direction*32,shot.y+3);ctx.lineTo(tip,shot.y+3);ctx.stroke();ctx.shadowBlur=0;}
   drawPlayer(atlas);drawPlayer(nita);for(const p of state.particles){ctx.globalAlpha=Math.max(0,p.life*2);ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,p.size,p.size);}ctx.globalAlpha=1;ctx.restore();
 }
 
