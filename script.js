@@ -27,6 +27,7 @@ const cloakDetail = document.getElementById("cloak-detail");
 const cloakCost = document.getElementById("cloak-cost");
 const buyGloveButton = document.getElementById("buy-glove");
 const buyCloakButton = document.getElementById("buy-cloak");
+const buyDualRingButton = document.getElementById("buy-dual-ring");
 const continueButton = document.getElementById("continue-button");
 const createRoomButton = document.getElementById("create-room");
 const showJoinButton = document.getElementById("show-join");
@@ -105,12 +106,12 @@ const levels = [
 
 const state = {
   running: false, paused: false, level: 0, keys: {}, keysPressed: {}, platforms: [], hazards: [], enemies: [], cameras: [], coins: [], exits: [], projectiles: [], particles: [], healthOrbs: [], reviveCups: [], boss: null,
-  gold: { atlas: 0, nita: 0 }, gear: { atlas: 0, nita: 0 }, collectedThisLevel: { atlas: 0, nita: 0 }, last: 0, audio: true, messageTimer: 0, transitionTimer: null, marketInGame: false, marketWasPaused: false
+  gold: { atlas: 0, nita: 0 }, gear: { atlas: 0, nita: 0 }, weapons: { dualRing: false }, collectedThisLevel: { atlas: 0, nita: 0 }, last: 0, audio: true, messageTimer: 0, transitionTimer: null, marketInGame: false, marketWasPaused: false
 };
 const network = { role: "solo", peer: null, connection: null, lastSync: 0 };
 
 function makePlayer(type, x, y) {
-  return { type, x, y, w: 34, h: 50, vx: 0, vy: 0, speed: type === "atlas" ? 260 : 270, jump: type === "atlas" ? 515 : 525, onGround: false, facing: 1, atExit: false, coyote: 0, jumpBuffer: 0, shotCooldown: 0, beamCharge: 0, beamFired: true, beamTarget: -1, invisible: 0, cloakCooldown: 0, actionTimer: 0, castTimer: 0, hp: 4, maxHp: 4, invulnerable: 0, dead: false, reviveTimer: 0 };
+  return { type, x, y, w: type === "atlas" ? 40 : 34, h: type === "atlas" ? 60 : 50, vx: 0, vy: 0, speed: type === "atlas" ? 260 : 270, jump: type === "atlas" ? 515 : 525, onGround: false, facing: 1, atExit: false, coyote: 0, jumpBuffer: 0, shotCooldown: 0, beamCharge: 0, beamFired: true, beamTarget: -1, invisible: 0, cloakCooldown: 0, actionTimer: 0, castTimer: 0, hp: 4, maxHp: 4, invulnerable: 0, dead: false, reviveTimer: 0 };
 }
 let atlas = makePlayer("atlas", 0, 0);
 let nita = makePlayer("nita", 0, 0);
@@ -154,6 +155,7 @@ function loadLevel(index) {
 function resetCampaign() {
   state.gold = { atlas: 0, nita: 0 };
   state.gear = { atlas: 0, nita: 0 };
+  state.weapons = { dualRing: false };
   loadLevel(0);
 }
 
@@ -161,7 +163,7 @@ function updateHud() {
   const glove = GEAR[state.gear.atlas], cloak = GEAR[state.gear.nita];
   atlasGoldLabel.textContent = state.gold.atlas;
   nitaGoldLabel.textContent = state.gold.nita;
-  atlasGearLabel.textContent = `${glove.name.toUpperCase()} YÜZÜK · ${glove.damage} HASAR`;
+  atlasGearLabel.textContent = state.weapons.dualRing ? "ÇİFT YÜZÜK · SERİ ATIŞ" : `${glove.name.toUpperCase()} YÜZÜK · ${glove.damage} HASAR`;
   nitaGearLabel.textContent = `${cloak.name.toUpperCase()} PELERİN · ${cloak.cloak} sn`;
   document.documentElement.style.setProperty("--glove", glove.color);
   document.documentElement.style.setProperty("--cloak", cloak.color);
@@ -214,7 +216,8 @@ function updatePlayer(p,left,right,jump,action,dt) {
     p.beamCharge = Math.max(0,p.beamCharge-dt);
     if (p.beamCharge === 0 && !p.beamFired) releaseAtlasBeam();
   }
-  if (p.type === "atlas" && state.keysPressed[action]) fireAtlas();
+  if (p.type === "atlas" && state.weapons.dualRing && state.keys[action]) fireDualRing();
+  else if (p.type === "atlas" && state.keysPressed[action]) fireAtlas();
   if (p.type === "nita" && state.keysPressed[action]) activateCloak();
   moveBody(p,dt);
   if (p.y > WORLD.height+80 || state.hazards.some(h=>intersects(p,h))) { resetLevel(`${p.type==="atlas"?"Atlas":"Nita"} yoldan düştü.`); return; }
@@ -233,6 +236,18 @@ function fireAtlas() {
   atlas.beamCharge = .14;
   atlas.beamFired = false;
   tone(310+state.gear.atlas*55,.08);
+}
+
+function fireDualRing() {
+  if(atlas.shotCooldown>0)return;
+  const target=findNearestVisibleEnemy()||(state.boss&&!state.boss.dead?state.boss:null);
+  if(target)atlas.facing=target.x+target.w/2>=atlas.x+atlas.w/2?1:-1;
+  const palm=atlasPalmPosition(),targetX=target&&!target.dead?target.x+target.w/2:palm.x+atlas.facing*500,targetY=target&&!target.dead?target.y+target.h*.45:palm.y;
+  let dx=targetX-palm.x,dy=targetY-palm.y,length=Math.hypot(dx,dy)||1;dx/=length;dy/=length;
+  const side=Math.random()<.5?-1:1,color=side<0?"#ffb12e":"#b96cff";
+  state.projectiles.push({x:palm.x,y:palm.y+side*3,w:13,h:6,vx:dx*820,vy:dy*820,life:.72,color,target:target===state.boss?-2:target?state.enemies.indexOf(target):-1,damage:1.5,dualRing:true});
+  atlas.shotCooldown=.19;atlas.actionTimer=.16;atlas.beamFired=true;
+  burst(palm.x,palm.y,color,5,atlas.facing*80);tone(side<0?690:760,.045);
 }
 
 function atlasPalmPosition(){
@@ -342,14 +357,13 @@ function updateEnemies(dt) {
     if(!enemy.superSoldier&&intersects(atlas,enemy)&&!atlas.dead) {if(state.boss){if(enemy.contactCooldown<=0){damagePlayer(atlas);enemy.contactCooldown=1;enemy.vx*=-1;}}else{resetLevel("Atlas bir gölge yaratığa yakalandı.");return;}}
     if(!enemy.superSoldier&&nita.invisible<=0&&intersects(nita,enemy)&&!nita.dead) {if(state.boss){if(enemy.contactCooldown<=0){damagePlayer(nita);enemy.contactCooldown=1;enemy.vx*=-1;}}else{resetLevel("Nita görünürken bir gölge yaratığa yakalandı.");return;}}
   }
-  const damage = GEAR[state.gear.atlas].damage;
   for (const shot of state.projectiles) {
     if(shot.bossShot)continue;
     const previousX=shot.x,previousY=shot.y;shot.x += shot.vx*dt;shot.y += (shot.vy||0)*dt;shot.life-=dt;
     if(!beamLineClear(previousX,previousY,shot.x,shot.y)){shot.life=0;burst(shot.x,shot.y,shot.color,6,0);continue;}
-    if(state.boss&&!state.boss.dead&&intersects(shot,state.boss)){shot.life=0;damageBossFromAtlas();continue;}
+    if(state.boss&&!state.boss.dead&&intersects(shot,state.boss)){shot.life=0;if(shot.dualRing){state.boss.hp=Math.max(0,state.boss.hp-.055);state.boss.flash=.08;if(state.boss.hp<=0){state.boss.dead=true;setTimeout(()=>completeLevel(),1200);}}else damageBossFromAtlas();continue;}
     const enemy=state.enemies.find(e=>!e.dead&&intersects(shot,e));
-    if(enemy){enemy.hp=Math.max(0,enemy.hp-damage);enemy.flash=.13;shot.life=0;burst(shot.x,shot.y,shot.color,10,shot.vx*.08);tone(enemy.hp<=0?140:210,.1);if(enemy.hp<=0){enemy.dead=true;burst(enemy.x+enemy.w/2,enemy.y+enemy.h/2,shot.color,24,0);}}
+    if(enemy){enemy.hp=Math.max(0,enemy.hp-(shot.damage??GEAR[state.gear.atlas].damage));enemy.flash=.13;shot.life=0;burst(shot.x,shot.y,shot.color,10,shot.vx*.08);tone(enemy.hp<=0?140:210,.1);if(enemy.hp<=0){enemy.dead=true;burst(enemy.x+enemy.w/2,enemy.y+enemy.h/2,shot.color,24,0);}}
   }
   state.projectiles=state.projectiles.filter(s=>s.life>0&&s.x>-40&&s.x<WORLD.width+40&&s.y>-40&&s.y<WORLD.height+40);
 }
@@ -419,7 +433,16 @@ function refreshMarket(){
     if(!next){nameEl.textContent=`${GEAR[current].name} ekipman tamamlandı`;detailEl.textContent=owner==="atlas"?`Hasar: ${GEAR[current].damage} / ${ENEMY_HP} · Tek vuruş · Otomatik hedefleme`:`Görünmezlik: ${GEAR[current].cloak} saniye · Legendary pelerin`;costEl.textContent="—";button.textContent="MAKSİMUM SEVİYE";button.disabled=true;card.classList.add("maxed");continue;}
     card.classList.remove("maxed");nameEl.textContent=`${next.name} ${owner==="atlas"?"Güç Yüzüğü":"Görünmezlik Pelerini"}`;detailEl.textContent=owner==="atlas"?`Hasar: ${next.damage} / ${ENEMY_HP} · ${next.hits===1?"Tek":next.hits} vuruş · Otomatik hedefleme`:`Görünmezlik: ${next.cloak} saniye · Kamera ve yaratıklar algılamaz`;costEl.textContent=next.cost;button.innerHTML=`<span>${next.cost}</span> ${owner.toUpperCase()} ALTINI`;button.disabled=state.gold[owner]<next.cost;
   }
+  buyDualRingButton.hidden=network.role==="guest";
+  buyDualRingButton.disabled=state.weapons.dualRing||state.gold.atlas<50;
+  buyDualRingButton.innerHTML=state.weapons.dualRing?"KUŞANILDI":'<span>50</span> ATLAS ALTINI';
+  buyDualRingButton.closest(".shop-card").classList.toggle("maxed",state.weapons.dualRing);
   updateHud();
+}
+
+function buyDualRing(){
+  if(network.role==="guest"||state.weapons.dualRing||state.gold.atlas<50)return;
+  state.gold.atlas-=50;state.weapons.dualRing=true;tone(940,.22);burst(atlas.x+atlas.w/2,atlas.y+20,"#ffb12e",26,0);refreshMarket();sendSnapshot();
 }
 
 function buyUpgrade(owner){
@@ -475,8 +498,8 @@ function drawPlatform(p,theme){
 
 function drawPlayer(p){
   if(p.dead){const dx=network.role==="guest"&&Number.isFinite(p.renderX)?p.renderX:p.x,dy=network.role==="guest"&&Number.isFinite(p.renderY)?p.renderY:p.y;ctx.save();ctx.globalAlpha=.5;ctx.fillStyle=COLORS[p.type];ctx.beginPath();ctx.ellipse(dx+17,dy+48,24,7,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.fillStyle="#fff";ctx.font='800 10px "Manrope"';ctx.textAlign="center";ctx.fillText(`KO · ${Math.ceil(p.reviveTimer)} sn`,dx+17,dy+33);ctx.textAlign="left";ctx.restore();return;}
-  const shooting=p.type==="atlas"&&p.actionTimer>0,casting=p.type==="nita"&&p.castTimer>0,color=COLORS[p.type],moving=!shooting&&!casting&&p.onGround&&Math.abs(p.vx)>18,bob=moving?Math.sin(performance.now()*.018)*1.2:0;let sprite=sprites[p.type],frame=0,sheet=false,drawW=p.type==="atlas"?46:45,drawH=69;
-  if(moving){sprite=p.type==="atlas"?sprites.atlasWalk:sprites.nitaWalk;frame=Math.floor(performance.now()*.009)%4;sheet=true;drawW=p.type==="atlas"?54:58;drawH=72;}
+  const shooting=p.type==="atlas"&&p.actionTimer>0,casting=p.type==="nita"&&p.castTimer>0,color=COLORS[p.type],moving=!shooting&&!casting&&p.onGround&&Math.abs(p.vx)>18,bob=moving?Math.sin(performance.now()*.018)*.55:0;let sprite=sprites[p.type],frame=0,sheet=false,drawW=p.type==="atlas"?62:45,drawH=p.type==="atlas"?84:69;
+  if(moving){sprite=p.type==="atlas"?sprites.atlasWalk:sprites.nitaWalk;frame=Math.floor(performance.now()*.009)%4;sheet=true;}
   const rawProgress=shooting?Math.min(1,Math.max(0,(.38-p.actionTimer)/.14)):0,shotProgress=rawProgress*rawProgress*(3-2*rawProgress),recoil=shooting&&p.beamFired?Math.sin(Math.min(1,(.24-p.actionTimer)/.24)*Math.PI)*3:0,renderX=network.role==="guest"&&Number.isFinite(p.renderX)?p.renderX:p.x,renderY=network.role==="guest"&&Number.isFinite(p.renderY)?p.renderY:p.y;
   ctx.save();ctx.translate(renderX+p.w/2-recoil*p.facing,renderY+p.h);if(p.facing<0)ctx.scale(-1,1);ctx.rotate(shooting?0:(p.onGround?0:p.vx*.00015));ctx.globalAlpha=p.type==="nita"&&p.invisible>0?.27:1;ctx.shadowColor=COLORS[p.type];ctx.shadowBlur=p.actionTimer>0?22:9;
   if(sprite.complete&&sprite.naturalWidth){if(sheet)ctx.drawImage(sprite,frame*256,0,256,512,-drawW/2,-drawH+bob,drawW,drawH);else ctx.drawImage(sprite,-drawW/2,-drawH+bob,drawW,drawH);}else drawRounded(-p.w/2,-p.h,p.w,p.h,10,color);
@@ -553,6 +576,7 @@ pauseButton.addEventListener("click",()=>{if(!state.running)return;state.paused=
 soundButton.addEventListener("click",()=>{state.audio=!state.audio;soundButton.textContent=state.audio?"SES AÇIK":"SES KAPALI";soundButton.setAttribute("aria-label",state.audio?"Sesi kapat":"Sesi aç");});
 hudMarketButton.addEventListener("click",openInGameMarket);
 marketToggle.addEventListener("click",toggleMarket);buyGloveButton.addEventListener("click",()=>buyUpgrade("atlas"));buyCloakButton.addEventListener("click",()=>buyUpgrade("nita"));continueButton.addEventListener("click",finishOrContinue);
+buyDualRingButton.addEventListener("click",buyDualRing);
 document.addEventListener("visibilitychange",()=>{if(document.hidden&&state.running&&!state.paused){state.paused=true;pauseButton.textContent="DEVAM ET";}});window.addEventListener("resize",resize);
 
 document.querySelectorAll(".touch-controls button").forEach(button=>{const key=button.dataset.key;const press=e=>{e.preventDefault();button.classList.add("active");setControl(key,true);};const release=e=>{e.preventDefault();button.classList.remove("active");setControl(key,false);};button.addEventListener("pointerdown",press);button.addEventListener("pointerup",release);button.addEventListener("pointercancel",release);button.addEventListener("pointerleave",e=>{if(e.buttons)release(e);});});
@@ -560,7 +584,7 @@ document.querySelectorAll(".joystick").forEach(stick=>{const knob=stick.querySel
 
 function roomCode(){const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";return Array.from({length:6},()=>chars[Math.floor(Math.random()*chars.length)]).join("");}
 function sendPacket(packet){if(network.connection?.open)network.connection.send(packet);}
-function sendSnapshot(){sendPacket({type:"state",level:state.level,atlas:{...atlas,renderX:undefined,renderY:undefined},nita:{...nita,renderX:undefined,renderY:undefined},enemies:state.enemies.map(e=>({...e,renderX:undefined,renderY:undefined})),coins:state.coins.map(c=>c.collected),projectiles:state.projectiles.map(s=>({...s})),cameras:state.cameras.map(c=>({charge:c.charge,pulse:c.pulse})),gold:{...state.gold},gear:{...state.gear},boss:state.boss?{...state.boss}:null,healthOrbs:state.healthOrbs.map(o=>({...o})),reviveCups:state.reviveCups.map(c=>({...c}))});}
+function sendSnapshot(){sendPacket({type:"state",level:state.level,atlas:{...atlas,renderX:undefined,renderY:undefined},nita:{...nita,renderX:undefined,renderY:undefined},enemies:state.enemies.map(e=>({...e,renderX:undefined,renderY:undefined})),coins:state.coins.map(c=>c.collected),projectiles:state.projectiles.map(s=>({...s})),cameras:state.cameras.map(c=>({charge:c.charge,pulse:c.pulse})),gold:{...state.gold},gear:{...state.gear},weapons:{...state.weapons},boss:state.boss?{...state.boss}:null,healthOrbs:state.healthOrbs.map(o=>({...o})),reviveCups:state.reviveCups.map(c=>({...c}))});}
 function beginMultiplayer(role){network.role=role;document.body.classList.remove("multiplayer-host","multiplayer-guest");document.body.classList.add(`multiplayer-${role}`);connectionBadge.textContent=role==="host"?"ATLAS · BAĞLI":"NITA · BAĞLI";connectionBadge.style.color=role==="host"?COLORS.atlas:COLORS.nita;resetCampaign();state.running=role==="host";state.paused=false;state.last=performance.now();overlay.classList.add("hidden");if(role==="host")sendPacket({type:"start",level:0,gold:state.gold,gear:state.gear});}
 function receivePacket(data){
   if(data.type==="key"&&network.role==="host"){if(data.down&&!state.keys[data.key])state.keysPressed[data.key]=true;state.keys[data.key]=data.down;}
