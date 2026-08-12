@@ -120,7 +120,7 @@ const levels = [
 
 const state = {
   running: false, paused: false, level: 0, keys: {}, keysPressed: {}, platforms: [], hazards: [], enemies: [], cameras: [], coins: [], exits: [], projectiles: [], particles: [], healthOrbs: [], reviveCups: [], boss: null,
-  gold: { atlas: 0, nita: 0 }, gear: { atlas: 0, nita: 0 }, weapons: { dualRing: false }, collectedThisLevel: { atlas: 0, nita: 0 }, last: 0, audio: true, messageTimer: 0, transitionTimer: null, marketInGame: false, marketWasPaused: false
+  gold: { atlas: 0, nita: 0 }, gear: { atlas: 0, nita: 0 }, weapons: { dualRing: false }, collectedThisLevel: { atlas: 0, nita: 0 }, last: 0, audio: true, messageTimer: 0, transitionTimer: null, marketInGame: false, marketWasPaused: false, autoPaused: false
 };
 const network = { role: "solo", character: null, hostCharacter: null, peer: null, connection: null, lastSync: 0 };
 
@@ -604,7 +604,13 @@ document.addEventListener("fullscreenchange",syncFullscreenUi);document.addEvent
 hudMarketButton.addEventListener("click",openInGameMarket);
 marketToggle.addEventListener("click",toggleMarket);buyGloveButton.addEventListener("click",()=>buyUpgrade("atlas"));buyCloakButton.addEventListener("click",()=>buyUpgrade("nita"));continueButton.addEventListener("click",finishOrContinue);
 buyDualRingButton.addEventListener("click",buyDualRing);
-document.addEventListener("visibilitychange",()=>{if(document.hidden&&state.running&&!state.paused){state.paused=true;pauseButton.textContent="DEVAM ET";}});window.addEventListener("resize",resize);
+function releaseAllInputs(){
+  if(network.role==="guest")for(const control of ["left","right","jump","action"])sendPacket({type:"control",control,down:false});
+  state.keys={};state.keysPressed={};document.querySelectorAll(".touch-controls button.active").forEach(button=>button.classList.remove("active"));document.querySelectorAll(".joystick i").forEach(knob=>knob.style.transform="");
+}
+function suspendForBackground(){releaseAllInputs();if(state.running&&!state.paused&&!state.marketInGame){state.paused=true;state.autoPaused=true;pauseButton.textContent="DEVAM ET";}}
+function resumeFromBackground(){releaseAllInputs();if(state.autoPaused&&state.running){state.autoPaused=false;state.paused=false;state.last=performance.now();pauseButton.textContent="DURAKLAT";showMessage("Oyun devam ediyor.",1);}}
+document.addEventListener("visibilitychange",()=>document.hidden?suspendForBackground():resumeFromBackground());window.addEventListener("blur",suspendForBackground);window.addEventListener("focus",()=>{if(!document.hidden)resumeFromBackground();});window.addEventListener("pagehide",releaseAllInputs);window.addEventListener("resize",resize);
 
 document.querySelectorAll(".touch-controls button").forEach(button=>{const control=button.dataset.control;const press=e=>{e.preventDefault();button.classList.add("active");setPlayerControl(control,true);};const release=e=>{e.preventDefault();button.classList.remove("active");setPlayerControl(control,false);};button.addEventListener("pointerdown",press);button.addEventListener("pointerup",release);button.addEventListener("pointercancel",release);button.addEventListener("pointerleave",e=>{if(e.buttons)release(e);});});
 document.querySelectorAll(".joystick").forEach(stick=>{const knob=stick.querySelector("i");function move(e){e.preventDefault();const r=stick.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2),distance=Math.hypot(dx,dy),limit=r.width*.31,factor=distance>limit?limit/distance:1;knob.style.transform=`translate(${dx*factor}px,${dy*factor}px)`;const threshold=r.width*.12;setPlayerControl("left",dx < -threshold);setPlayerControl("right",dx > threshold);}function release(e){e.preventDefault();knob.style.transform="";setPlayerControl("left",false);setPlayerControl("right",false);}stick.addEventListener("pointerdown",e=>{stick.setPointerCapture(e.pointerId);move(e);});stick.addEventListener("pointermove",e=>{if(stick.hasPointerCapture(e.pointerId))move(e);});stick.addEventListener("pointerup",release);stick.addEventListener("pointercancel",release);});
