@@ -62,12 +62,6 @@ const WALK_CROPS = {
   atlas: [{y:62,h:387,cx:127},{y:64,h:385,cx:110},{y:64,h:383,cx:122},{y:62,h:387,cx:120}],
   nita: [{y:38,h:427,cx:147},{y:40,h:425,cx:127},{y:42,h:423,cx:115},{y:40,h:425,cx:114}]
 };
-const ATLAS_WALK_HANDS = [
-  [[-13.6,-39.6],[15,-40.7]],
-  [[-7.5,-39.8],[19.4,-41]],
-  [[-11.4,-39.1],[16.5,-39.8]],
-  [[-8.9,-39.5],[9.7,-35.7]]
-];
 const sprites = {
   atlas: new Image(), nita: new Image(), atlasWalk: new Image(), atlasAction: new Image(), nitaWalk: new Image(), enemy: new Image(), enemyWalk: new Image()
 };
@@ -128,7 +122,7 @@ const state = {
 const network = { role: "solo", peer: null, connection: null, lastSync: 0 };
 
 function makePlayer(type, x, y) {
-  return { type, x, y, w: type === "atlas" ? 40 : 34, h: type === "atlas" ? 60 : 50, vx: 0, vy: 0, speed: type === "atlas" ? 260 : 270, jump: type === "atlas" ? 515 : 525, onGround: false, facing: 1, atExit: false, coyote: 0, jumpBuffer: 0, shotCooldown: 0, beamCharge: 0, beamFired: true, beamTarget: -1, invisible: 0, cloakCooldown: 0, actionTimer: 0, castTimer: 0, hp: 4, maxHp: 4, invulnerable: 0, dead: false, reviveTimer: 0 };
+  return { type, x, y, w: type === "atlas" ? 40 : 34, h: type === "atlas" ? 60 : 50, vx: 0, vy: 0, speed: type === "atlas" ? 260 : 270, jump: type === "atlas" ? 515 : 525, onGround: false, facing: 1, atExit: false, coyote: 0, jumpBuffer: 0, walkCycle: 0, shotCooldown: 0, beamCharge: 0, beamFired: true, beamTarget: -1, invisible: 0, cloakCooldown: 0, actionTimer: 0, castTimer: 0, hp: 4, maxHp: 4, invulnerable: 0, dead: false, reviveTimer: 0 };
 }
 let atlas = makePlayer("atlas", 0, 0);
 let nita = makePlayer("nita", 0, 0);
@@ -180,7 +174,7 @@ function updateHud() {
   const glove = GEAR[state.gear.atlas], cloak = GEAR[state.gear.nita];
   atlasGoldLabel.textContent = state.gold.atlas;
   nitaGoldLabel.textContent = state.gold.nita;
-  atlasGearLabel.textContent = state.weapons.dualRing ? `${glove.name.toUpperCase()} ÇİFT YÜZÜK · SERİ ATIŞ` : `${glove.name.toUpperCase()} YÜZÜK · ${glove.damage} HASAR`;
+  atlasGearLabel.textContent = state.weapons.dualRing ? `${glove.name.toUpperCase()} KADİM TILSIM · SERİ ATIŞ` : `${glove.name.toUpperCase()} KUTSANMIŞ EL · ${glove.damage} HASAR`;
   nitaGearLabel.textContent = `${cloak.name.toUpperCase()} PELERİN · ${cloak.cloak} sn`;
   document.documentElement.style.setProperty("--glove", glove.color);
   document.documentElement.style.setProperty("--cloak", cloak.color);
@@ -216,6 +210,7 @@ function updatePlayer(p,left,right,jump,action,dt) {
   const direction = (state.keys[left]?-1:0)+(state.keys[right]?1:0);
   const accel = p.onGround ? 1900 : 1050;
   p.vx = approach(p.vx,direction*p.speed,accel*dt);
+  if(p.onGround&&Math.abs(p.vx)>18)p.walkCycle=(p.walkCycle+Math.abs(p.vx)*dt/42)%4;
   if (!direction && p.onGround) p.vx = approach(p.vx,0,2350*dt);
   if (direction) p.facing = direction;
   p.coyote = p.onGround ? .11 : Math.max(0,p.coyote-dt);
@@ -448,7 +443,7 @@ function refreshMarket(){
     const current=state.gear[owner],next=GEAR[current+1],card=button.closest(".shop-card");
     card.style.setProperty("--item-color",next?.color||GEAR[current].color);
     if(!next){nameEl.textContent=`${GEAR[current].name} ekipman tamamlandı`;detailEl.textContent=owner==="atlas"?`Hasar: ${GEAR[current].damage} / ${ENEMY_HP} · Tek vuruş · Otomatik hedefleme`:`Görünmezlik: ${GEAR[current].cloak} saniye · Legendary pelerin`;costEl.textContent="—";button.textContent="MAKSİMUM SEVİYE";button.disabled=true;card.classList.add("maxed");continue;}
-    card.classList.remove("maxed");nameEl.textContent=`${next.name} ${owner==="atlas"?"Güç Yüzüğü":"Görünmezlik Pelerini"}`;detailEl.textContent=owner==="atlas"?`Hasar: ${next.damage} / ${ENEMY_HP} · ${next.hits===1?"Tek":next.hits} vuruş · Otomatik hedefleme`:`Görünmezlik: ${next.cloak} saniye · Kamera ve yaratıklar algılamaz`;costEl.textContent=next.cost;button.innerHTML=`<span>${next.cost}</span> ${owner.toUpperCase()} ALTINI`;button.disabled=state.gold[owner]<next.cost;
+    card.classList.remove("maxed");nameEl.textContent=`${next.name} ${owner==="atlas"?"Kutsanmış El":"Görünmezlik Pelerini"}`;detailEl.textContent=owner==="atlas"?`Hasar: ${next.damage} / ${ENEMY_HP} · ${next.hits===1?"Tek":next.hits} vuruş · Otomatik hedefleme`:`Görünmezlik: ${next.cloak} saniye · Kamera ve yaratıklar algılamaz`;costEl.textContent=next.cost;button.innerHTML=`<span>${next.cost}</span> ${owner.toUpperCase()} ALTINI`;button.disabled=state.gold[owner]<next.cost;
   }
   buyDualRingButton.hidden=network.role==="guest";
   buyDualRingButton.disabled=state.weapons.dualRing||state.gold.atlas<50;
@@ -516,24 +511,11 @@ function drawPlatform(p,theme){
 function drawPlayer(p){
   if(p.dead){const dx=network.role==="guest"&&Number.isFinite(p.renderX)?p.renderX:p.x,dy=network.role==="guest"&&Number.isFinite(p.renderY)?p.renderY:p.y;ctx.save();ctx.globalAlpha=.5;ctx.fillStyle=COLORS[p.type];ctx.beginPath();ctx.ellipse(dx+17,dy+48,24,7,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.fillStyle="#fff";ctx.font='800 10px "Manrope"';ctx.textAlign="center";ctx.fillText(`KO · ${Math.ceil(p.reviveTimer)} sn`,dx+17,dy+33);ctx.textAlign="left";ctx.restore();return;}
   const shooting=p.type==="atlas"&&p.actionTimer>0,casting=p.type==="nita"&&p.castTimer>0,color=COLORS[p.type],moving=!shooting&&!casting&&p.onGround&&Math.abs(p.vx)>18,bob=0;let sprite=sprites[p.type],frame=0,sheet=false,drawW=p.type==="atlas"?62:45,drawH=p.type==="atlas"?88:72;
-  if(moving){sprite=p.type==="atlas"?sprites.atlasWalk:sprites.nitaWalk;frame=Math.floor(performance.now()*.0075)%4;sheet=true;}
+  if(moving){sprite=p.type==="atlas"?sprites.atlasWalk:sprites.nitaWalk;frame=Math.floor(p.walkCycle)%4;sheet=true;}
   if(shooting){sprite=sprites.atlasAction;drawW=66;drawH=91;}
-  const rawProgress=shooting?Math.min(1,Math.max(0,(.38-p.actionTimer)/.14)):0,shotProgress=rawProgress*rawProgress*(3-2*rawProgress),recoil=shooting&&p.beamFired?Math.sin(Math.min(1,(.24-p.actionTimer)/.24)*Math.PI)*3:0,renderX=network.role==="guest"&&Number.isFinite(p.renderX)?p.renderX:p.x,renderY=network.role==="guest"&&Number.isFinite(p.renderY)?p.renderY:p.y;
+  const recoil=shooting&&p.beamFired?Math.sin(Math.min(1,(.24-p.actionTimer)/.24)*Math.PI)*3:0,renderX=network.role==="guest"&&Number.isFinite(p.renderX)?p.renderX:p.x,renderY=network.role==="guest"&&Number.isFinite(p.renderY)?p.renderY:p.y;
   ctx.save();ctx.translate(renderX+p.w/2-recoil*p.facing,renderY+p.h);if(p.facing<0)ctx.scale(-1,1);ctx.rotate(shooting?0:(p.onGround?0:p.vx*.00015));ctx.globalAlpha=p.type==="nita"&&p.invisible>0?.27:1;ctx.shadowColor=COLORS[p.type];ctx.shadowBlur=p.actionTimer>0?22:9;
   if(sprite.complete&&sprite.naturalWidth){if(shooting){ctx.drawImage(sprite,677,48,259,52,-21.5,-drawH,59.8,11.2);ctx.drawImage(sprite,650,100,286,372,-drawW*.42,-79.8,drawW,79.8);}else if(sheet){const crop=WALK_CROPS[p.type][frame],centerOffset=(128-crop.cx)*drawW/256;ctx.drawImage(sprite,frame*256,crop.y,256,crop.h,-drawW/2+centerOffset,-drawH+bob,drawW,drawH);}else ctx.drawImage(sprite,0,10,256,364,-drawW/2,-drawH+bob,drawW,drawH);}else drawRounded(-p.w/2,-p.h,p.w,p.h,10,color);
-  if(p.type==="atlas"){
-    const gearColor=GEAR[state.gear.atlas].color,palmX=shooting?31:16,palmY=shooting?-57:-31;
-    if(!state.weapons.dualRing){const ringX=shooting?palmX-2:10,ringY=shooting?palmY+1:-29;ctx.shadowColor=gearColor;ctx.shadowBlur=shooting?12:3;ctx.strokeStyle=gearColor;ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(ringX,ringY,2.2,1.15,.18,0,Math.PI*2);ctx.stroke();if(shooting){ctx.fillStyle=gearColor;ctx.shadowBlur=20;ctx.beginPath();ctx.arc(palmX+1,palmY-1,2.25,0,Math.PI*2);ctx.fill();ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(palmX+1,palmY-1,.8,0,Math.PI*2);ctx.fill();}}
-    if(shooting&&!p.beamFired){ctx.strokeStyle=gearColor;ctx.lineWidth=1.5;for(let r=9;r<19;r+=5){ctx.globalAlpha=.75-r*.025;ctx.beginPath();ctx.arc(palmX,palmY,r*(.6+shotProgress*.4),-.7,.7);ctx.stroke();}ctx.globalAlpha=1;}
-    if(state.weapons.dualRing){
-      const pulse=.72+Math.sin(performance.now()*.012)*.28,rapid=state.keys.s;
-      const hands=shooting?[[35,-79],[34,-61]]:moving?ATLAS_WALK_HANDS[frame]:[[11,-41],[-8.5,-40]];
-      ctx.globalCompositeOperation="lighter";
-      hands.forEach(([x,y],i)=>{const ringColor=i?"#bd63ff":"#ffd34d";ctx.save();ctx.translate(x,y);ctx.rotate((i?1:-1)*(performance.now()*.003));ctx.shadowColor=ringColor;ctx.shadowBlur=rapid?9:6;ctx.strokeStyle=ringColor;ctx.lineWidth=.8;ctx.beginPath();ctx.ellipse(0,0,rapid?1.65:1.15,rapid?.8:.55,.18,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=.5+.38*pulse;ctx.strokeStyle="#fff";ctx.lineWidth=.35;ctx.stroke();ctx.globalAlpha=.08+.07*pulse;ctx.fillStyle=ringColor;ctx.beginPath();ctx.arc(0,0,rapid?2.8:2.1,0,Math.PI*2);ctx.fill();ctx.restore();});
-      if(rapid){const a=hands[0],b=hands[1];ctx.globalAlpha=.35+.3*pulse;ctx.strokeStyle="#ffe3a0";ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.quadraticCurveTo((a[0]+b[0])/2+Math.sin(performance.now()*.03)*3,(a[1]+b[1])/2-5,b[0],b[1]);ctx.stroke();}
-      ctx.globalAlpha=1;ctx.globalCompositeOperation="source-over";
-    }
-  }
   if(casting){const lift=1-p.castTimer/.85;ctx.strokeStyle="#d58a60";ctx.lineWidth=6;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(-7,-43);ctx.lineTo(-15-lift*4,-58);ctx.lineTo(-18,-68);ctx.moveTo(7,-43);ctx.lineTo(15+lift*4,-58);ctx.lineTo(18,-68);ctx.stroke();ctx.fillStyle="#aefcff";ctx.shadowColor="#72edff";ctx.shadowBlur=18;ctx.beginPath();ctx.arc(-18,-70,3,0,Math.PI*2);ctx.arc(18,-70,3,0,Math.PI*2);ctx.fill();}
   ctx.restore();
   if(state.boss){ctx.fillStyle="rgba(0,0,0,.72)";ctx.fillRect(renderX-5,renderY-17,44,7);for(let i=0;i<p.maxHp;i++){ctx.fillStyle=i<p.hp?COLORS[p.type]:"#30343a";ctx.fillRect(renderX-2+i*10,renderY-15,8,3);}}
