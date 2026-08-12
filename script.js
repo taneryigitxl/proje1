@@ -45,6 +45,8 @@ const connectionBadge = document.getElementById("connection-badge");
 const levelTransition = document.getElementById("level-transition");
 const transitionLevelName = document.getElementById("transition-level-name");
 const transitionNext = document.getElementById("transition-next");
+const iosInstallTip = document.getElementById("ios-install-tip");
+const iosInstallClose = document.getElementById("ios-install-close");
 
 const WORLD = { width: 1280, height: 720 };
 const COLORS = { atlas: "#ff704d", nita: "#54d8e8", cream: "#f5efe3", dark: "#10141d" };
@@ -123,6 +125,12 @@ const state = {
   gold: { atlas: 0, nita: 0 }, gear: { atlas: 0, nita: 0 }, weapons: { dualRing: false }, collectedThisLevel: { atlas: 0, nita: 0 }, last: 0, audio: true, messageTimer: 0, transitionTimer: null, marketInGame: false, marketWasPaused: false, autoPaused: false
 };
 const network = { role: "solo", character: null, hostCharacter: null, peer: null, connection: null, lastSync: 0 };
+
+function setupIosInstallTip(){
+  const ua=navigator.userAgent,isIos=/iPhone|iPad|iPod/i.test(ua)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1),standalone=window.matchMedia("(display-mode: standalone)").matches||navigator.standalone===true,isSafari=/Safari/i.test(ua)&&!/CriOS|FxiOS|EdgiOS/i.test(ua);
+  if(isIos&&isSafari&&!standalone&&sessionStorage.getItem("ios-install-tip-closed")!=="1")setTimeout(()=>{iosInstallTip.hidden=false;},900);
+}
+iosInstallClose.addEventListener("click",()=>{iosInstallTip.hidden=true;sessionStorage.setItem("ios-install-tip-closed","1");});
 
 function makePlayer(type, x, y) {
   return { type, x, y, w: type === "atlas" ? 40 : 34, h: type === "atlas" ? 60 : 50, vx: 0, vy: 0, speed: type === "atlas" ? 260 : 270, jump: type === "atlas" ? 515 : 525, onGround: false, facing: 1, atExit: false, coyote: 0, jumpBuffer: 0, walkCycle: 0, shotCooldown: 0, beamCharge: 0, beamFired: true, beamTarget: -1, invisible: 0, cloakCooldown: 0, actionTimer: 0, castTimer: 0, hp: 4, maxHp: 4, invulnerable: 0, dead: false, reviveTimer: 0 };
@@ -643,4 +651,4 @@ copyCodeButton.addEventListener("click",async()=>{try{await navigator.clipboard.
 document.querySelectorAll("[data-character]").forEach(button=>button.addEventListener("click",()=>{const character=button.dataset.character;if(network.role==="host"){network.hostCharacter=character;document.querySelectorAll("[data-character]").forEach(b=>{b.disabled=true;b.classList.toggle("selected",b===button);});characterSelectStatus.textContent="Diğer oyuncu karakterini seçiyor…";sendPacket({type:"host-choice",character});}else if(network.role==="guest"&&network.hostCharacter&&character!==network.hostCharacter){button.classList.add("selected");document.querySelectorAll("[data-character]").forEach(b=>b.disabled=true);characterSelectStatus.textContent="Oyun başlatılıyor…";sendPacket({type:"guest-choice",character});}}));
 soloButton.addEventListener("click",()=>{network.role="solo";document.body.classList.remove("multiplayer-host","multiplayer-guest");connectionBadge.textContent="AYNI CİHAZ";resetCampaign();state.running=true;state.last=performance.now();overlay.classList.add("hidden");});
 
-loadLevel(0);resize();requestAnimationFrame(t=>{state.last=t;requestAnimationFrame(loop);});
+setupIosInstallTip();loadLevel(0);resize();requestAnimationFrame(t=>{state.last=t;requestAnimationFrame(loop);});
