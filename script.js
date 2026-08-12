@@ -59,7 +59,7 @@ const DUAL_RING = [
   { accent:"#ff8a3d", damage:3.6, bossDamage:.1 }
 ];
 const WALK_CROPS = {
-  atlas: [{y:62,h:387,cx:127},{y:64,h:385,cx:110},{y:64,h:383,cx:122},{y:62,h:387,cx:120}],
+  atlas: [{y:62,h:383,cx:137},{y:64,h:381,cx:109},{y:62,h:383,cx:107},{y:64,h:381,cx:109}],
   nita: [{y:38,h:427,cx:147},{y:40,h:425,cx:127},{y:42,h:423,cx:115},{y:40,h:425,cx:114}]
 };
 const sprites = {
@@ -67,7 +67,7 @@ const sprites = {
 };
 sprites.atlas.src = "assets/atlas.png";
 sprites.nita.src = "assets/nita.png";
-sprites.atlasWalk.src = "assets/atlas-walk.png";
+sprites.atlasWalk.src = "assets/atlas-walk-v2.png";
 sprites.atlasAction.src = "assets/atlas-action.png";
 sprites.nitaWalk.src = "assets/nita-walk.png";
 sprites.enemy.src = "assets/enemy.png";
