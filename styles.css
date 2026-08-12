@@ -42,7 +42,7 @@ kbd { min-width:21px; display:inline-grid; place-items:center; margin:0 2px; pad
 @keyframes checkPop { 0%{opacity:0;transform:scale(.2) rotate(-25deg)} 100%{opacity:1;transform:scale(1) rotate(0)} }
 @keyframes transitionText { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
 @keyframes burstRay { from{opacity:0;scale:1 .2} 45%{opacity:.9} to{opacity:0;scale:1 1.8} }
-.overlay { position:absolute; z-index:5; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; text-align:center; background-color:#070a10;background-image:radial-gradient(circle at 50% 40%,rgba(22,29,42,.42),rgba(7,10,16,.9) 72%),linear-gradient(rgba(6,9,15,.48),rgba(6,9,15,.68)),url("assets/menu-atlas-nita-bg.png");background-position:center,center,35% center;background-repeat:no-repeat;background-size:auto,auto,min(92vw,164vh) auto; transition:opacity .4s ease,visibility .4s; }
+.overlay { position:absolute; z-index:5; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; text-align:center; background-color:#070a10;background-image:radial-gradient(circle at 50% 40%,rgba(22,29,42,.42),rgba(7,10,16,.9) 72%),linear-gradient(rgba(6,9,15,.48),rgba(6,9,15,.68)),url("assets/menu-atlas-nita-bg.png");background-position:center,center,calc(50% - 10vw) center;background-repeat:no-repeat;background-size:auto,auto,min(92vw,164vh) auto; transition:opacity .4s ease,visibility .4s; }
 .overlay.hidden { opacity:0; visibility:hidden; pointer-events:none; }
 .overlay h1 { margin:10px 0 16px; font:800 clamp(4rem,10vw,8.5rem)/.75 "Manrope",sans-serif; letter-spacing:-.085em; text-transform:uppercase; }
 .overlay h1 em { color:var(--nita); font-style:normal; }
