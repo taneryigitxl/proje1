@@ -50,10 +50,10 @@ kbd { min-width:21px; display:inline-grid; place-items:center; margin:0 2px; pad
 .eyebrow { margin:0; font-size:.64rem; font-weight:700; letter-spacing:.22em; color:var(--atlas); }
 .overlay button { border:0; border-radius:100px; padding:16px 22px; background:var(--cream); color:var(--night); font-weight:800; font-size:.78rem; letter-spacing:.06em; cursor:pointer; box-shadow:0 10px 35px rgba(0,0,0,.24); }
 .overlay button span { padding-left:20px; }
-.lobby-actions { display:grid;grid-template-columns:1fr 1fr;gap:10px;min-width:min(390px,90vw); }
+.lobby-actions { display:flex;flex-direction:column;gap:10px;width:min(390px,90vw); }
 .lobby-actions .secondary { background:transparent;color:var(--cream);border:1px solid rgba(245,239,227,.3);box-shadow:none; }
-.lobby-actions>button { min-width:0; }
-.lobby-actions .text-button { grid-column:1/-1;padding:8px;background:transparent;color:rgba(245,239,227,.5);box-shadow:none;font-size:.62rem; }
+.lobby-actions>button { width:100%;min-width:0;height:52px;padding:0 22px; }
+.lobby-actions .text-button { background:transparent;color:var(--cream);border:1px solid rgba(245,239,227,.3);box-shadow:none;font-size:.78rem; }
 .join-form { width:min(390px,90vw); }
 .join-form label,.room-wait>span { display:block;margin-bottom:8px;font-size:.58rem;font-weight:700;letter-spacing:.16em;color:rgba(245,239,227,.55); }
 .join-form div { display:flex;gap:8px; }
@@ -77,9 +77,6 @@ kbd { min-width:21px; display:inline-grid; place-items:center; margin:0 2px; pad
 .rotate-device { display:none;position:absolute;z-index:20;inset:0;align-items:center;justify-content:center;flex-direction:column;gap:9px;text-align:center;background:#10141d;color:var(--cream); }
 .rotate-device strong { font:800 1rem "Manrope",sans-serif;letter-spacing:.08em; }.rotate-device span{font-size:.75rem;opacity:.55}.phone-icon{font-size:3rem;color:var(--nita);animation:rotatePhone 1.8s ease-in-out infinite}@keyframes rotatePhone{50%{transform:rotate(90deg)}}
 .restart-hint { margin-top:22px!important; font-size:.65rem; opacity:.5; }
-.title-mark { position:relative; width:80px; height:36px; }
-.title-mark i { position:absolute; width:28px; height:36px; border-radius:20px 20px 8px 8px; background:var(--atlas); transform:rotate(-13deg); }
-.title-mark i:last-child { right:0; background:var(--nita); transform:rotate(13deg); }
 .market { position:absolute;z-index:7;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:clamp(18px,4vw,52px);text-align:center;background:radial-gradient(circle at 50% 25%,rgba(50,62,82,.96),rgba(7,10,15,.99) 72%);opacity:0;visibility:hidden;pointer-events:none;transition:.28s ease; }
 .market.active { opacity:1;visibility:visible;pointer-events:auto; }
 .market h2 { margin:7px 0 4px;font:800 clamp(2rem,5vw,4.2rem)/1 "Manrope",sans-serif;letter-spacing:-.055em; }
