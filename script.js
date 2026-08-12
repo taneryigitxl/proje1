@@ -77,14 +77,25 @@ const WALK_CROPS = {
   atlas: [{y:62,h:383,cx:137},{y:64,h:381,cx:109},{y:62,h:383,cx:107},{y:64,h:381,cx:109}],
   nita: [{y:38,h:427,cx:147},{y:40,h:425,cx:127},{y:42,h:423,cx:115},{y:40,h:425,cx:114}]
 };
+const WRATH_WALK_CROPS = {
+  atlas: [{y:42,h:392,cx:136},{y:42,h:392,cx:134},{y:42,h:392,cx:133},{y:42,h:392,cx:134}],
+  nita: [{y:35,h:405,cx:131},{y:35,h:405,cx:129},{y:35,h:405,cx:128},{y:35,h:405,cx:129}]
+};
 const sprites = {
-  atlas: new Image(), nita: new Image(), atlasWalk: new Image(), atlasAction: new Image(), nitaWalk: new Image(), enemy: new Image(), enemyWalk: new Image()
+  atlas: new Image(), nita: new Image(), atlasWalk: new Image(), atlasAction: new Image(), nitaWalk: new Image(),
+  wrathAtlas: new Image(), wrathNita: new Image(), wrathAtlasWalk: new Image(), wrathNitaWalk: new Image(), wrathAtlasAction: new Image(),
+  enemy: new Image(), enemyWalk: new Image()
 };
 sprites.atlas.src = "assets/atlas.png";
 sprites.nita.src = "assets/nita.png";
 sprites.atlasWalk.src = "assets/atlas-walk-v2.png";
 sprites.atlasAction.src = "assets/atlas-action.png";
 sprites.nitaWalk.src = "assets/nita-walk.png";
+sprites.wrathAtlas.src = "assets/wrath-atlas-idle.png";
+sprites.wrathNita.src = "assets/wrath-nita-idle.png";
+sprites.wrathAtlasWalk.src = "assets/wrath-atlas-walk.png";
+sprites.wrathNitaWalk.src = "assets/wrath-nita-walk.png";
+sprites.wrathAtlasAction.src = "assets/wrath-atlas-action.png";
 sprites.enemy.src = "assets/enemy.png";
 sprites.enemyWalk.src = "assets/enemy-walk.png";
 const backgrounds = Array.from({length:5},(_,i)=>{const image=new Image();image.src=`assets/level-${i+1}-bg.jpg`;return image;});
@@ -565,7 +576,7 @@ function managedCharacters(){return network.role==="solo"?["atlas","nita"]:netwo
 function heroName(owner){return owner==="atlas"?"Atlas":"Nita";}
 function renderInventory(){
   const owners=managedCharacters();
-  inventoryGrid.innerHTML=owners.map(owner=>{const item=state.inventory[owner],equipped=item.equipped,armorItem=item.armor&&!equipped,selected=state.selectedArmor===owner;return `<article class="inventory-character ${owner}" data-owner="${owner}" style="--hero-color:${COLORS[owner]}"><div class="avatar-stage"><img src="assets/${owner}.png" alt="${heroName(owner)}">${equipped?'<i class="armor-preview" aria-label="Öfke Zırhı kuşanıldı"></i>':""}</div><div class="character-inventory"><small>${owner.toUpperCase()}</small><h3>${heroName(owner)}</h3><div class="gear-slot ${equipped?"equipped":""}">${equipped?"ÖFKE ZIRHI · +2 CAN":"ZIRH YUVASI · EŞYA SÜRÜKLE"}</div><div class="inventory-items">${item.hearts?`<div class="inventory-item"><i class="item-gem">◆</i><span><b>Öfkenin Kalbi ×${item.hearts}</b><em>Demircide zırha dönüştürülür</em></span></div>`:""}${armorItem?`<button class="inventory-item ${selected?"selected":""}" type="button" draggable="true" data-armor-owner="${owner}"><i class="item-armor"></i><span><b>Öfke Zırhı</b><em>Sürükle veya dokunarak seç</em></span></button>`:""}${!item.hearts&&!armorItem&&!equipped?'<div class="empty-inventory">Henüz özel eşya yok. Öfkenin Kalbi, 5. bölüm boss’undan düşer.</div>':""}</div></div></article>`;}).join("");
+  inventoryGrid.innerHTML=owners.map(owner=>{const item=state.inventory[owner],equipped=item.equipped,armorItem=item.armor&&!equipped,selected=state.selectedArmor===owner,avatar=equipped?`assets/wrath-${owner}-idle.png`:`assets/${owner}.png`;return `<article class="inventory-character ${owner} ${equipped?"armored":""}" data-owner="${owner}" style="--hero-color:${COLORS[owner]}"><div class="avatar-stage"><img src="${avatar}" alt="${heroName(owner)}${equipped?" · Öfke Zırhı":""}"></div><div class="character-inventory"><small>${owner.toUpperCase()}</small><h3>${heroName(owner)}</h3><div class="gear-slot ${equipped?"equipped":""}">${equipped?"ÖFKE ZIRHI · +2 CAN":"ZIRH YUVASI · EŞYA SÜRÜKLE"}</div><div class="inventory-items">${item.hearts?`<div class="inventory-item"><i class="item-gem">◆</i><span><b>Öfkenin Kalbi ×${item.hearts}</b><em>Demircide zırha dönüştürülür</em></span></div>`:""}${armorItem?`<button class="inventory-item ${selected?"selected":""}" type="button" draggable="true" data-armor-owner="${owner}"><i class="item-armor"></i><span><b>Öfke Zırhı</b><em>Sürükle veya dokunarak seç</em></span></button>`:""}${!item.hearts&&!armorItem&&!equipped?'<div class="empty-inventory">Henüz özel eşya yok. Öfkenin Kalbi, 5. bölüm boss’undan düşer.</div>':""}</div></div></article>`;}).join("");
 }
 function renderForge(){
   forgeOptions.innerHTML=managedCharacters().map(owner=>{const item=state.inventory[owner],status=item.armor?item.equipped?"Kuşanıldı":"Üretildi · Envanterde":item.hearts?"1 Öfkenin Kalbi hazır":"Öfkenin Kalbi gerekli";return `<article class="forge-option"><i class="item-armor"></i><span><b>${heroName(owner)} · Öfke Zırhı</b><small>${status} · Kalp: ${item.hearts}</small></span><button type="button" data-craft-owner="${owner}" ${item.armor||!item.hearts?"disabled":""}>${item.armor?"ÜRETİLDİ":"1 KALP İLE ÜRET"}</button></article>`;}).join("");
@@ -674,23 +685,15 @@ function drawPlatform(p,theme){
   if(theme==="storm"&&variant===1){ctx.fillStyle="#263b42";ctx.fillRect(p.x+8,p.y+8,5,p.h-8);ctx.fillRect(p.x+p.w-13,p.y+8,5,p.h-8);ctx.fillStyle="#a9c4c8";ctx.fillRect(p.x+9,p.y+10,2,2);ctx.fillRect(p.x+p.w-12,p.y+10,2,2);}ctx.restore();
 }
 
-function drawWrathArmor(p){
-  const scale=p.type==="atlas"?1:.84;ctx.save();ctx.scale(scale,scale);ctx.translate(0,p.type==="atlas"?0:1);ctx.shadowColor="#ff251d";ctx.shadowBlur=9;const metal=ctx.createLinearGradient(-28,-58,28,-22);metal.addColorStop(0,"#050609");metal.addColorStop(.48,"#352128");metal.addColorStop(1,"#08090c");ctx.fillStyle=metal;ctx.strokeStyle="#9d1e20";ctx.lineWidth=2;
-  ctx.beginPath();ctx.moveTo(-22,-59);ctx.lineTo(-32,-50);ctx.lineTo(-27,-25);ctx.lineTo(-13,-17);ctx.lineTo(13,-17);ctx.lineTo(27,-25);ctx.lineTo(32,-50);ctx.lineTo(22,-59);ctx.lineTo(0,-54);ctx.closePath();ctx.fill();ctx.stroke();
-  ctx.fillStyle="#111116";for(const side of [-1,1]){ctx.beginPath();ctx.ellipse(side*28,-51,13,8,side*.28,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillRect(side<0?-30:18,-24,12,22);ctx.strokeRect(side<0?-30:18,-24,12,22);}
-  ctx.fillStyle="#090a0e";ctx.fillRect(-15,-20,12,20);ctx.fillRect(3,-20,12,20);ctx.strokeRect(-15,-20,12,20);ctx.strokeRect(3,-20,12,20);ctx.fillStyle="#ff3b2f";ctx.shadowBlur=14;ctx.fillRect(-2,-48,4,27);ctx.fillRect(-23,-34,46,3);ctx.restore();
-}
-
 function drawPlayer(p){
   if(p.dead){const dx=network.role==="guest"&&Number.isFinite(p.renderX)?p.renderX:p.x,dy=network.role==="guest"&&Number.isFinite(p.renderY)?p.renderY:p.y;ctx.save();ctx.globalAlpha=.5;ctx.fillStyle=COLORS[p.type];ctx.beginPath();ctx.ellipse(dx+17,dy+48,24,7,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.fillStyle="#fff";ctx.font='800 10px "Manrope"';ctx.textAlign="center";ctx.fillText(`KO · ${Math.ceil(p.reviveTimer)} sn`,dx+17,dy+33);ctx.textAlign="left";ctx.restore();return;}
-  const shooting=p.type==="atlas"&&p.actionTimer>0,casting=p.type==="nita"&&p.castTimer>0,color=COLORS[p.type],moving=!shooting&&!casting&&p.onGround&&Math.abs(p.vx)>18,bob=0;let sprite=sprites[p.type],frame=0,sheet=false,drawW=p.type==="atlas"?62:45,drawH=p.type==="atlas"?88:72;
-  if(moving){sprite=p.type==="atlas"?sprites.atlasWalk:sprites.nitaWalk;frame=Math.floor(p.walkCycle)%4;sheet=true;}
-  if(shooting){sprite=sprites.atlasAction;drawW=66;drawH=91;}
+  const armored=Boolean(state.inventory[p.type].equipped),shooting=p.type==="atlas"&&p.actionTimer>0,casting=p.type==="nita"&&p.castTimer>0,color=COLORS[p.type],moving=!shooting&&!casting&&p.onGround&&Math.abs(p.vx)>18,bob=0;let sprite=armored?(p.type==="atlas"?sprites.wrathAtlas:sprites.wrathNita):sprites[p.type],frame=0,sheet=false,drawW=p.type==="atlas"?62:45,drawH=p.type==="atlas"?88:72;
+  if(moving){sprite=armored?(p.type==="atlas"?sprites.wrathAtlasWalk:sprites.wrathNitaWalk):(p.type==="atlas"?sprites.atlasWalk:sprites.nitaWalk);frame=Math.floor(p.walkCycle)%4;sheet=true;}
+  if(shooting){sprite=armored?sprites.wrathAtlasAction:sprites.atlasAction;drawW=66;drawH=91;}
   const recoil=shooting&&p.beamFired?Math.sin(Math.min(1,(.24-p.actionTimer)/.24)*Math.PI)*3:0,renderX=network.role==="guest"&&Number.isFinite(p.renderX)?p.renderX:p.x,renderY=network.role==="guest"&&Number.isFinite(p.renderY)?p.renderY:p.y;
   ctx.save();ctx.translate(renderX+p.w/2-recoil*p.facing,renderY+p.h);if(p.facing<0)ctx.scale(-1,1);ctx.rotate(shooting?0:(p.onGround?0:p.vx*.00015));ctx.globalAlpha=p.type==="nita"&&p.invisible>0?.27:1;ctx.shadowColor=COLORS[p.type];ctx.shadowBlur=p.actionTimer>0?22:9;
-  if(sprite.complete&&sprite.naturalWidth){if(shooting){ctx.drawImage(sprite,677,48,259,52,-21.5,-drawH,59.8,11.2);ctx.drawImage(sprite,650,100,286,372,-drawW*.42,-79.8,drawW,79.8);}else if(sheet){const crop=WALK_CROPS[p.type][frame],centerOffset=(128-crop.cx)*drawW/256;ctx.drawImage(sprite,frame*256,crop.y,256,crop.h,-drawW/2+centerOffset,-drawH+bob,drawW,drawH);}else ctx.drawImage(sprite,0,10,256,364,-drawW/2,-drawH+bob,drawW,drawH);}else drawRounded(-p.w/2,-p.h,p.w,p.h,10,color);
+  if(sprite.complete&&sprite.naturalWidth){if(shooting){ctx.drawImage(sprite,677,48,259,52,-21.5,-drawH,59.8,11.2);ctx.drawImage(sprite,650,100,286,372,-drawW*.42,-79.8,drawW,79.8);}else if(sheet){const crop=(armored?WRATH_WALK_CROPS:WALK_CROPS)[p.type][frame],centerOffset=(128-crop.cx)*drawW/256;ctx.drawImage(sprite,frame*256,crop.y,256,crop.h,-drawW/2+centerOffset,-drawH+bob,drawW,drawH);}else ctx.drawImage(sprite,0,10,256,364,-drawW/2,-drawH+bob,drawW,drawH);}else drawRounded(-p.w/2,-p.h,p.w,p.h,10,color);
   if(casting){const lift=1-p.castTimer/.85;ctx.strokeStyle="#d58a60";ctx.lineWidth=6;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(-7,-43);ctx.lineTo(-15-lift*4,-58);ctx.lineTo(-18,-68);ctx.moveTo(7,-43);ctx.lineTo(15+lift*4,-58);ctx.lineTo(18,-68);ctx.stroke();ctx.fillStyle="#aefcff";ctx.shadowColor="#72edff";ctx.shadowBlur=18;ctx.beginPath();ctx.arc(-18,-70,3,0,Math.PI*2);ctx.arc(18,-70,3,0,Math.PI*2);ctx.fill();}
-  if(state.inventory[p.type].equipped)drawWrathArmor(p);
   ctx.restore();
   if(p.type==="nita"&&p.invisible>0){const label=`${p.invisible.toFixed(1)} sn`,cx=renderX+p.w/2,cy=renderY-(state.boss?53:37),pulse=.82+Math.sin(performance.now()*.012)*.18;ctx.save();ctx.font='800 10px "Manrope"';ctx.textAlign="center";ctx.textBaseline="middle";const width=Math.max(42,ctx.measureText(label).width+16);ctx.shadowColor="#54d8e8";ctx.shadowBlur=8*pulse;ctx.fillStyle="rgba(8,18,25,.55)";ctx.beginPath();ctx.roundRect(cx-width/2,cy-10,width,20,10);ctx.fill();ctx.shadowBlur=0;ctx.strokeStyle=`rgba(84,216,232,${.3+.17*pulse})`;ctx.lineWidth=1;ctx.stroke();ctx.fillStyle="rgba(201,251,255,.82)";ctx.fillText(label,cx,cy+.5);ctx.restore();}
   if(state.boss){ctx.fillStyle="rgba(0,0,0,.72)";ctx.fillRect(renderX-5,renderY-17,p.maxHp*10+4,7);for(let i=0;i<p.maxHp;i++){ctx.fillStyle=i<p.hp?COLORS[p.type]:"#30343a";ctx.fillRect(renderX-2+i*10,renderY-15,8,3);}}
