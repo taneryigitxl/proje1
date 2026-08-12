@@ -591,15 +591,16 @@ startButton.addEventListener("click",()=>{if(startButton.dataset.action==="resta
 pauseButton.addEventListener("click",()=>{if(!state.running)return;state.paused=!state.paused;pauseButton.textContent=state.paused?"DEVAM ET":"DURAKLAT";showMessage(state.paused?"Oyun duraklatıldı.":"Yola devam!",1.2);});
 soundButton.addEventListener("click",()=>{state.audio=!state.audio;soundButton.textContent=state.audio?"SES AÇIK":"SES KAPALI";soundButton.setAttribute("aria-label",state.audio?"Sesi kapat":"Sesi aç");});
 async function toggleFullscreen(){
-  try{
-    const active=document.fullscreenElement||document.webkitFullscreenElement;
-    if(active){if(document.exitFullscreen)await document.exitFullscreen();else if(document.webkitExitFullscreen)document.webkitExitFullscreen();}
-    else{const target=document.getElementById("game");if(target.requestFullscreen)await target.requestFullscreen({navigationUI:"hide"});else if(target.webkitRequestFullscreen)target.webkitRequestFullscreen();try{await screen.orientation?.lock?.("landscape");}catch{}}
-  }catch{showMessage("Tam ekran için tarayıcı menüsündeki tam ekran seçeneğini kullanabilirsin.",3);}setTimeout(resize,120);
+  const active=document.fullscreenElement||document.webkitFullscreenElement;
+  if(active){try{if(document.exitFullscreen)await document.exitFullscreen();else document.webkitExitFullscreen?.();}catch{}return;}
+  if(document.body.classList.contains("pseudo-fullscreen")){document.body.classList.remove("pseudo-fullscreen");fullscreenButton.textContent="TAM EKRAN";setTimeout(resize,80);return;}
+  const target=document.documentElement,request=target.requestFullscreen||target.webkitRequestFullscreen||target.msRequestFullscreen;
+  if(request){try{const result=request.call(target);if(result?.then)await result;try{await screen.orientation?.lock?.("landscape");}catch{}setTimeout(resize,120);return;}catch(error){console.warn("Fullscreen açılamadı:",error);}}
+  document.body.classList.add("pseudo-fullscreen");fullscreenButton.textContent="TAM EKRANDAN ÇIK";window.scrollTo(0,1);setTimeout(resize,120);showMessage("En geniş ekran modu açıldı. iPhone'da gerçek tam ekran için Paylaş > Ana Ekrana Ekle'yi kullanabilirsin.",4);
 }
 fullscreenButton.addEventListener("click",toggleFullscreen);
-document.addEventListener("fullscreenchange",()=>{fullscreenButton.textContent=document.fullscreenElement?"TAM EKRANDAN ÇIK":"TAM EKRAN";fullscreenButton.setAttribute("aria-label",document.fullscreenElement?"Tam ekrandan çık":"Tam ekrana geç");setTimeout(resize,80);});
-document.addEventListener("webkitfullscreenchange",()=>setTimeout(resize,80));
+function syncFullscreenUi(){const active=document.fullscreenElement||document.webkitFullscreenElement;fullscreenButton.textContent=active||document.body.classList.contains("pseudo-fullscreen")?"TAM EKRANDAN ÇIK":"TAM EKRAN";fullscreenButton.setAttribute("aria-label",active?"Tam ekrandan çık":"Tam ekrana geç");setTimeout(resize,80);}
+document.addEventListener("fullscreenchange",syncFullscreenUi);document.addEventListener("webkitfullscreenchange",syncFullscreenUi);
 hudMarketButton.addEventListener("click",openInGameMarket);
 marketToggle.addEventListener("click",toggleMarket);buyGloveButton.addEventListener("click",()=>buyUpgrade("atlas"));buyCloakButton.addEventListener("click",()=>buyUpgrade("nita"));continueButton.addEventListener("click",finishOrContinue);
 buyDualRingButton.addEventListener("click",buyDualRing);
