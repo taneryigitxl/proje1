@@ -38,6 +38,8 @@ const roomInput = document.getElementById("room-code");
 const roomWait = document.getElementById("room-wait");
 const roomCodeDisplay = document.getElementById("room-code-display");
 const copyCodeButton = document.getElementById("copy-code");
+const characterSelect = document.getElementById("character-select");
+const characterSelectStatus = document.getElementById("character-select-status");
 const connectionBadge = document.getElementById("connection-badge");
 const levelTransition = document.getElementById("level-transition");
 const transitionLevelName = document.getElementById("transition-level-name");
@@ -119,7 +121,7 @@ const state = {
   running: false, paused: false, level: 0, keys: {}, keysPressed: {}, platforms: [], hazards: [], enemies: [], cameras: [], coins: [], exits: [], projectiles: [], particles: [], healthOrbs: [], reviveCups: [], boss: null,
   gold: { atlas: 0, nita: 0 }, gear: { atlas: 0, nita: 0 }, weapons: { dualRing: false }, collectedThisLevel: { atlas: 0, nita: 0 }, last: 0, audio: true, messageTimer: 0, transitionTimer: null, marketInGame: false, marketWasPaused: false
 };
-const network = { role: "solo", peer: null, connection: null, lastSync: 0 };
+const network = { role: "solo", character: null, hostCharacter: null, peer: null, connection: null, lastSync: 0 };
 
 function makePlayer(type, x, y) {
   return { type, x, y, w: type === "atlas" ? 40 : 34, h: type === "atlas" ? 60 : 50, vx: 0, vy: 0, speed: type === "atlas" ? 260 : 270, jump: type === "atlas" ? 515 : 525, onGround: false, facing: 1, atExit: false, coyote: 0, jumpBuffer: 0, walkCycle: 0, shotCooldown: 0, beamCharge: 0, beamFired: true, beamTarget: -1, invisible: 0, cloakCooldown: 0, actionTimer: 0, castTimer: 0, hp: 4, maxHp: 4, invulnerable: 0, dead: false, reviveTimer: 0 };
@@ -425,7 +427,7 @@ function showMarket(){
   marketSummary.textContent=`Bu bölüm: Atlas +${state.collectedThisLevel.atlas} · Nita +${state.collectedThisLevel.nita} altın`;
   marketToggle.hidden=false;marketGrid.hidden=true;marketToggle.innerHTML='MARKET <span>◇</span>';marketToggle.setAttribute("aria-expanded","false");
   continueButton.innerHTML=state.level===levels.length-1?'YOLCULUĞU TAMAMLA <span>✓</span>':'DEVAM ET <span>→</span>';
-  continueButton.hidden=network.role==="guest";buyGloveButton.hidden=network.role==="guest";buyCloakButton.hidden=network.role==="host";refreshMarket();market.classList.add("active");market.setAttribute("aria-hidden","false");
+  continueButton.hidden=network.role==="guest";buyGloveButton.hidden=network.role!=="solo"&&network.character!=="atlas";buyCloakButton.hidden=network.role!=="solo"&&network.character!=="nita";refreshMarket();market.classList.add("active");market.setAttribute("aria-hidden","false");
 }
 
 function openInGameMarket(){
@@ -433,7 +435,7 @@ function openInGameMarket(){
   state.marketInGame=true;state.marketWasPaused=state.paused;state.paused=true;
   marketTitle.textContent="Market";marketSummary.textContent=`Atlas ${state.gold.atlas} · Nita ${state.gold.nita} altın`;
   marketToggle.hidden=true;marketGrid.hidden=false;continueButton.hidden=false;continueButton.innerHTML='OYUNA DÖN <span>←</span>';
-  buyGloveButton.hidden=network.role==="guest";buyCloakButton.hidden=network.role==="host";refreshMarket();market.classList.add("active");market.setAttribute("aria-hidden","false");
+  buyGloveButton.hidden=network.role!=="solo"&&network.character!=="atlas";buyCloakButton.hidden=network.role!=="solo"&&network.character!=="nita";refreshMarket();market.classList.add("active");market.setAttribute("aria-hidden","false");
 }
 
 function toggleMarket(){const opening=marketGrid.hidden;marketGrid.hidden=!opening;marketToggle.innerHTML=opening?'MARKETİ KAPAT <span>×</span>':'MARKET <span>◇</span>';marketToggle.setAttribute("aria-expanded",String(opening));tone(opening?520:330,.06);}
@@ -445,7 +447,7 @@ function refreshMarket(){
     if(!next){nameEl.textContent=`${GEAR[current].name} ekipman tamamlandı`;detailEl.textContent=owner==="atlas"?`Hasar: ${GEAR[current].damage} / ${ENEMY_HP} · Tek vuruş · Otomatik hedefleme`:`Görünmezlik: ${GEAR[current].cloak} saniye · Legendary pelerin`;costEl.textContent="—";button.textContent="MAKSİMUM SEVİYE";button.disabled=true;card.classList.add("maxed");continue;}
     card.classList.remove("maxed");nameEl.textContent=`${next.name} ${owner==="atlas"?"Kutsanmış El":"Görünmezlik Pelerini"}`;detailEl.textContent=owner==="atlas"?`Hasar: ${next.damage} / ${ENEMY_HP} · ${next.hits===1?"Tek":next.hits} vuruş · Otomatik hedefleme`:`Görünmezlik: ${next.cloak} saniye · Kamera ve yaratıklar algılamaz`;costEl.textContent=next.cost;button.innerHTML=`<span>${next.cost}</span> ${owner.toUpperCase()} ALTINI`;button.disabled=state.gold[owner]<next.cost;
   }
-  buyDualRingButton.hidden=network.role==="guest";
+  buyDualRingButton.hidden=network.role!=="solo"&&network.character!=="atlas";
   buyDualRingButton.disabled=state.weapons.dualRing||state.gold.atlas<50;
   buyDualRingButton.innerHTML=state.weapons.dualRing?"KUŞANILDI":'<span>50</span> ATLAS ALTINI';
   buyDualRingButton.closest(".shop-card").classList.toggle("maxed",state.weapons.dualRing);
@@ -453,7 +455,7 @@ function refreshMarket(){
 }
 
 function buyDualRing(){
-  if(network.role==="guest"||state.weapons.dualRing||state.gold.atlas<50)return;
+  if(network.role==="guest"){sendPacket({type:"buy-charm"});return;}if(state.weapons.dualRing||state.gold.atlas<50)return;
   state.gold.atlas-=50;state.weapons.dualRing=true;tone(940,.22);burst(atlas.x+atlas.w/2,atlas.y+20,"#ffb12e",26,0);refreshMarket();sendSnapshot();
 }
 
@@ -577,7 +579,10 @@ function smoothGuest(dt){const factor=1-Math.exp(-dt*18);for(const body of [atla
 function loop(time){const dt=Math.min((time-state.last)/1000,.032);state.last=time;if(state.running&&!state.paused&&network.role!=="guest")update(dt);if(network.role==="guest")smoothGuest(dt);if(network.role==="host"&&state.running&&time-network.lastSync>30){sendSnapshot();network.lastSync=time;}draw();requestAnimationFrame(loop);}
 function tone(freq,duration){if(!state.audio)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;state.ac||=new AC();const o=state.ac.createOscillator(),g=state.ac.createGain();o.frequency.value=freq;o.type="triangle";g.gain.setValueAtTime(.04,state.ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,state.ac.currentTime+duration);o.connect(g);g.connect(state.ac.destination);o.start();o.stop(state.ac.currentTime+duration);}
 
-function setControl(key,down){if(network.role==="guest"){sendPacket({type:"key",key,down});return;}if(down&&!state.keys[key])state.keysPressed[key]=true;state.keys[key]=down;}
+function characterKeys(character){return character==="atlas"?{left:"a",right:"d",jump:"w",action:"s"}:{left:"arrowleft",right:"arrowright",jump:"arrowup",action:"arrowdown"};}
+function applyCharacterControl(character,control,down){const key=characterKeys(character)[control];if(!key)return;if(down&&!state.keys[key])state.keysPressed[key]=true;state.keys[key]=down;}
+function setPlayerControl(control,down){if(network.role==="solo"){applyCharacterControl("atlas",control,down);return;}if(network.role==="guest"){sendPacket({type:"control",control,down});return;}applyCharacterControl(network.character,control,down);}
+function setControl(key,down){if(network.role!=="solo"){const control={a:"left",arrowleft:"left",d:"right",arrowright:"right",w:"jump",arrowup:"jump",s:"action",arrowdown:"action"}[key];if(control)setPlayerControl(control,down);return;}if(down&&!state.keys[key])state.keysPressed[key]=true;state.keys[key]=down;}
 function fillTestGold(){state.gold.atlas=99;state.gold.nita=99;updateHud();if(market.classList.contains("active"))refreshMarket();showMessage("TEST ALTINLARI DOLDURULDU · ATLAS 99 · NITA 99",2);tone(980,.16);sendSnapshot();}
 window.addEventListener("keydown",e=>{const key=e.key.toLowerCase(),isIKey=e.code==="KeyI"||key==="ı"||key==="i"||key==="i̇";if(e.shiftKey&&isIKey){e.preventDefault();if(network.role==="guest")sendPacket({type:"cheatGold"});else fillTestGold();return;}if(e.ctrlKey&&isIKey){e.preventDefault();if(state.running&&network.role!=="guest"){showMessage("GİZLİ GEÇİŞ KODU AKTİF",1);completeLevel();}return;}if(["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright","r"].includes(key))e.preventDefault();setControl(key,true);if(key==="r"&&state.running&&network.role!=="guest")resetLevel("Bölüm yeniden başladı.");});
 window.addEventListener("keyup",e=>setControl(e.key.toLowerCase(),false));
@@ -589,18 +594,24 @@ marketToggle.addEventListener("click",toggleMarket);buyGloveButton.addEventListe
 buyDualRingButton.addEventListener("click",buyDualRing);
 document.addEventListener("visibilitychange",()=>{if(document.hidden&&state.running&&!state.paused){state.paused=true;pauseButton.textContent="DEVAM ET";}});window.addEventListener("resize",resize);
 
-document.querySelectorAll(".touch-controls button").forEach(button=>{const key=button.dataset.key;const press=e=>{e.preventDefault();button.classList.add("active");setControl(key,true);};const release=e=>{e.preventDefault();button.classList.remove("active");setControl(key,false);};button.addEventListener("pointerdown",press);button.addEventListener("pointerup",release);button.addEventListener("pointercancel",release);button.addEventListener("pointerleave",e=>{if(e.buttons)release(e);});});
-document.querySelectorAll(".joystick").forEach(stick=>{const knob=stick.querySelector("i"),keys=[stick.dataset.left,stick.dataset.right,stick.dataset.up,stick.dataset.down].filter(Boolean);function move(e){e.preventDefault();const r=stick.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2),distance=Math.hypot(dx,dy),limit=r.width*.28,factor=distance>limit?limit/distance:1;knob.style.transform=`translate(${dx*factor}px,${dy*factor}px)`;const threshold=r.width*.14;setControl(stick.dataset.left,dx < -threshold);setControl(stick.dataset.right,dx > threshold);setControl(stick.dataset.up,dy < -threshold);if(stick.dataset.down)setControl(stick.dataset.down,dy > threshold);}function release(e){e.preventDefault();knob.style.transform="";keys.forEach(key=>setControl(key,false));}stick.addEventListener("pointerdown",e=>{stick.setPointerCapture(e.pointerId);move(e);});stick.addEventListener("pointermove",e=>{if(stick.hasPointerCapture(e.pointerId))move(e);});stick.addEventListener("pointerup",release);stick.addEventListener("pointercancel",release);});
+document.querySelectorAll(".touch-controls button").forEach(button=>{const control=button.dataset.control;const press=e=>{e.preventDefault();button.classList.add("active");setPlayerControl(control,true);};const release=e=>{e.preventDefault();button.classList.remove("active");setPlayerControl(control,false);};button.addEventListener("pointerdown",press);button.addEventListener("pointerup",release);button.addEventListener("pointercancel",release);button.addEventListener("pointerleave",e=>{if(e.buttons)release(e);});});
+document.querySelectorAll(".joystick").forEach(stick=>{const knob=stick.querySelector("i");function move(e){e.preventDefault();const r=stick.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2),distance=Math.hypot(dx,dy),limit=r.width*.31,factor=distance>limit?limit/distance:1;knob.style.transform=`translate(${dx*factor}px,${dy*factor}px)`;const threshold=r.width*.12;setPlayerControl("left",dx < -threshold);setPlayerControl("right",dx > threshold);}function release(e){e.preventDefault();knob.style.transform="";setPlayerControl("left",false);setPlayerControl("right",false);}stick.addEventListener("pointerdown",e=>{stick.setPointerCapture(e.pointerId);move(e);});stick.addEventListener("pointermove",e=>{if(stick.hasPointerCapture(e.pointerId))move(e);});stick.addEventListener("pointerup",release);stick.addEventListener("pointercancel",release);});
 
 function roomCode(){const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";return Array.from({length:6},()=>chars[Math.floor(Math.random()*chars.length)]).join("");}
 function sendPacket(packet){if(network.connection?.open)network.connection.send(packet);}
 function sendSnapshot(){sendPacket({type:"state",level:state.level,atlas:{...atlas,renderX:undefined,renderY:undefined},nita:{...nita,renderX:undefined,renderY:undefined},enemies:state.enemies.map(e=>({...e,renderX:undefined,renderY:undefined})),coins:state.coins.map(c=>c.collected),projectiles:state.projectiles.map(s=>({...s})),cameras:state.cameras.map(c=>({charge:c.charge,pulse:c.pulse})),gold:{...state.gold},gear:{...state.gear},weapons:{...state.weapons},boss:state.boss?{...state.boss}:null,healthOrbs:state.healthOrbs.map(o=>({...o})),reviveCups:state.reviveCups.map(c=>({...c}))});}
-function beginMultiplayer(role){network.role=role;document.body.classList.remove("multiplayer-host","multiplayer-guest");document.body.classList.add(`multiplayer-${role}`);connectionBadge.textContent=role==="host"?"ATLAS · BAĞLI":"NITA · BAĞLI";connectionBadge.style.color=role==="host"?COLORS.atlas:COLORS.nita;resetCampaign();state.running=role==="host";state.paused=false;state.last=performance.now();overlay.classList.add("hidden");if(role==="host")sendPacket({type:"start",level:0,gold:state.gold,gear:state.gear});}
+function showCharacterSelect(hostChoice=null){roomWait.hidden=true;characterSelect.hidden=false;characterSelectStatus.textContent=network.role==="host"?"İlk seçim hakkı sende.":hostChoice?"Kalan karakteri seçerek onayla.":"Oda sahibi seçim yapıyor…";document.querySelectorAll("[data-character]").forEach(button=>{button.disabled=network.role==="guest"&&(!hostChoice||button.dataset.character===hostChoice);button.classList.remove("selected");});}
+function startSelectedGame(assignments){network.character=assignments[network.role];document.body.classList.remove("character-atlas","character-nita");document.body.classList.add(`character-${network.character}`);connectionBadge.textContent=`${network.character.toUpperCase()} · BAĞLI`;connectionBadge.style.color=COLORS[network.character];characterSelect.hidden=true;resetCampaign();state.running=network.role==="host";state.paused=false;state.last=performance.now();overlay.classList.add("hidden");document.querySelector('.touch-controls .action').textContent=network.character==="atlas"?"YETENEK":"GÖRÜNMEZ";}
+function beginMultiplayer(role){network.role=role;network.character=null;document.body.classList.remove("multiplayer-host","multiplayer-guest");document.body.classList.add(`multiplayer-${role}`);connectionBadge.textContent="KARAKTER SEÇİMİ";if(role==="host")showCharacterSelect();else{roomWait.hidden=true;characterSelect.hidden=false;characterSelectStatus.textContent="Oda sahibi seçim yapıyor…";document.querySelectorAll("[data-character]").forEach(button=>button.disabled=true);}}
 function receivePacket(data){
-  if(data.type==="key"&&network.role==="host"){if(data.down&&!state.keys[data.key])state.keysPressed[data.key]=true;state.keys[data.key]=data.down;}
+  if(data.type==="control"&&network.role==="host")applyCharacterControl(network.character==="atlas"?"nita":"atlas",data.control,data.down);
+  if(data.type==="host-choice"&&network.role==="guest"){network.hostCharacter=data.character;showCharacterSelect(data.character);}
+  if(data.type==="guest-choice"&&network.role==="host"){const assignments={host:network.hostCharacter,guest:data.character};startSelectedGame(assignments);sendPacket({type:"selection-complete",assignments,level:0,gold:state.gold,gear:state.gear});}
+  if(data.type==="selection-complete"&&network.role==="guest"){startSelectedGame(data.assignments);state.gold={...data.gold};state.gear={...data.gear};loadLevel(data.level);state.running=true;}
   if(data.type==="state"&&network.role==="guest"&&data.weapons)state.weapons={...state.weapons,...data.weapons};
   if(data.type==="cheatGold"&&network.role==="host")fillTestGold();
-  if(data.type==="buy"&&network.role==="host"&&data.owner==="nita")buyUpgrade("nita");
+  if(data.type==="buy"&&network.role==="host"&&["atlas","nita"].includes(data.owner)){const next=GEAR[state.gear[data.owner]+1];if(next&&state.gold[data.owner]>=next.cost){state.gold[data.owner]-=next.cost;state.gear[data.owner]++;refreshMarket();sendSnapshot();}}
+  if(data.type==="buy-charm"&&network.role==="host"&&!state.weapons.dualRing&&state.gold.atlas>=50){state.gold.atlas-=50;state.weapons.dualRing=true;refreshMarket();sendSnapshot();}
   if(data.type==="start"&&network.role==="guest"){state.gold={...data.gold};state.gear={...data.gear};loadLevel(data.level);state.running=true;state.paused=false;market.classList.remove("active");overlay.classList.add("hidden");}
   if(data.type==="state"&&network.role==="guest"){if(state.level!==data.level)loadLevel(data.level);const oldAtlas=[atlas.renderX??atlas.x,atlas.renderY??atlas.y],oldNita=[nita.renderX??nita.x,nita.renderY??nita.y],oldEnemies=state.enemies.map(e=>[e.renderX??e.x,e.renderY??e.y]),oldBoss=state.boss?[state.boss.renderX??state.boss.x,state.boss.renderY??state.boss.y]:null;Object.assign(atlas,data.atlas);Object.assign(nita,data.nita);atlas.renderX=oldAtlas[0];atlas.renderY=oldAtlas[1];nita.renderX=oldNita[0];nita.renderY=oldNita[1];state.enemies=data.enemies.map((e,i)=>({...e,renderX:oldEnemies[i]?.[0]??e.x,renderY:oldEnemies[i]?.[1]??e.y}));state.projectiles=data.projectiles;data.coins.forEach((collected,i)=>{if(state.coins[i])state.coins[i].collected=collected;});data.cameras.forEach((c,i)=>{if(state.cameras[i])Object.assign(state.cameras[i],c);});state.gold={...data.gold};state.gear={...data.gear};state.boss=data.boss?{...data.boss,renderX:oldBoss?.[0]??data.boss.x,renderY:oldBoss?.[1]??data.boss.y}:null;state.healthOrbs=(data.healthOrbs||[]).map(o=>({...o}));state.reviveCups=(data.reviveCups||[]).map(c=>({...c}));updateHud();if(market.classList.contains("active"))refreshMarket();}
   if(data.type==="complete"&&network.role==="guest"){state.running=false;state.gold={...data.gold};state.gear={...data.gear};state.collectedThisLevel={...data.collected};updateHud();playLevelTransition(levels[data.level]?.name||"Bölüm",data.final,showMarket);}
@@ -611,6 +622,7 @@ createRoomButton.addEventListener("click",()=>{if(typeof Peer==="undefined"){sho
 showJoinButton.addEventListener("click",()=>{lobbyActions.hidden=true;joinForm.hidden=false;roomInput.focus();});
 joinForm.addEventListener("submit",e=>{e.preventDefault();if(typeof Peer==="undefined"){showMessage("Çevrimiçi oyun servisi yüklenemedi.",4);return;}const code=roomInput.value.trim().toLowerCase();if(code.length!==6)return;joinForm.hidden=true;connectionBadge.textContent="BAĞLANIYOR";overlayText.textContent="Odaya bağlanılıyor…";network.peer=new Peer();network.peer.on("open",()=>bindConnection(network.peer.connect(`nita-${code}`,{reliable:true}),"guest"));network.peer.on("error",peerError);});
 copyCodeButton.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(roomCodeDisplay.textContent);copyCodeButton.textContent="KOPYALANDI";}catch{showMessage("Kodu elle paylaşabilirsin.",2);}});
+document.querySelectorAll("[data-character]").forEach(button=>button.addEventListener("click",()=>{const character=button.dataset.character;if(network.role==="host"){network.hostCharacter=character;document.querySelectorAll("[data-character]").forEach(b=>{b.disabled=true;b.classList.toggle("selected",b===button);});characterSelectStatus.textContent="Diğer oyuncu karakterini seçiyor…";sendPacket({type:"host-choice",character});}else if(network.role==="guest"&&network.hostCharacter&&character!==network.hostCharacter){button.classList.add("selected");document.querySelectorAll("[data-character]").forEach(b=>b.disabled=true);characterSelectStatus.textContent="Oyun başlatılıyor…";sendPacket({type:"guest-choice",character});}}));
 soloButton.addEventListener("click",()=>{network.role="solo";document.body.classList.remove("multiplayer-host","multiplayer-guest");connectionBadge.textContent="AYNI CİHAZ";resetCampaign();state.running=true;state.last=performance.now();overlay.classList.add("hidden");});
 
 loadLevel(0);resize();requestAnimationFrame(t=>{state.last=t;requestAnimationFrame(loop);});

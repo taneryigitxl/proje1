@@ -52,13 +52,9 @@
         <span id="transition-next">SONRAKİ BÖLÜME GEÇİLİYOR…</span>
       </section>
 
-      <div class="touch-controls atlas-touch" aria-label="Atlas dokunmatik kontrolleri">
-        <div class="joystick" data-left="a" data-right="d" data-up="w" aria-label="Atlas hareket joystick’i"><i></i><span></span></div>
-        <div class="touch-actions"><button data-key="w" class="jump" aria-label="Atlas zıpla">ZIPLA</button><button data-key="s" class="action" aria-label="Atlas güç ışını">GÜÇ<br />IŞINI</button></div>
-      </div>
-      <div class="touch-controls nita-touch" aria-label="Nita dokunmatik kontrolleri">
-        <div class="joystick" data-left="arrowleft" data-right="arrowright" data-up="arrowup" data-down="arrowdown" aria-label="Nita hareket joystick’i"><i></i><span></span></div>
-        <div class="touch-actions"><button data-key="arrowup" class="jump" aria-label="Nita zıpla">ZIPLA</button><button data-key="arrowdown" class="action" aria-label="Nita görünmezlik pelerini">GÖRÜNMEZ</button></div>
+      <div class="touch-controls mobile-gamepad" aria-label="Mobil oyun kontrolleri">
+        <div class="joystick" aria-label="Hareket joystick’i"><i></i><span></span></div>
+        <div class="touch-actions"><button data-control="jump" class="jump" aria-label="Zıpla">ZIPLA</button><button data-control="action" class="action" aria-label="Yetenek kullan">YETENEK</button></div>
       </div>
 
       <div class="rotate-device"><div class="phone-icon">↻</div><strong>TELEFONU YATAY ÇEVİR</strong><span>Nita Yollarda yatay ekranda oynanır.</span></div>
@@ -76,6 +72,11 @@
           <div><input id="room-code" maxlength="6" autocomplete="off" inputmode="text" placeholder="ABC123" required /><button type="submit">KATIL</button></div>
         </form>
         <div id="room-wait" class="room-wait" hidden><span>ODA KODU</span><strong id="room-code-display">------</strong><button id="copy-code" type="button">KODU KOPYALA</button><p>İkinci oyuncu bekleniyor…</p></div>
+        <div id="character-select" class="character-select" hidden>
+          <p id="character-select-title">KARAKTERİNİ SEÇ</p>
+          <div><button type="button" data-character="atlas"><b>ATLAS</b><small>Kutsanmış El</small></button><button type="button" data-character="nita"><b>NITA</b><small>Görünmezlik</small></button></div>
+          <span id="character-select-status">Oda sahibi seçim yapıyor…</span>
+        </div>
         <button id="start-button" type="button" hidden>SONRAKİ BÖLÜM <span>→</span></button>
         <p class="restart-hint"><kbd>R</kbd> bölümü yeniden başlatır</p>
       </section>
