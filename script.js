@@ -52,6 +52,12 @@ const GEAR = [
   { name: "Sarı · Legendary", color: "#ffd34d", hits: 1, damage: 12, cloak: 5, cost: 5 }
 ];
 const ENEMY_HP = 12;
+const DUAL_RING = [
+  { accent:"#7ffcff", damage:.9, bossDamage:.035 },
+  { accent:"#65ffd1", damage:1.2, bossDamage:.05 },
+  { accent:"#ff72dc", damage:1.8, bossDamage:.07 },
+  { accent:"#ff8a3d", damage:3.6, bossDamage:.1 }
+];
 const WALK_CROPS = {
   atlas: [{y:62,h:387},{y:64,h:385},{y:64,h:383},{y:62,h:387}],
   nita: [{y:38,h:427},{y:40,h:425},{y:42,h:423},{y:40,h:425}]
@@ -168,7 +174,7 @@ function updateHud() {
   const glove = GEAR[state.gear.atlas], cloak = GEAR[state.gear.nita];
   atlasGoldLabel.textContent = state.gold.atlas;
   nitaGoldLabel.textContent = state.gold.nita;
-  atlasGearLabel.textContent = state.weapons.dualRing ? "ÇİFT YÜZÜK · SERİ ATIŞ" : `${glove.name.toUpperCase()} YÜZÜK · ${glove.damage} HASAR`;
+  atlasGearLabel.textContent = state.weapons.dualRing ? `${glove.name.toUpperCase()} ÇİFT YÜZÜK · SERİ ATIŞ` : `${glove.name.toUpperCase()} YÜZÜK · ${glove.damage} HASAR`;
   nitaGearLabel.textContent = `${cloak.name.toUpperCase()} PELERİN · ${cloak.cloak} sn`;
   document.documentElement.style.setProperty("--glove", glove.color);
   document.documentElement.style.setProperty("--cloak", cloak.color);
@@ -250,8 +256,8 @@ function fireDualRing() {
   if(target)atlas.facing=target.x+target.w/2>=atlas.x+atlas.w/2?1:-1;
   const palm=atlasPalmPosition(),targetX=target&&!target.dead?target.x+target.w/2:palm.x+atlas.facing*500,targetY=target&&!target.dead?target.y+target.h*.45:palm.y;
   let dx=targetX-palm.x,dy=targetY-palm.y,length=Math.hypot(dx,dy)||1;dx/=length;dy/=length;
-  const side=Math.random()<.5?-1:1,color=side<0?"#ffb12e":"#b96cff";
-  state.projectiles.push({x:palm.x,y:palm.y+side*3,w:13,h:6,vx:dx*820,vy:dy*820,life:.72,color,target:target===state.boss?-2:target?state.enemies.indexOf(target):-1,damage:1.5,dualRing:true});
+  const dual=DUAL_RING[state.gear.atlas],side=Math.random()<.5?-1:1,color=side<0?GEAR[state.gear.atlas].color:dual.accent;
+  state.projectiles.push({x:palm.x,y:palm.y+side*3,w:13,h:6,vx:dx*820,vy:dy*820,life:.72,color,target:target===state.boss?-2:target?state.enemies.indexOf(target):-1,damage:dual.damage,dualRing:true});
   atlas.shotCooldown=.19;atlas.beamFired=true;
   burst(palm.x,palm.y,color,5,atlas.facing*80);tone(side<0?690:760,.045);
 }
@@ -366,7 +372,7 @@ function updateEnemies(dt) {
     if(shot.bossShot)continue;
     const previousX=shot.x,previousY=shot.y;shot.x += shot.vx*dt;shot.y += (shot.vy||0)*dt;shot.life-=dt;
     if(!beamLineClear(previousX,previousY,shot.x,shot.y)){shot.life=0;burst(shot.x,shot.y,shot.color,6,0);continue;}
-    if(state.boss&&!state.boss.dead&&intersects(shot,state.boss)){shot.life=0;if(shot.dualRing){state.boss.hp=Math.max(0,state.boss.hp-.055);state.boss.flash=.08;if(state.boss.hp<=0){state.boss.dead=true;setTimeout(()=>completeLevel(),1200);}}else damageBossFromAtlas();continue;}
+    if(state.boss&&!state.boss.dead&&intersects(shot,state.boss)){shot.life=0;if(shot.dualRing){state.boss.hp=Math.max(0,state.boss.hp-DUAL_RING[state.gear.atlas].bossDamage);state.boss.flash=.08;if(state.boss.hp<=0){state.boss.dead=true;setTimeout(()=>completeLevel(),1200);}}else damageBossFromAtlas();continue;}
     const enemy=state.enemies.find(e=>!e.dead&&intersects(shot,e));
     if(enemy){enemy.hp=Math.max(0,enemy.hp-(shot.damage??GEAR[state.gear.atlas].damage));enemy.flash=.13;shot.life=0;burst(shot.x,shot.y,shot.color,10,shot.vx*.08);tone(enemy.hp<=0?140:210,.1);if(enemy.hp<=0){enemy.dead=true;burst(enemy.x+enemy.w/2,enemy.y+enemy.h/2,shot.color,24,0);}}
   }
@@ -511,13 +517,13 @@ function drawPlayer(p){
   if(sprite.complete&&sprite.naturalWidth){if(shooting)ctx.drawImage(sprite,650,48,286,424,-drawW*.42,-drawH+bob,drawW,drawH);else if(sheet){const crop=WALK_CROPS[p.type][frame];ctx.drawImage(sprite,frame*256,crop.y,256,crop.h,-drawW/2,-drawH+bob,drawW,drawH);}else ctx.drawImage(sprite,0,10,256,364,-drawW/2,-drawH+bob,drawW,drawH);}else drawRounded(-p.w/2,-p.h,p.w,p.h,10,color);
   if(p.type==="atlas"){
     const gearColor=GEAR[state.gear.atlas].color,palmX=shooting?31:16,palmY=shooting?-57:-31;
-    const ringX=shooting?palmX-2:10,ringY=shooting?palmY+1:-29;ctx.shadowColor=gearColor;ctx.shadowBlur=shooting?12:3;ctx.strokeStyle=gearColor;ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(ringX,ringY,2.2,1.15,.18,0,Math.PI*2);ctx.stroke();if(shooting){ctx.fillStyle=gearColor;ctx.shadowBlur=20;ctx.beginPath();ctx.arc(palmX+1,palmY-1,2.25,0,Math.PI*2);ctx.fill();ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(palmX+1,palmY-1,.8,0,Math.PI*2);ctx.fill();}
+    if(!state.weapons.dualRing){const ringX=shooting?palmX-2:10,ringY=shooting?palmY+1:-29;ctx.shadowColor=gearColor;ctx.shadowBlur=shooting?12:3;ctx.strokeStyle=gearColor;ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(ringX,ringY,2.2,1.15,.18,0,Math.PI*2);ctx.stroke();if(shooting){ctx.fillStyle=gearColor;ctx.shadowBlur=20;ctx.beginPath();ctx.arc(palmX+1,palmY-1,2.25,0,Math.PI*2);ctx.fill();ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(palmX+1,palmY-1,.8,0,Math.PI*2);ctx.fill();}}
     if(shooting&&!p.beamFired){ctx.strokeStyle=gearColor;ctx.lineWidth=1.5;for(let r=9;r<19;r+=5){ctx.globalAlpha=.75-r*.025;ctx.beginPath();ctx.arc(palmX,palmY,r*(.6+shotProgress*.4),-.7,.7);ctx.stroke();}ctx.globalAlpha=1;}
     if(state.weapons.dualRing){
-      const pulse=.72+Math.sin(performance.now()*.012)*.28,rapid=state.keys.s;
-      const hands=shooting?[[palmX,palmY],[palmX-7,palmY+7]]:[[13,-36],[8,-31]];
+      const pulse=.72+Math.sin(performance.now()*.012)*.28,rapid=state.keys.s,dual=DUAL_RING[state.gear.atlas];
+      const hands=shooting?[[34,-74],[31,-62]]:[[14,-37],[-13,-36]];
       ctx.globalCompositeOperation="lighter";
-      hands.forEach(([x,y],i)=>{const ringColor=i?"#b96cff":"#ffb12e";ctx.save();ctx.translate(x,y);ctx.rotate((i?1:-1)*(performance.now()*.004));ctx.shadowColor=ringColor;ctx.shadowBlur=rapid?18:9;ctx.strokeStyle=ringColor;ctx.lineWidth=2.4;ctx.beginPath();ctx.ellipse(0,0,rapid?5.5:4.2,rapid?2.7:2.1,.2,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=.45+.35*pulse;ctx.strokeStyle="#fff";ctx.lineWidth=.8;ctx.stroke();ctx.restore();});
+      hands.forEach(([x,y],i)=>{const ringColor=i?dual.accent:gearColor;ctx.save();ctx.translate(x,y);ctx.rotate((i?1:-1)*(performance.now()*.004));ctx.shadowColor=ringColor;ctx.shadowBlur=rapid?17:11;ctx.strokeStyle=ringColor;ctx.lineWidth=1.8;ctx.beginPath();ctx.ellipse(0,0,rapid?4.4:3.3,rapid?2.2:1.65,.2,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=.5+.38*pulse;ctx.strokeStyle="#fff";ctx.lineWidth=.65;ctx.stroke();ctx.restore();});
       if(rapid){const a=hands[0],b=hands[1];ctx.globalAlpha=.35+.3*pulse;ctx.strokeStyle="#ffe3a0";ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.quadraticCurveTo((a[0]+b[0])/2+Math.sin(performance.now()*.03)*3,(a[1]+b[1])/2-5,b[0],b[1]);ctx.stroke();}
       ctx.globalAlpha=1;ctx.globalCompositeOperation="source-over";
     }
