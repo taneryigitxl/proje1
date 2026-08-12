@@ -57,11 +57,12 @@ const WALK_CROPS = {
   nita: [{y:38,h:427},{y:40,h:425},{y:42,h:423},{y:40,h:425}]
 };
 const sprites = {
-  atlas: new Image(), nita: new Image(), atlasWalk: new Image(), nitaWalk: new Image(), enemy: new Image(), enemyWalk: new Image()
+  atlas: new Image(), nita: new Image(), atlasWalk: new Image(), atlasAction: new Image(), nitaWalk: new Image(), enemy: new Image(), enemyWalk: new Image()
 };
 sprites.atlas.src = "assets/atlas.png";
 sprites.nita.src = "assets/nita.png";
 sprites.atlasWalk.src = "assets/atlas-walk.png";
+sprites.atlasAction.src = "assets/atlas-action.png";
 sprites.nitaWalk.src = "assets/nita-walk.png";
 sprites.enemy.src = "assets/enemy.png";
 sprites.enemyWalk.src = "assets/enemy-walk.png";
@@ -244,19 +245,19 @@ function fireAtlas() {
 
 function fireDualRing() {
   if(atlas.shotCooldown>0)return;
+  atlas.actionTimer=.16;
   const target=findNearestVisibleEnemy()||(state.boss&&!state.boss.dead?state.boss:null);
   if(target)atlas.facing=target.x+target.w/2>=atlas.x+atlas.w/2?1:-1;
   const palm=atlasPalmPosition(),targetX=target&&!target.dead?target.x+target.w/2:palm.x+atlas.facing*500,targetY=target&&!target.dead?target.y+target.h*.45:palm.y;
   let dx=targetX-palm.x,dy=targetY-palm.y,length=Math.hypot(dx,dy)||1;dx/=length;dy/=length;
   const side=Math.random()<.5?-1:1,color=side<0?"#ffb12e":"#b96cff";
   state.projectiles.push({x:palm.x,y:palm.y+side*3,w:13,h:6,vx:dx*820,vy:dy*820,life:.72,color,target:target===state.boss?-2:target?state.enemies.indexOf(target):-1,damage:1.5,dualRing:true});
-  atlas.shotCooldown=.19;atlas.actionTimer=.16;atlas.beamFired=true;
+  atlas.shotCooldown=.19;atlas.beamFired=true;
   burst(palm.x,palm.y,color,5,atlas.facing*80);tone(side<0?690:760,.045);
 }
 
 function atlasPalmPosition(){
-  const charging=atlas.actionTimer>0,raw=charging?Math.min(1,Math.max(0,(.38-atlas.actionTimer)/.14)):0,ease=raw*raw*(3-2*raw);
-  return {x:atlas.x+atlas.w/2+atlas.facing*(20+ease*12),y:atlas.y+atlas.h-38-ease*5};
+  return {x:atlas.x+atlas.w/2+atlas.facing*31,y:atlas.y+atlas.h-57};
 }
 
 function releaseAtlasBeam() {
@@ -504,12 +505,12 @@ function drawPlayer(p){
   if(p.dead){const dx=network.role==="guest"&&Number.isFinite(p.renderX)?p.renderX:p.x,dy=network.role==="guest"&&Number.isFinite(p.renderY)?p.renderY:p.y;ctx.save();ctx.globalAlpha=.5;ctx.fillStyle=COLORS[p.type];ctx.beginPath();ctx.ellipse(dx+17,dy+48,24,7,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.fillStyle="#fff";ctx.font='800 10px "Manrope"';ctx.textAlign="center";ctx.fillText(`KO · ${Math.ceil(p.reviveTimer)} sn`,dx+17,dy+33);ctx.textAlign="left";ctx.restore();return;}
   const shooting=p.type==="atlas"&&p.actionTimer>0,casting=p.type==="nita"&&p.castTimer>0,color=COLORS[p.type],moving=!shooting&&!casting&&p.onGround&&Math.abs(p.vx)>18,bob=0;let sprite=sprites[p.type],frame=0,sheet=false,drawW=p.type==="atlas"?62:45,drawH=p.type==="atlas"?88:72;
   if(moving){sprite=p.type==="atlas"?sprites.atlasWalk:sprites.nitaWalk;frame=Math.floor(performance.now()*.009)%4;sheet=true;}
+  if(shooting){sprite=sprites.atlasAction;drawW=66;drawH=91;}
   const rawProgress=shooting?Math.min(1,Math.max(0,(.38-p.actionTimer)/.14)):0,shotProgress=rawProgress*rawProgress*(3-2*rawProgress),recoil=shooting&&p.beamFired?Math.sin(Math.min(1,(.24-p.actionTimer)/.24)*Math.PI)*3:0,renderX=network.role==="guest"&&Number.isFinite(p.renderX)?p.renderX:p.x,renderY=network.role==="guest"&&Number.isFinite(p.renderY)?p.renderY:p.y;
   ctx.save();ctx.translate(renderX+p.w/2-recoil*p.facing,renderY+p.h);if(p.facing<0)ctx.scale(-1,1);ctx.rotate(shooting?0:(p.onGround?0:p.vx*.00015));ctx.globalAlpha=p.type==="nita"&&p.invisible>0?.27:1;ctx.shadowColor=COLORS[p.type];ctx.shadowBlur=p.actionTimer>0?22:9;
-  if(sprite.complete&&sprite.naturalWidth){if(sheet){const crop=WALK_CROPS[p.type][frame];ctx.drawImage(sprite,frame*256,crop.y,256,crop.h,-drawW/2,-drawH+bob,drawW,drawH);}else ctx.drawImage(sprite,0,10,256,364,-drawW/2,-drawH+bob,drawW,drawH);}else drawRounded(-p.w/2,-p.h,p.w,p.h,10,color);
+  if(sprite.complete&&sprite.naturalWidth){if(shooting)ctx.drawImage(sprite,650,48,286,424,-drawW*.42,-drawH+bob,drawW,drawH);else if(sheet){const crop=WALK_CROPS[p.type][frame];ctx.drawImage(sprite,frame*256,crop.y,256,crop.h,-drawW/2,-drawH+bob,drawW,drawH);}else ctx.drawImage(sprite,0,10,256,364,-drawW/2,-drawH+bob,drawW,drawH);}else drawRounded(-p.w/2,-p.h,p.w,p.h,10,color);
   if(p.type==="atlas"){
-    const gearColor=GEAR[state.gear.atlas].color,palmX=16+shotProgress*12,palmY=-31-shotProgress*5,elbowX=12+shotProgress*7,elbowY=-40+shotProgress*2;
-    if(shooting){ctx.lineCap="round";ctx.strokeStyle="#282c31";ctx.lineWidth=9;ctx.beginPath();ctx.moveTo(7,-46);ctx.lineTo(elbowX,elbowY);ctx.lineTo(palmX,palmY);ctx.stroke();ctx.strokeStyle="#d58a60";ctx.lineWidth=5.5;ctx.beginPath();ctx.moveTo(9,-45);ctx.lineTo(elbowX,elbowY);ctx.lineTo(palmX,palmY);ctx.stroke();}
+    const gearColor=GEAR[state.gear.atlas].color,palmX=shooting?31:16,palmY=shooting?-57:-31;
     const ringX=shooting?palmX-2:10,ringY=shooting?palmY+1:-29;ctx.shadowColor=gearColor;ctx.shadowBlur=shooting?12:3;ctx.strokeStyle=gearColor;ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(ringX,ringY,2.2,1.15,.18,0,Math.PI*2);ctx.stroke();if(shooting){ctx.fillStyle=gearColor;ctx.shadowBlur=20;ctx.beginPath();ctx.arc(palmX+1,palmY-1,2.25,0,Math.PI*2);ctx.fill();ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(palmX+1,palmY-1,.8,0,Math.PI*2);ctx.fill();}
     if(shooting&&!p.beamFired){ctx.strokeStyle=gearColor;ctx.lineWidth=1.5;for(let r=9;r<19;r+=5){ctx.globalAlpha=.75-r*.025;ctx.beginPath();ctx.arc(palmX,palmY,r*(.6+shotProgress*.4),-.7,.7);ctx.stroke();}ctx.globalAlpha=1;}
     if(state.weapons.dualRing){
