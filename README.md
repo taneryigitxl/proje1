@@ -35,7 +35,7 @@ Altıncı bölümden itibaren zırhlı gölgeler 24 can taşır. Bu düşmanlar 
 
 Onuncu bölümdeki Ak Muhafız; beyaz kanatlı, uzun kılıçlı, kapüşonlu ve siyah yüzünde beyaz gözleri görünen son bosstur. Temas hasarı vermez. Kılıç saldırısından 1,35 saniye önce hedef alanı giderek daha parlak kırmızı yanar; vuruş alandaki oyunculardan iki can slotu götürür. 36 canlık boss, en güçlü Atlas ekipmanıyla kesintisiz isabet durumunda yaklaşık 66–69 saniyede yenilir.
 
-Test sırasında `Shift` + `ı`, Atlas ve Nita'nın altınlarını 99'a tamamlar ve marketi anında günceller.
+Test sırasında `Shift` + `ı`, Atlas ve Nita'nın altınlarını 99'a tamamlar, her iki karakterin envanterine ikişer Öfkenin Kalbi ekler ve açık market, envanter veya demirci ekranını anında günceller.
 
 ## Çalıştırma
 
