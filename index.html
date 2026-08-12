@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <meta name="description" content="Nita Yollarda — iki kişilik, beş bölümlük 2D platform oyunu." />
+    <meta name="description" content="Nita Yollarda — iki kişilik, on bölümlük 2D platform oyunu." />
     <meta name="theme-color" content="#10141d" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -22,13 +22,15 @@
 
       <header class="hud">
         <div class="brand"><span>NITA</span> YOLLARDA <b id="connection-badge">ÇEVRİMDIŞI</b></div>
-        <div class="level-info"><small>BÖLÜM</small><strong id="level-number">1 / 5</strong><span id="level-name">İlk Temas</span></div>
+        <div class="level-info"><small>BÖLÜM</small><strong id="level-number">1 / 10</strong><span id="level-name">İlk Temas</span></div>
         <div class="economy" aria-label="Altın ve ekipman durumu">
           <span class="atlas-wallet"><i></i><b id="atlas-gold">0</b><small id="atlas-gear">BEYAZ ELDİVEN</small></span>
           <span class="nita-wallet"><i></i><b id="nita-gold">0</b><small id="nita-gear">BEYAZ PELERİN · 1 sn</small></span>
         </div>
         <div class="hud-actions">
           <button id="hud-market-button" type="button">MARKET</button>
+          <button id="inventory-button" type="button">ENVANTER</button>
+          <button id="village-button" type="button">KÖY</button>
           <button id="fullscreen-button" type="button" aria-label="Tam ekrana geç">TAM EKRAN</button>
           <button id="sound-button" type="button" aria-label="Sesi kapat">SES AÇIK</button>
           <button id="pause-button" type="button">DURAKLAT</button>
@@ -115,6 +117,32 @@
         </div>
         <button id="continue-button" class="continue-button" type="button">DEVAM ET <span>→</span></button>
         <p class="market-note">Yükseltmeler avantaj sağlar; bölümler yetenek kullanmadan da tamamlanabilir.</p>
+      </section>
+
+      <section id="inventory-panel" class="inventory-panel" aria-labelledby="inventory-title" aria-hidden="true">
+        <div class="panel-topline"><div><p class="eyebrow">KAHRAMAN DONANIMI</p><h2 id="inventory-title">Envanter</h2></div><button id="inventory-close" class="panel-close" type="button" aria-label="Envanteri kapat">×</button></div>
+        <p class="inventory-help">Zırhı karakter kartının üzerine sürükle. Dokunmatik ekranda zırha, sonra karaktere dokun.</p>
+        <div id="inventory-grid" class="inventory-grid"></div>
+      </section>
+
+      <section id="village" class="village" aria-labelledby="village-title" aria-hidden="true">
+        <div class="village-sky" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div class="village-mountains" aria-hidden="true"></div>
+        <div class="village-houses" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div class="village-road" aria-hidden="true"></div>
+        <div class="village-header"><p class="eyebrow">YOLCULUK ARASI</p><h2 id="village-title">Kızıl Ocak Köyü</h2><span>Şimdilik yalnızca demirci hizmet veriyor.</span></div>
+        <button id="blacksmith-npc" class="blacksmith-npc" type="button" aria-haspopup="dialog">
+          <span class="forge-building" aria-hidden="true"><i class="forge-fire"></i><i class="forge-anvil"></i></span>
+          <span class="smith-figure" aria-hidden="true"><i class="smith-head"></i><i class="smith-body"></i><i class="smith-hammer"></i></span>
+          <strong>DEMİRCİ VARKO</strong><small>ZIRH ÜRET</small>
+        </button>
+        <div class="locked-villager" aria-hidden="true"><span>?</span><small>Yakında</small></div>
+        <section id="forge-panel" class="forge-panel" role="dialog" aria-modal="true" aria-labelledby="forge-title" hidden>
+          <button id="forge-close" class="panel-close" type="button" aria-label="Demirciyi kapat">×</button>
+          <p class="eyebrow">DEMİRCİ VARKO</p><h3 id="forge-title">Öfke Zırhı</h3>
+          <p>Öfkenin Kalbi’ni siyah çeliğe mühürlerim. Başın açık kalır; gövden ve uzuvların iki ek can slotuyla korunur.</p>
+          <div id="forge-options" class="forge-options"></div>
+        </section>
       </section>
     </main>
   </body>

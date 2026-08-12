@@ -1,6 +1,6 @@
 # Nita Yollarda
 
-Atlas ve Nita ile aynı cihazda veya oda koduyla çevrimiçi oynanan, beş bölümlük 2D platform oyunu. Proje saf HTML, CSS ve JavaScript kullanır; derleme adımı yoktur.
+Atlas ve Nita ile aynı cihazda veya oda koduyla çevrimiçi oynanan, on bölümlük 2D platform oyunu. Proje saf HTML, CSS ve JavaScript kullanır; derleme adımı yoktur.
 
 ## Kontroller
 
@@ -25,6 +25,16 @@ Nita'nın anıt ritüeli dört saniye sürer ve tek başına hasar vermez. Ritü
 
 Boss savaşında düşen takım arkadaşı oyunu bitirmez. Dokuz saniye sonra beliren revive kupasını hayatta kalan oyuncu alırsa takım arkadaşı iki canla geri döner. `Ctrl` + `ı` gizli test kısayolu mevcut bölümü doğrudan geçirir.
 
+## Köy, demirci ve Öfke Zırhı
+
+Beşinci bölüm boss'u yenildiğinde biri Atlas'a, biri Nita'ya ait toplam iki **Öfkenin Kalbi** düşer. HUD'daki **Köy** düğmesi Kızıl Ocak Köyü'nü açar; köyde şimdilik etkileşime açık tek NPC Demirci Varko'dur. Her kalp, ilgili kahraman için siyah ve kırmızı detaylı bir Öfke Zırhı üretir. Köy açıkken aynı düğme **Göreve Devam Et** olarak değişir.
+
+Üretilen zırh **Envanter** sekmesinden ilgili karakter kartının üzerine sürüklenerek kuşanır; dokunmatik ekranda önce zırha, sonra karaktere dokunmak da yeterlidir. Zırh başı açık bırakıp gövdeyi ve uzuvları kaplar, maksimum canı 4'ten 6 slota çıkarır. Tek bilgisayar modunda iki karakterin envanteri birlikte yönetilir. Çevrimiçi oyunda her oyuncu yalnızca kendi karakterinin envanterini, üretimini ve kuşanmasını yönetebilir; durum oda sahibi üzerinden senkronize edilir.
+
+Altıncı bölümden itibaren zırhlı gölgeler 24 can taşır. Bu düşmanlar beyaz, mavi, mor ve sarı/Legendary ellerle sırasıyla 8, 6, 4 ve 2 isabette yenilir. 6–9. bölümlerde giderek daralan zamanlamalara sahip kızıl mühür lazerleri, daha hızlı devriyeler ve yoğun kamera düzenleri bulunur. Bu bölümlerdeki parıltılı altınlar çift değerlidir; bütün Atlas altınları toplandığında sarı el yükseltmesinden sonra Kadim Tılsım da son boss öncesinde alınabilir.
+
+Onuncu bölümdeki Ak Muhafız; beyaz kanatlı, uzun kılıçlı, kapüşonlu ve siyah yüzünde beyaz gözleri görünen son bosstur. Temas hasarı vermez. Kılıç saldırısından 1,35 saniye önce hedef alanı giderek daha parlak kırmızı yanar; vuruş alandaki oyunculardan iki can slotu götürür. 36 canlık boss, en güçlü Atlas ekipmanıyla kesintisiz isabet durumunda yaklaşık 66–69 saniyede yenilir.
+
 Test sırasında `Shift` + `ı`, Atlas ve Nita'nın altınlarını 99'a tamamlar ve marketi anında günceller.
 
 ## Çalıştırma
@@ -35,5 +45,5 @@ Ana dosyalar:
 
 - `index.html`: oyun arayüzü ve pazar
 - `styles.css`: HUD, dokunmatik kontroller ve pazar görünümü
-- `script.js`: fizik, beş bölüm, düşmanlar, kameralar, altınlar, yetenekler ve çok oyunculu senkronizasyon
+- `script.js`: fizik, on bölüm, iki boss, düşmanlar, kameralar, lazerler, altınlar, yetenekler ve çok oyunculu senkronizasyon
 - `assets/`: karakter ve düşman görselleri
