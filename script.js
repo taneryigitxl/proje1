@@ -52,6 +52,10 @@ const GEAR = [
   { name: "Sarı · Legendary", color: "#ffd34d", hits: 1, damage: 12, cloak: 5, cost: 5 }
 ];
 const ENEMY_HP = 12;
+const WALK_CROPS = {
+  atlas: [{y:62,h:387},{y:64,h:385},{y:64,h:383},{y:62,h:387}],
+  nita: [{y:38,h:427},{y:40,h:425},{y:42,h:423},{y:40,h:425}]
+};
 const sprites = {
   atlas: new Image(), nita: new Image(), atlasWalk: new Image(), nitaWalk: new Image(), enemy: new Image(), enemyWalk: new Image()
 };
@@ -252,7 +256,7 @@ function fireDualRing() {
 
 function atlasPalmPosition(){
   const charging=atlas.actionTimer>0,raw=charging?Math.min(1,Math.max(0,(.38-atlas.actionTimer)/.14)):0,ease=raw*raw*(3-2*raw);
-  return {x:atlas.x+atlas.w/2+atlas.facing*(16+ease*12),y:atlas.y+atlas.h-31-ease*5};
+  return {x:atlas.x+atlas.w/2+atlas.facing*(20+ease*12),y:atlas.y+atlas.h-38-ease*5};
 }
 
 function releaseAtlasBeam() {
@@ -498,16 +502,24 @@ function drawPlatform(p,theme){
 
 function drawPlayer(p){
   if(p.dead){const dx=network.role==="guest"&&Number.isFinite(p.renderX)?p.renderX:p.x,dy=network.role==="guest"&&Number.isFinite(p.renderY)?p.renderY:p.y;ctx.save();ctx.globalAlpha=.5;ctx.fillStyle=COLORS[p.type];ctx.beginPath();ctx.ellipse(dx+17,dy+48,24,7,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.fillStyle="#fff";ctx.font='800 10px "Manrope"';ctx.textAlign="center";ctx.fillText(`KO · ${Math.ceil(p.reviveTimer)} sn`,dx+17,dy+33);ctx.textAlign="left";ctx.restore();return;}
-  const shooting=p.type==="atlas"&&p.actionTimer>0,casting=p.type==="nita"&&p.castTimer>0,color=COLORS[p.type],moving=!shooting&&!casting&&p.onGround&&Math.abs(p.vx)>18,bob=moving?Math.sin(performance.now()*.018)*.55:0;let sprite=sprites[p.type],frame=0,sheet=false,drawW=p.type==="atlas"?62:45,drawH=p.type==="atlas"?84:69;
+  const shooting=p.type==="atlas"&&p.actionTimer>0,casting=p.type==="nita"&&p.castTimer>0,color=COLORS[p.type],moving=!shooting&&!casting&&p.onGround&&Math.abs(p.vx)>18,bob=0;let sprite=sprites[p.type],frame=0,sheet=false,drawW=p.type==="atlas"?62:45,drawH=p.type==="atlas"?88:72;
   if(moving){sprite=p.type==="atlas"?sprites.atlasWalk:sprites.nitaWalk;frame=Math.floor(performance.now()*.009)%4;sheet=true;}
   const rawProgress=shooting?Math.min(1,Math.max(0,(.38-p.actionTimer)/.14)):0,shotProgress=rawProgress*rawProgress*(3-2*rawProgress),recoil=shooting&&p.beamFired?Math.sin(Math.min(1,(.24-p.actionTimer)/.24)*Math.PI)*3:0,renderX=network.role==="guest"&&Number.isFinite(p.renderX)?p.renderX:p.x,renderY=network.role==="guest"&&Number.isFinite(p.renderY)?p.renderY:p.y;
   ctx.save();ctx.translate(renderX+p.w/2-recoil*p.facing,renderY+p.h);if(p.facing<0)ctx.scale(-1,1);ctx.rotate(shooting?0:(p.onGround?0:p.vx*.00015));ctx.globalAlpha=p.type==="nita"&&p.invisible>0?.27:1;ctx.shadowColor=COLORS[p.type];ctx.shadowBlur=p.actionTimer>0?22:9;
-  if(sprite.complete&&sprite.naturalWidth){if(sheet)ctx.drawImage(sprite,frame*256,0,256,512,-drawW/2,-drawH+bob,drawW,drawH);else ctx.drawImage(sprite,-drawW/2,-drawH+bob,drawW,drawH);}else drawRounded(-p.w/2,-p.h,p.w,p.h,10,color);
+  if(sprite.complete&&sprite.naturalWidth){if(sheet){const crop=WALK_CROPS[p.type][frame];ctx.drawImage(sprite,frame*256,crop.y,256,crop.h,-drawW/2,-drawH+bob,drawW,drawH);}else ctx.drawImage(sprite,0,10,256,364,-drawW/2,-drawH+bob,drawW,drawH);}else drawRounded(-p.w/2,-p.h,p.w,p.h,10,color);
   if(p.type==="atlas"){
     const gearColor=GEAR[state.gear.atlas].color,palmX=16+shotProgress*12,palmY=-31-shotProgress*5,elbowX=12+shotProgress*7,elbowY=-40+shotProgress*2;
     if(shooting){ctx.lineCap="round";ctx.strokeStyle="#282c31";ctx.lineWidth=9;ctx.beginPath();ctx.moveTo(7,-46);ctx.lineTo(elbowX,elbowY);ctx.lineTo(palmX,palmY);ctx.stroke();ctx.strokeStyle="#d58a60";ctx.lineWidth=5.5;ctx.beginPath();ctx.moveTo(9,-45);ctx.lineTo(elbowX,elbowY);ctx.lineTo(palmX,palmY);ctx.stroke();}
     const ringX=shooting?palmX-2:10,ringY=shooting?palmY+1:-29;ctx.shadowColor=gearColor;ctx.shadowBlur=shooting?12:3;ctx.strokeStyle=gearColor;ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(ringX,ringY,2.2,1.15,.18,0,Math.PI*2);ctx.stroke();if(shooting){ctx.fillStyle=gearColor;ctx.shadowBlur=20;ctx.beginPath();ctx.arc(palmX+1,palmY-1,2.25,0,Math.PI*2);ctx.fill();ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(palmX+1,palmY-1,.8,0,Math.PI*2);ctx.fill();}
     if(shooting&&!p.beamFired){ctx.strokeStyle=gearColor;ctx.lineWidth=1.5;for(let r=9;r<19;r+=5){ctx.globalAlpha=.75-r*.025;ctx.beginPath();ctx.arc(palmX,palmY,r*(.6+shotProgress*.4),-.7,.7);ctx.stroke();}ctx.globalAlpha=1;}
+    if(state.weapons.dualRing){
+      const pulse=.72+Math.sin(performance.now()*.012)*.28,rapid=state.keys.s;
+      const hands=shooting?[[palmX,palmY],[palmX-7,palmY+7]]:[[13,-36],[8,-31]];
+      ctx.globalCompositeOperation="lighter";
+      hands.forEach(([x,y],i)=>{const ringColor=i?"#b96cff":"#ffb12e";ctx.save();ctx.translate(x,y);ctx.rotate((i?1:-1)*(performance.now()*.004));ctx.shadowColor=ringColor;ctx.shadowBlur=rapid?18:9;ctx.strokeStyle=ringColor;ctx.lineWidth=2.4;ctx.beginPath();ctx.ellipse(0,0,rapid?5.5:4.2,rapid?2.7:2.1,.2,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=.45+.35*pulse;ctx.strokeStyle="#fff";ctx.lineWidth=.8;ctx.stroke();ctx.restore();});
+      if(rapid){const a=hands[0],b=hands[1];ctx.globalAlpha=.35+.3*pulse;ctx.strokeStyle="#ffe3a0";ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.quadraticCurveTo((a[0]+b[0])/2+Math.sin(performance.now()*.03)*3,(a[1]+b[1])/2-5,b[0],b[1]);ctx.stroke();}
+      ctx.globalAlpha=1;ctx.globalCompositeOperation="source-over";
+    }
   }
   if(casting){const lift=1-p.castTimer/.85;ctx.strokeStyle="#d58a60";ctx.lineWidth=6;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(-7,-43);ctx.lineTo(-15-lift*4,-58);ctx.lineTo(-18,-68);ctx.moveTo(7,-43);ctx.lineTo(15+lift*4,-58);ctx.lineTo(18,-68);ctx.stroke();ctx.fillStyle="#aefcff";ctx.shadowColor="#72edff";ctx.shadowBlur=18;ctx.beginPath();ctx.arc(-18,-70,3,0,Math.PI*2);ctx.arc(18,-70,3,0,Math.PI*2);ctx.fill();}
   ctx.restore();
@@ -558,7 +570,7 @@ function drawBossFireball(shot){const speed=Math.hypot(shot.vx,shot.vy)||1,ux=sh
 function draw(){
   const rect=canvas.getBoundingClientRect(),scale=Math.min(rect.width/WORLD.width,rect.height/WORLD.height),ox=(rect.width-WORLD.width*scale)/2,oy=(rect.height-WORLD.height*scale)/2,level=levels[state.level]||levels[0];ctx.fillStyle=COLORS.dark;ctx.fillRect(0,0,rect.width,rect.height);ctx.save();ctx.translate(ox,oy);ctx.scale(scale,scale);drawBackground(level);
   if(!level.boss)drawHazard({x:0,y:648,w:1280,h:72});for(const p of state.platforms)drawPlatform(p,level.theme);if(level.boss)for(const h of state.hazards)drawHazard(h);for(const e of state.exits)drawExit(e);for(const c of state.cameras)drawCamera(c);for(const coin of state.coins)drawCoin(coin);for(const enemy of state.enemies)drawEnemy(enemy);if(state.boss)drawBoss();
-  for(const shot of state.projectiles){if(shot.bossShot){drawBossFireball(shot);continue;}const speed=Math.hypot(shot.vx,shot.vy||0)||1,ux=shot.vx/speed,uy=(shot.vy||0)/speed,cx=shot.x+shot.w/2,cy=shot.y+shot.h/2,tailX=cx-ux*76,tailY=cy-uy*76,tipX=cx+ux*24,tipY=cy+uy*24,beam=ctx.createLinearGradient(tailX,tailY,tipX,tipY);beam.addColorStop(0,"rgba(255,255,255,0)");beam.addColorStop(.45,shot.color);beam.addColorStop(1,"#ffffff");ctx.strokeStyle=beam;ctx.lineCap="round";ctx.lineWidth=8;ctx.shadowColor=shot.color;ctx.shadowBlur=22;ctx.beginPath();ctx.moveTo(tailX,tailY);ctx.lineTo(tipX,tipY);ctx.stroke();ctx.strokeStyle="#fff";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(cx-ux*30,cy-uy*30);ctx.lineTo(tipX,tipY);ctx.stroke();ctx.shadowBlur=0;}
+  for(const shot of state.projectiles){if(shot.bossShot){drawBossFireball(shot);continue;}const speed=Math.hypot(shot.vx,shot.vy||0)||1,ux=shot.vx/speed,uy=(shot.vy||0)/speed,cx=shot.x+shot.w/2,cy=shot.y+shot.h/2,tail=shot.dualRing?38:76,reach=shot.dualRing?15:24,tailX=cx-ux*tail,tailY=cy-uy*tail,tipX=cx+ux*reach,tipY=cy+uy*reach,beam=ctx.createLinearGradient(tailX,tailY,tipX,tipY);beam.addColorStop(0,"rgba(255,255,255,0)");beam.addColorStop(.45,shot.color);beam.addColorStop(1,"#ffffff");ctx.strokeStyle=beam;ctx.lineCap="round";ctx.lineWidth=shot.dualRing?5:8;ctx.shadowColor=shot.color;ctx.shadowBlur=shot.dualRing?15:22;ctx.beginPath();ctx.moveTo(tailX,tailY);ctx.lineTo(tipX,tipY);ctx.stroke();ctx.strokeStyle="#fff";ctx.lineWidth=shot.dualRing?1.3:2;ctx.beginPath();ctx.moveTo(cx-ux*(shot.dualRing?12:30),cy-uy*(shot.dualRing?12:30));ctx.lineTo(tipX,tipY);ctx.stroke();if(shot.dualRing){ctx.save();ctx.translate(cx,cy);ctx.rotate(Math.atan2(uy,ux));ctx.strokeStyle=shot.color;ctx.lineWidth=2;ctx.globalAlpha=.8;ctx.beginPath();ctx.ellipse(0,0,3,8,0,0,Math.PI*2);ctx.stroke();ctx.restore();}ctx.shadowBlur=0;}
   drawPlayer(atlas);drawPlayer(nita);for(const p of state.particles){ctx.globalAlpha=Math.max(0,p.life*2);ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,p.size,p.size);}ctx.globalAlpha=1;ctx.restore();
 }
 
@@ -588,6 +600,7 @@ function sendSnapshot(){sendPacket({type:"state",level:state.level,atlas:{...atl
 function beginMultiplayer(role){network.role=role;document.body.classList.remove("multiplayer-host","multiplayer-guest");document.body.classList.add(`multiplayer-${role}`);connectionBadge.textContent=role==="host"?"ATLAS · BAĞLI":"NITA · BAĞLI";connectionBadge.style.color=role==="host"?COLORS.atlas:COLORS.nita;resetCampaign();state.running=role==="host";state.paused=false;state.last=performance.now();overlay.classList.add("hidden");if(role==="host")sendPacket({type:"start",level:0,gold:state.gold,gear:state.gear});}
 function receivePacket(data){
   if(data.type==="key"&&network.role==="host"){if(data.down&&!state.keys[data.key])state.keysPressed[data.key]=true;state.keys[data.key]=data.down;}
+  if(data.type==="state"&&network.role==="guest"&&data.weapons)state.weapons={...state.weapons,...data.weapons};
   if(data.type==="cheatGold"&&network.role==="host")fillTestGold();
   if(data.type==="buy"&&network.role==="host"&&data.owner==="nita")buyUpgrade("nita");
   if(data.type==="start"&&network.role==="guest"){state.gold={...data.gold};state.gear={...data.gear};loadLevel(data.level);state.running=true;state.paused=false;market.classList.remove("active");overlay.classList.add("hidden");}
