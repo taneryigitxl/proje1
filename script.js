@@ -62,6 +62,12 @@ const WALK_CROPS = {
   atlas: [{y:62,h:387,cx:127},{y:64,h:385,cx:110},{y:64,h:383,cx:122},{y:62,h:387,cx:120}],
   nita: [{y:38,h:427,cx:147},{y:40,h:425,cx:127},{y:42,h:423,cx:115},{y:40,h:425,cx:114}]
 };
+const ATLAS_WALK_HANDS = [
+  [[-13.6,-39.6],[15,-40.7]],
+  [[-7.5,-39.8],[19.4,-41]],
+  [[-11.4,-39.1],[16.5,-39.8]],
+  [[-8.9,-39.5],[9.7,-35.7]]
+];
 const sprites = {
   atlas: new Image(), nita: new Image(), atlasWalk: new Image(), atlasAction: new Image(), nitaWalk: new Image(), enemy: new Image(), enemyWalk: new Image()
 };
@@ -520,10 +526,10 @@ function drawPlayer(p){
     if(!state.weapons.dualRing){const ringX=shooting?palmX-2:10,ringY=shooting?palmY+1:-29;ctx.shadowColor=gearColor;ctx.shadowBlur=shooting?12:3;ctx.strokeStyle=gearColor;ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(ringX,ringY,2.2,1.15,.18,0,Math.PI*2);ctx.stroke();if(shooting){ctx.fillStyle=gearColor;ctx.shadowBlur=20;ctx.beginPath();ctx.arc(palmX+1,palmY-1,2.25,0,Math.PI*2);ctx.fill();ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(palmX+1,palmY-1,.8,0,Math.PI*2);ctx.fill();}}
     if(shooting&&!p.beamFired){ctx.strokeStyle=gearColor;ctx.lineWidth=1.5;for(let r=9;r<19;r+=5){ctx.globalAlpha=.75-r*.025;ctx.beginPath();ctx.arc(palmX,palmY,r*(.6+shotProgress*.4),-.7,.7);ctx.stroke();}ctx.globalAlpha=1;}
     if(state.weapons.dualRing){
-      const pulse=.72+Math.sin(performance.now()*.012)*.28,rapid=state.keys.s,dual=DUAL_RING[state.gear.atlas];
-      const hands=shooting?[[35,-79],[34,-61]]:[[11,-41],[-8.5,-40]];
+      const pulse=.72+Math.sin(performance.now()*.012)*.28,rapid=state.keys.s;
+      const hands=shooting?[[35,-79],[34,-61]]:moving?ATLAS_WALK_HANDS[frame]:[[11,-41],[-8.5,-40]];
       ctx.globalCompositeOperation="lighter";
-      hands.forEach(([x,y],i)=>{const ringColor=i?dual.accent:gearColor;ctx.save();ctx.translate(x,y);ctx.rotate((i?1:-1)*(performance.now()*.003));ctx.shadowColor=ringColor;ctx.shadowBlur=rapid?14:9;ctx.strokeStyle=ringColor;ctx.lineWidth=1.35;ctx.beginPath();ctx.ellipse(0,0,rapid?2.8:2.15,rapid?1.35:1.05,.18,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=.48+.4*pulse;ctx.strokeStyle="#fff";ctx.lineWidth=.5;ctx.stroke();ctx.globalAlpha=.12+.1*pulse;ctx.fillStyle=ringColor;ctx.beginPath();ctx.arc(0,0,rapid?5:3.8,0,Math.PI*2);ctx.fill();ctx.restore();});
+      hands.forEach(([x,y],i)=>{const ringColor=i?"#bd63ff":"#ffd34d";ctx.save();ctx.translate(x,y);ctx.rotate((i?1:-1)*(performance.now()*.003));ctx.shadowColor=ringColor;ctx.shadowBlur=rapid?9:6;ctx.strokeStyle=ringColor;ctx.lineWidth=.8;ctx.beginPath();ctx.ellipse(0,0,rapid?1.65:1.15,rapid?.8:.55,.18,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=.5+.38*pulse;ctx.strokeStyle="#fff";ctx.lineWidth=.35;ctx.stroke();ctx.globalAlpha=.08+.07*pulse;ctx.fillStyle=ringColor;ctx.beginPath();ctx.arc(0,0,rapid?2.8:2.1,0,Math.PI*2);ctx.fill();ctx.restore();});
       if(rapid){const a=hands[0],b=hands[1];ctx.globalAlpha=.35+.3*pulse;ctx.strokeStyle="#ffe3a0";ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.quadraticCurveTo((a[0]+b[0])/2+Math.sin(performance.now()*.03)*3,(a[1]+b[1])/2-5,b[0],b[1]);ctx.stroke();}
       ctx.globalAlpha=1;ctx.globalCompositeOperation="source-over";
     }
