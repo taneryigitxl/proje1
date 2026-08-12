@@ -6,6 +6,7 @@ const overlayText = document.getElementById("overlay-text");
 const startButton = document.getElementById("start-button");
 const pauseButton = document.getElementById("pause-button");
 const soundButton = document.getElementById("sound-button");
+const fullscreenButton = document.getElementById("fullscreen-button");
 const hudMarketButton = document.getElementById("hud-market-button");
 const message = document.getElementById("message");
 const levelNumber = document.getElementById("level-number");
@@ -589,6 +590,16 @@ window.addEventListener("keyup",e=>setControl(e.key.toLowerCase(),false));
 startButton.addEventListener("click",()=>{if(startButton.dataset.action==="restart")resetCampaign();state.running=true;state.paused=false;state.last=performance.now();startButton.dataset.action="";startButton.hidden=true;overlay.classList.add("hidden");sendPacket({type:"start",level:state.level,gold:state.gold,gear:state.gear});});
 pauseButton.addEventListener("click",()=>{if(!state.running)return;state.paused=!state.paused;pauseButton.textContent=state.paused?"DEVAM ET":"DURAKLAT";showMessage(state.paused?"Oyun duraklatıldı.":"Yola devam!",1.2);});
 soundButton.addEventListener("click",()=>{state.audio=!state.audio;soundButton.textContent=state.audio?"SES AÇIK":"SES KAPALI";soundButton.setAttribute("aria-label",state.audio?"Sesi kapat":"Sesi aç");});
+async function toggleFullscreen(){
+  try{
+    const active=document.fullscreenElement||document.webkitFullscreenElement;
+    if(active){if(document.exitFullscreen)await document.exitFullscreen();else if(document.webkitExitFullscreen)document.webkitExitFullscreen();}
+    else{const target=document.getElementById("game");if(target.requestFullscreen)await target.requestFullscreen({navigationUI:"hide"});else if(target.webkitRequestFullscreen)target.webkitRequestFullscreen();try{await screen.orientation?.lock?.("landscape");}catch{}}
+  }catch{showMessage("Tam ekran için tarayıcı menüsündeki tam ekran seçeneğini kullanabilirsin.",3);}setTimeout(resize,120);
+}
+fullscreenButton.addEventListener("click",toggleFullscreen);
+document.addEventListener("fullscreenchange",()=>{fullscreenButton.textContent=document.fullscreenElement?"TAM EKRANDAN ÇIK":"TAM EKRAN";fullscreenButton.setAttribute("aria-label",document.fullscreenElement?"Tam ekrandan çık":"Tam ekrana geç");setTimeout(resize,80);});
+document.addEventListener("webkitfullscreenchange",()=>setTimeout(resize,80));
 hudMarketButton.addEventListener("click",openInGameMarket);
 marketToggle.addEventListener("click",toggleMarket);buyGloveButton.addEventListener("click",()=>buyUpgrade("atlas"));buyCloakButton.addEventListener("click",()=>buyUpgrade("nita"));continueButton.addEventListener("click",finishOrContinue);
 buyDualRingButton.addEventListener("click",buyDualRing);
