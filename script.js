@@ -40,6 +40,9 @@ const buyGloveButton = document.getElementById("buy-glove");
 const buyCloakButton = document.getElementById("buy-cloak");
 const buyDualRingButton = document.getElementById("buy-dual-ring");
 const buySkyWhisperButton = document.getElementById("buy-sky-whisper");
+const skyWhisperName = document.getElementById("sky-whisper-name");
+const skyWhisperDetail = document.getElementById("sky-whisper-detail");
+const skyWhisperCost = document.getElementById("sky-whisper-cost");
 const continueButton = document.getElementById("continue-button");
 const createRoomButton = document.getElementById("create-room");
 const showJoinButton = document.getElementById("show-join");
@@ -73,6 +76,12 @@ const DUAL_RING = [
   { accent:"#65ffd1", damage:1.2, bossDamage:.05 },
   { accent:"#ff72dc", damage:1.8, bossDamage:.07 },
   { accent:"#ff8a3d", damage:3.6, bossDamage:.1 }
+];
+const SKY_WHISPER = [
+  {name:"Beyaz",color:"#f7f4e8",damage:3,cost:50},
+  {name:"Mavi",color:"#4ea8ff",damage:4,cost:3},
+  {name:"Mor",color:"#c36cff",damage:6,cost:4},
+  {name:"Sarı · Legendary",color:"#ffd34d",damage:8,cost:5}
 ];
 const WALK_CROPS = {
   atlas: [{y:62,h:383,cx:137},{y:64,h:381,cx:109},{y:62,h:383,cx:107},{y:64,h:381,cx:109}],
@@ -148,7 +157,7 @@ const levels = [
     name: "MARIO ??", theme: "boss", boss: true, bossType: "mario", sky: ["#06070a", "#11141a"], starts: [[110,565],[175,565]],
     platforms: [[0,625,1280,25]], hazards: [[0,650,1280,70]], enemies: [], cameras: [], exits: [], coins: [],
     shrines: [[285,625],[625,625],[940,625]],
-    hint: "BOSS: Gökyüzü Fısıltısı satın alındıysa Nita SHIFT ile 2 saniyede bir yıldırım çağırabilir."
+    hint: "BOSS: Gökyüzü Fısıltısı için Nita anıtta ↓ ile 4 sn ritüel yapsın; ritüel tamamlanınca SHIFT ile yıldırımı kullansın."
   },
   {
     name: "Kızıl Geçit", theme: "ruins", sky: ["#c8784f", "#392c35"], starts: [[48,590],[102,590]],
@@ -199,7 +208,7 @@ const levels = [
 
 const state = {
   running: false, paused: false, level: 0, levelTime: 0, keys: {}, keysPressed: {}, platforms: [], hazards: [], enemies: [], cameras: [], lasers: [], coins: [], exits: [], projectiles: [], particles: [], healthOrbs: [], reviveCups: [], boss: null,
-  gold: { atlas: 0, nita: 0 }, gear: { atlas: 0, nita: 0 }, weapons: { dualRing: false, skyWhisper: false }, inventory: {atlas:{hearts:0,armor:false,equipped:false},nita:{hearts:0,armor:false,equipped:false}}, collectedThisLevel: { atlas: 0, nita: 0 }, skyLightningTimer: 0, skyLightningX: 0, last: 0, audio: true, messageTimer: 0, transitionTimer: null, marketInGame: false, marketWasPaused: false, inventoryOpen: false, villageOpen: false, panelWasPaused: false, selectedArmor: null, autoPaused: false
+  gold: { atlas: 0, nita: 0 }, gear: { atlas: 0, nita: 0 }, weapons: { dualRing: false, skyWhisper: false, skyWhisperLevel: -1 }, inventory: {atlas:{hearts:0,armor:false,equipped:false},nita:{hearts:0,armor:false,equipped:false}}, collectedThisLevel: { atlas: 0, nita: 0 }, skyLightningTimer: 0, skyLightningX: 0, last: 0, audio: true, messageTimer: 0, transitionTimer: null, marketInGame: false, marketWasPaused: false, inventoryOpen: false, villageOpen: false, panelWasPaused: false, selectedArmor: null, autoPaused: false
 };
 const network = { role: "solo", character: null, hostCharacter: null, peer: null, connection: null, lastSync: 0 };
 
@@ -263,7 +272,7 @@ function loadLevel(index) {
 function resetCampaign() {
   state.gold = { atlas: 0, nita: 0 };
   state.gear = { atlas: 0, nita: 0 };
-  state.weapons = { dualRing: false, skyWhisper: false };
+  state.weapons = { dualRing: false, skyWhisper: false, skyWhisperLevel: -1 };
   state.inventory = {atlas:{hearts:0,armor:false,equipped:false},nita:{hearts:0,armor:false,equipped:false}};
   closeInventory(false);closeVillage(false);
   loadLevel(0);
@@ -274,7 +283,8 @@ function updateHud() {
   atlasGoldLabel.textContent = state.gold.atlas;
   nitaGoldLabel.textContent = state.gold.nita;
   atlasGearLabel.textContent = (state.weapons.dualRing ? `${glove.name.toUpperCase()} KADİM TILSIM · SERİ ATIŞ` : `${glove.name.toUpperCase()} KUTSANMIŞ EL · ${glove.damage} HASAR`)+(state.inventory.atlas.equipped?" · ÖFKE ZIRHI":"");
-  nitaGearLabel.textContent = `${cloak.name.toUpperCase()} PELERİN · ${cloak.cloak} sn${state.weapons.skyWhisper?" · GÖKYÜZÜ FISILTISI":""}${state.inventory.nita.equipped?" · ÖFKE ZIRHI":""}`;
+  const whisper=SKY_WHISPER[Math.max(0,state.weapons.skyWhisperLevel)];
+  nitaGearLabel.textContent = `${cloak.name.toUpperCase()} PELERİN · ${cloak.cloak} sn${state.weapons.skyWhisper?` · ${whisper.name.toUpperCase()} GÖKYÜZÜ FISILTISI`:""}${state.inventory.nita.equipped?" · ÖFKE ZIRHI":""}`;
   document.documentElement.style.setProperty("--glove", glove.color);
   document.documentElement.style.setProperty("--cloak", cloak.color);
 }
@@ -418,17 +428,21 @@ function damagePlayer(player,amount=1){
 }
 
 function tryStartRitual(){
-  const boss=state.boss;if(!boss||boss.type!=="mario"||boss.ritualWindow<=0||boss.ritualDone)return false;
+  const boss=state.boss;if(!state.weapons.skyWhisper||!boss||boss.type!=="mario"||boss.ritualWindow<=0||boss.ritualDone)return false;
   const shrine=levels[state.level].shrines[boss.activeShrine];if(!shrine||Math.hypot(nita.x+nita.w/2-shrine[0],nita.y+nita.h-shrine[1])>72){showMessage("Ritüel için parlayan anıta yaklaş.",1.2);return false;}
   boss.ritualProgress=.01;nita.invisible=Math.max(nita.invisible,4.8);nita.cloakCooldown=Math.max(nita.cloakCooldown,5.5);nita.actionTimer=.35;showMessage("4 saniyelik ritüel başladı — anıtın yanında kal!",2);tone(680,.14);return true;
 }
 
 function castRitualLightning(){
   if(!state.weapons.skyWhisper||nita.dead)return;
-  if(nita.lightningCooldown>0){showMessage(`Gökyüzü Fısıltısı ${nita.lightningCooldown.toFixed(1)} sn sonra hazır.`,1);return;}
-  const boss=state.boss,x=nita.x+nita.w/2;nita.lightningCooldown=2;nita.castTimer=.85;nita.actionTimer=.85;nita.vx=0;state.skyLightningTimer=.9;state.skyLightningX=x;
-  if(boss?.type==="mario"){boss.lightningTimer=.9;boss.lightningX=x;boss.ritualCharge=0;}
-  const radius=340;for(const enemy of state.enemies)if(!enemy.dead&&Math.abs(enemy.x+enemy.w/2-x)<=radius){enemy.hp=0;enemy.dead=true;burst(enemy.x+enemy.w/2,enemy.y+enemy.h/2,"#8ffcff",22,0);}if(boss&&!boss.dead&&Math.abs(boss.x+boss.w/2-x)<=radius)damageBossSlot("lightning");burst(x,600,"#b8ffff",42,0);showMessage("GÖKYÜZÜ FISILTISI — yıldırım alanı patladı!",1.4);tone(1040,.25);
+  const boss=state.boss,mario=boss?.type==="mario";
+  if(mario&&boss.ritualCharge<=0){showMessage("5. bölümde yıldırım için önce anıtta ritüeli tamamla.",1.5);return;}
+  if(!mario&&nita.lightningCooldown>0){showMessage(`Gökyüzü Fısıltısı ${nita.lightningCooldown.toFixed(1)} sn sonra hazır.`,1);return;}
+  const level=Math.max(0,state.weapons.skyWhisperLevel),skill=SKY_WHISPER[level],x=nita.x+nita.w/2;if(mario)boss.ritualCharge--;else nita.lightningCooldown=2;nita.castTimer=.85;nita.actionTimer=.85;nita.vx=0;state.skyLightningTimer=.9;state.skyLightningX=x;
+  if(mario){boss.lightningTimer=.9;boss.lightningX=x;}
+  const radius=340;for(const enemy of state.enemies)if(!enemy.dead&&Math.abs(enemy.x+enemy.w/2-x)<=radius){enemy.hp=Math.max(0,enemy.hp-skill.damage);enemy.flash=.18;burst(enemy.x+enemy.w/2,enemy.y+enemy.h/2,skill.color,14,0);if(enemy.hp<=0)enemy.dead=true;}
+  if(boss&&!boss.dead&&Math.abs(boss.x+boss.w/2-x)<=radius){if(mario)damageBossSlot("lightning");else{boss.hp=Math.max(0,boss.hp-skill.damage/12);boss.flash=.18;if(boss.hp<=0){boss.dead=true;announceBossDefeat(boss);setTimeout(()=>completeLevel(),1200);}}}
+  burst(x,600,skill.color,42,0);showMessage(`${skill.name.toUpperCase()} GÖKYÜZÜ FISILTISI · ${skill.damage} ALAN HASARI`,1.4);tone(1040,.25);
 }
 
 function announceBossDefeat(boss){
@@ -465,7 +479,11 @@ function updateMarioBoss(dt){
   boss.jumpTimer-=dt;boss.slamPulse=Math.max(0,boss.slamPulse-dt);if(boss.jumpTimer<=0&&boss.y>=boss.groundY){boss.jumpTimer=10;boss.vy=-610;tone(85,.16);}if(boss.y<boss.groundY||boss.vy<0){const wasAirborne=boss.y<boss.groundY;boss.vy+=1320*dt;boss.y+=boss.vy*dt;if(wasAirborne&&boss.y>=boss.groundY){boss.y=boss.groundY;boss.vy=0;boss.slamPulse=.75;for(const player of [atlas,nita])if(!player.dead&&player.onGround)damagePlayer(player,2);burst(boss.x+boss.w/2,625,"#ff6a24",38,0);tone(62,.3);}}
   boss.minionTimer-=dt;if(boss.minionTimer<=0){boss.minionTimer=15;spawnSuperSoldiers();}
   boss.lightningTimer=Math.max(0,boss.lightningTimer-dt);
-  boss.ritualWindow=0;boss.ritualProgress=0;boss.ritualCharge=0;
+  if(state.weapons.skyWhisper){
+    if(boss.ritualWindow>0){boss.ritualWindow=Math.max(0,boss.ritualWindow-dt);if(boss.ritualProgress>0&&!boss.ritualDone){const shrine=levels[state.level].shrines[boss.activeShrine],near=Math.hypot(nita.x+nita.w/2-shrine[0],nita.y+nita.h-shrine[1])<=78;if(near&&nita.invisible>0){boss.ritualProgress+=dt;if(boss.ritualProgress>=4){boss.ritualDone=true;boss.ritualProgress=0;boss.ritualCharge=Math.min(2,boss.ritualCharge+1);showMessage("Ritüel hazır: SHIFT ile Gökyüzü Fısıltısı!",3);tone(920,.22);}}else{boss.ritualProgress=0;showMessage("Ritüel bozuldu.",1);}}
+      if(boss.ritualWindow===0){boss.ritualWait=4;boss.activeShrine=-1;boss.ritualProgress=0;}
+    }else{boss.ritualWait-=dt;if(boss.ritualWait<=0){boss.ritualWindow=6;boss.ritualDone=false;boss.activeShrine=(boss.activeShrine+1+Math.floor(Math.random()*2))%3;showMessage("RİTÜEL PENCERESİ AÇILDI — parlayan anıta git!",3);tone(760,.2);}}
+  }
   boss.attackTimer-=dt;if(boss.attackTimer<=0){boss.attackTimer=1.75+Math.random()*.55;const target=Math.random()<.5?atlas:nita,originX=boss.x+boss.w/2,originY=boss.y+72,dx=target.x+target.w/2-originX,dy=target.y+target.h/2-originY,len=Math.hypot(dx,dy)||1;state.projectiles.push({x:originX-9,y:originY-9,w:18,h:18,vx:dx/len*360,vy:dy/len*360,life:4,color:"#ff3e2f",bossShot:true,phase:Math.random()*6.2});burst(originX,originY,"#ff5a20",14,-boss.vx);tone(125,.08);}
   if(!atlas.dead&&intersects(atlas,boss))damagePlayer(atlas);if(!nita.dead&&intersects(nita,boss))damagePlayer(nita);
   for(const shot of state.projectiles)if(shot.bossShot){shot.x+=shot.vx*dt;shot.y+=shot.vy*dt;shot.life-=dt;const victim=[atlas,nita].find(p=>intersects(shot,p));if(victim){shot.life=0;damagePlayer(victim);}}
@@ -635,9 +653,9 @@ function refreshMarket(){
   buyDualRingButton.innerHTML=state.weapons.dualRing?"KUŞANILDI":'<span>50</span> ATLAS ALTINI';
   buyDualRingButton.closest(".shop-card").classList.toggle("maxed",state.weapons.dualRing);
   buySkyWhisperButton.hidden=network.role!=="solo"&&network.character!=="nita";
-  buySkyWhisperButton.disabled=state.weapons.skyWhisper||state.gold.nita<50;
-  buySkyWhisperButton.innerHTML=state.weapons.skyWhisper?"KUŞANILDI · SHIFT":'<span>50</span> NITA ALTINI';
-  buySkyWhisperButton.closest(".shop-card").classList.toggle("maxed",state.weapons.skyWhisper);
+  const whisperCurrent=state.weapons.skyWhisperLevel,whisperNext=SKY_WHISPER[whisperCurrent+1],whisperShown=whisperNext||SKY_WHISPER[whisperCurrent],whisperCard=buySkyWhisperButton.closest(".shop-card");
+  whisperCard.style.setProperty("--item-color",whisperShown.color);skyWhisperName.textContent=whisperNext?`${whisperNext.name} Gökyüzü Fısıltısı`:`${whisperShown.name} Gökyüzü Fısıltısı tamamlandı`;skyWhisperDetail.textContent=`Alan hasarı: ${whisperShown.damage} · Bekleme: 2 saniye · 5. bölümde ritüel gerekir`;
+  buySkyWhisperButton.disabled=!whisperNext||state.gold.nita<whisperNext.cost;buySkyWhisperButton.innerHTML=whisperNext?`<span>${whisperNext.cost}</span> NITA ALTINI`:"MAKSİMUM SEVİYE";whisperCard.classList.toggle("maxed",!whisperNext);
   updateHud();
 }
 
@@ -647,8 +665,11 @@ function buyDualRing(){
 }
 
 function buySkyWhisper(){
-  if(network.role==="guest"){sendPacket({type:"buy-sky-whisper"});return;}if(state.weapons.skyWhisper||state.gold.nita<50)return;
-  state.gold.nita-=50;state.weapons.skyWhisper=true;tone(1080,.25);burst(nita.x+nita.w/2,nita.y+20,"#8ffcff",32,0);showMessage("GÖKYÜZÜ FISILTISI KUŞANILDI · SHIFT",3);refreshMarket();sendSnapshot();
+  if(network.role==="guest"){sendPacket({type:"buy-sky-whisper"});return;}applySkyWhisperUpgrade();
+}
+
+function applySkyWhisperUpgrade(){
+  const next=SKY_WHISPER[state.weapons.skyWhisperLevel+1];if(!next||state.gold.nita<next.cost)return;state.gold.nita-=next.cost;state.weapons.skyWhisperLevel++;state.weapons.skyWhisper=true;tone(1080,.25);burst(nita.x+nita.w/2,nita.y+20,next.color,32,0);showMessage(`${next.name.toUpperCase()} GÖKYÜZÜ FISILTISI KUŞANILDI · SHIFT`,3);refreshMarket();sendSnapshot();
 }
 
 function buyUpgrade(owner){
@@ -871,7 +892,7 @@ function receivePacket(data){
   if(data.type==="cheatGold"&&network.role==="host")fillTestGold();
   if(data.type==="buy"&&network.role==="host"&&["atlas","nita"].includes(data.owner)){const next=GEAR[state.gear[data.owner]+1];if(next&&state.gold[data.owner]>=next.cost){state.gold[data.owner]-=next.cost;state.gear[data.owner]++;refreshMarket();sendSnapshot();}}
   if(data.type==="buy-charm"&&network.role==="host"&&!state.weapons.dualRing&&state.gold.atlas>=50){state.gold.atlas-=50;state.weapons.dualRing=true;refreshMarket();sendSnapshot();}
-  if(data.type==="buy-sky-whisper"&&network.role==="host"&&!state.weapons.skyWhisper&&state.gold.nita>=50){state.gold.nita-=50;state.weapons.skyWhisper=true;refreshMarket();sendSnapshot();}
+  if(data.type==="buy-sky-whisper"&&network.role==="host")applySkyWhisperUpgrade();
   if(data.type==="sky-whisper"&&network.role==="host"&&(network.character==="atlas"))castRitualLightning();
   if(data.type==="craft-armor"&&network.role==="host"){const remoteOwner=network.character==="atlas"?"nita":"atlas";if(data.owner===remoteOwner)applyCraftArmor(data.owner);}
   if(data.type==="equip-armor"&&network.role==="host"){const remoteOwner=network.character==="atlas"?"nita":"atlas";if(data.owner===remoteOwner)applyArmor(data.owner);}
