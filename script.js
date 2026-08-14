@@ -98,6 +98,16 @@ sprites.wrathNitaWalk.src = "assets/wrath-nita-walk.png";
 sprites.wrathAtlasAction.src = "assets/wrath-atlas-action.png";
 sprites.enemy.src = "assets/enemy.png";
 sprites.enemyWalk.src = "assets/enemy-walk.png";
+
+function removeWhiteSpriteFringe(image){
+  image.addEventListener("load",()=>{
+    const canvas=document.createElement("canvas"),width=image.naturalWidth,height=image.naturalHeight;canvas.width=width;canvas.height=height;
+    const paint=canvas.getContext("2d",{willReadFrequently:true});paint.drawImage(image,0,0);const frame=paint.getImageData(0,0,width,height),pixels=frame.data,remove=[];
+    for(let y=1;y<height-1;y++)for(let x=1;x<width-1;x++){const i=(y*width+x)*4;if(pixels[i]<225||pixels[i+1]<225||pixels[i+2]<225||pixels[i+3]===0)continue;let edge=false;for(let oy=-1;oy<=1&&!edge;oy++)for(let ox=-1;ox<=1;ox++)if(pixels[((y+oy)*width+x+ox)*4+3]===0){edge=true;break;}if(edge)remove.push(i);}
+    for(const i of remove)pixels[i+3]=0;paint.putImageData(frame,0,0);image.src=canvas.toDataURL("image/png");
+  },{once:true});
+}
+for(const sprite of [sprites.wrathAtlas,sprites.wrathNita,sprites.wrathAtlasWalk,sprites.wrathNitaWalk,sprites.wrathAtlasAction])removeWhiteSpriteFringe(sprite);
 const backgrounds = Array.from({length:5},(_,i)=>{const image=new Image();image.src=`assets/level-${i+1}-bg.jpg`;return image;});
 
 const levels = [
@@ -394,11 +404,14 @@ function collectCoins(p) {
 }
 
 function damagePlayer(player,amount=1){
-  if(player.invulnerable>0||!state.boss)return;
+  if(player.invulnerable>0)return;
   if(player.type==="nita"&&player.invisible>0)return;
-  player.hp=Math.max(0,player.hp-amount);player.invulnerable=1.15;state.boss.hitCount++;burst(player.x+player.w/2,player.y+player.h/2,"#ff4b4b",16,-player.facing*80);tone(105,.18);
-  if(state.boss.hitCount%2===0)state.healthOrbs.push({x:180+Math.random()*850,y:620,w:22,h:22,bob:Math.random()*6.2});
-  if(player.hp<=0&&!player.dead){player.dead=true;player.reviveTimer=9;showMessage(`${player.type==="atlas"?"Atlas":"Nita"} düştü — 9 saniye sonra revive kupası gelecek.`,3);}
+  player.hp=Math.max(0,player.hp-amount);player.invulnerable=1.15;burst(player.x+player.w/2,player.y+player.h/2,"#ff4b4b",16,-player.facing*80);tone(105,.18);
+  if(state.boss){state.boss.hitCount++;if(state.boss.hitCount%2===0)state.healthOrbs.push({x:180+Math.random()*850,y:620,w:22,h:22,bob:Math.random()*6.2});}
+  if(player.hp<=0&&!player.dead){
+    if(!state.boss){resetLevel(`${player.type==="atlas"?"Atlas":"Nita"} bir gölge yaratığa yenildi.`);return true;}
+    player.dead=true;player.reviveTimer=9;showMessage(`${player.type==="atlas"?"Atlas":"Nita"} düştü — 9 saniye sonra revive kupası gelecek.`,3);
+  }
 }
 
 function tryStartRitual(){
@@ -494,8 +507,8 @@ function updateEnemies(dt) {
     if(enemy.superSoldier){const targets=[atlas,nita].filter(p=>!p.dead&&(p.type!=="nita"||p.invisible<=0)),target=targets.sort((a,b)=>Math.abs(a.x-enemy.x)-Math.abs(b.x-enemy.x))[0];if(target){const dx=target.x+target.w/2-(enemy.x+enemy.w/2),distance=Math.abs(dx);enemy.facing=Math.sign(dx)||enemy.facing||1;if(distance<=68){enemy.vx=0;if(enemy.attackCooldown<=0){enemy.attackCooldown=1.15;enemy.attackTimer=.48;}if(previousAttack>.2&&enemy.attackTimer<=.2&&distance<=78)damagePlayer(target);}else enemy.vx=enemy.facing*92;}}
     enemy.x+=enemy.vx*dt;
     if (enemy.x<enemy.minX) {enemy.x=enemy.minX;enemy.vx=Math.abs(enemy.vx);} if(enemy.x+enemy.w>enemy.maxX){enemy.x=enemy.maxX-enemy.w;enemy.vx=-Math.abs(enemy.vx);}
-    if(!enemy.superSoldier&&intersects(atlas,enemy)&&!atlas.dead) {if(state.boss){if(enemy.contactCooldown<=0){damagePlayer(atlas);enemy.contactCooldown=1;enemy.vx*=-1;}}else{resetLevel("Atlas bir gölge yaratığa yakalandı.");return;}}
-    if(!enemy.superSoldier&&nita.invisible<=0&&intersects(nita,enemy)&&!nita.dead) {if(state.boss){if(enemy.contactCooldown<=0){damagePlayer(nita);enemy.contactCooldown=1;enemy.vx*=-1;}}else{resetLevel("Nita görünürken bir gölge yaratığa yakalandı.");return;}}
+    if(!enemy.superSoldier&&intersects(atlas,enemy)&&!atlas.dead&&enemy.contactCooldown<=0){if(damagePlayer(atlas,state.boss?1:2))return;enemy.contactCooldown=1.2;enemy.vx*=-1;}
+    if(!enemy.superSoldier&&nita.invisible<=0&&intersects(nita,enemy)&&!nita.dead&&enemy.contactCooldown<=0){if(damagePlayer(nita,state.boss?1:2))return;enemy.contactCooldown=1.2;enemy.vx*=-1;}
   }
   for (const shot of state.projectiles) {
     if(shot.bossShot)continue;
@@ -692,7 +705,7 @@ function drawPlayer(p){
   if(shooting){sprite=armored?sprites.wrathAtlasAction:sprites.atlasAction;drawW=66;drawH=91;}
   const recoil=shooting&&p.beamFired?Math.sin(Math.min(1,(.24-p.actionTimer)/.24)*Math.PI)*3:0,renderX=network.role==="guest"&&Number.isFinite(p.renderX)?p.renderX:p.x,renderY=network.role==="guest"&&Number.isFinite(p.renderY)?p.renderY:p.y;
   ctx.save();ctx.translate(renderX+p.w/2-recoil*p.facing,renderY+p.h);if(p.facing<0)ctx.scale(-1,1);ctx.rotate(shooting?0:(p.onGround?0:p.vx*.00015));ctx.globalAlpha=p.type==="nita"&&p.invisible>0?.27:1;ctx.shadowColor=COLORS[p.type];ctx.shadowBlur=p.actionTimer>0?22:9;
-  if(sprite.complete&&sprite.naturalWidth){if(shooting){ctx.drawImage(sprite,677,48,259,52,-21.5,-drawH,59.8,11.2);ctx.drawImage(sprite,650,100,286,372,-drawW*.42,-79.8,drawW,79.8);}else if(sheet){const crop=(armored?WRATH_WALK_CROPS:WALK_CROPS)[p.type][frame],centerOffset=(128-crop.cx)*drawW/256;ctx.drawImage(sprite,frame*256,crop.y,256,crop.h,-drawW/2+centerOffset,-drawH+bob,drawW,drawH);}else ctx.drawImage(sprite,0,10,256,364,-drawW/2,-drawH+bob,drawW,drawH);}else drawRounded(-p.w/2,-p.h,p.w,p.h,10,color);
+  if(sprite.complete&&sprite.naturalWidth){if(shooting){ctx.drawImage(sprite,650,48,286,424,-drawW*.42,-drawH,drawW,drawH);}else if(sheet){const crop=(armored?WRATH_WALK_CROPS:WALK_CROPS)[p.type][frame],centerOffset=(128-crop.cx)*drawW/256;ctx.drawImage(sprite,frame*256,crop.y,256,crop.h,-drawW/2+centerOffset,-drawH+bob,drawW,drawH);}else ctx.drawImage(sprite,0,10,256,364,-drawW/2,-drawH+bob,drawW,drawH);}else drawRounded(-p.w/2,-p.h,p.w,p.h,10,color);
   if(casting){const lift=1-p.castTimer/.85;ctx.strokeStyle="#d58a60";ctx.lineWidth=6;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(-7,-43);ctx.lineTo(-15-lift*4,-58);ctx.lineTo(-18,-68);ctx.moveTo(7,-43);ctx.lineTo(15+lift*4,-58);ctx.lineTo(18,-68);ctx.stroke();ctx.fillStyle="#aefcff";ctx.shadowColor="#72edff";ctx.shadowBlur=18;ctx.beginPath();ctx.arc(-18,-70,3,0,Math.PI*2);ctx.arc(18,-70,3,0,Math.PI*2);ctx.fill();}
   ctx.restore();
   if(p.type==="nita"&&p.invisible>0){const label=`${p.invisible.toFixed(1)} sn`,cx=renderX+p.w/2,cy=renderY-(state.boss?53:37),pulse=.82+Math.sin(performance.now()*.012)*.18;ctx.save();ctx.font='800 10px "Manrope"';ctx.textAlign="center";ctx.textBaseline="middle";const width=Math.max(42,ctx.measureText(label).width+16);ctx.shadowColor="#54d8e8";ctx.shadowBlur=8*pulse;ctx.fillStyle="rgba(8,18,25,.55)";ctx.beginPath();ctx.roundRect(cx-width/2,cy-10,width,20,10);ctx.fill();ctx.shadowBlur=0;ctx.strokeStyle=`rgba(84,216,232,${.3+.17*pulse})`;ctx.lineWidth=1;ctx.stroke();ctx.fillStyle="rgba(201,251,255,.82)";ctx.fillText(label,cx,cy+.5);ctx.restore();}
