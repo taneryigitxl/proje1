@@ -93,7 +93,7 @@ const WRATH_WALK_CROPS = {
 };
 const sprites = {
   atlas: new Image(), nita: new Image(), atlasWalk: new Image(), atlasAction: new Image(), nitaWalk: new Image(),
-  wrathAtlas: new Image(), wrathNita: new Image(), wrathAtlasWalk: new Image(), wrathNitaWalk: new Image(), wrathAtlasAction: new Image(),
+  wrathAtlas: new Image(), wrathNita: new Image(), wrathAtlasWalk: new Image(), wrathNitaWalk: new Image(), wrathAtlasAction: new Image(), nitaSkyWhisper: new Image(), wrathNitaSkyWhisper: new Image(),
   enemy: new Image(), enemyWalk: new Image()
 };
 sprites.atlas.src = "assets/atlas.png";
@@ -106,6 +106,8 @@ sprites.wrathNita.src = "assets/wrath-nita-idle.png";
 sprites.wrathAtlasWalk.src = "assets/wrath-atlas-walk.png";
 sprites.wrathNitaWalk.src = "assets/wrath-nita-walk.png";
 sprites.wrathAtlasAction.src = "assets/wrath-atlas-action.png";
+sprites.nitaSkyWhisper.src = "assets/nita-sky-whisper.png";
+sprites.wrathNitaSkyWhisper.src = "assets/wrath-nita-sky-whisper.png";
 sprites.enemy.src = "assets/enemy.png";
 sprites.enemyWalk.src = "assets/enemy-walk.png";
 
@@ -113,7 +115,7 @@ function removeWhiteSpriteFringe(image){
   image.addEventListener("load",()=>{
     const canvas=document.createElement("canvas"),width=image.naturalWidth,height=image.naturalHeight;canvas.width=width;canvas.height=height;
     const paint=canvas.getContext("2d",{willReadFrequently:true});paint.drawImage(image,0,0);const frame=paint.getImageData(0,0,width,height),pixels=frame.data,remove=[];
-    for(let y=1;y<height-1;y++)for(let x=1;x<width-1;x++){const i=(y*width+x)*4;if(pixels[i]<225||pixels[i+1]<225||pixels[i+2]<225||pixels[i+3]===0)continue;let edge=false;for(let oy=-1;oy<=1&&!edge;oy++)for(let ox=-1;ox<=1;ox++)if(pixels[((y+oy)*width+x+ox)*4+3]===0){edge=true;break;}if(edge)remove.push(i);}
+    for(let y=3;y<height-3;y++)for(let x=3;x<width-3;x++){const i=(y*width+x)*4;if(pixels[i]<205||pixels[i+1]<205||pixels[i+2]<205||pixels[i+3]===0)continue;let edge=false;for(let oy=-3;oy<=3&&!edge;oy++)for(let ox=-3;ox<=3;ox++)if(pixels[((y+oy)*width+x+ox)*4+3]===0){edge=true;break;}if(edge)remove.push(i);}
     for(const i of remove)pixels[i+3]=0;paint.putImageData(frame,0,0);image.src=canvas.toDataURL("image/png");
   },{once:true});
 }
@@ -740,13 +742,13 @@ function drawPlatform(p,theme){
 
 function drawPlayer(p){
   if(p.dead){const dx=network.role==="guest"&&Number.isFinite(p.renderX)?p.renderX:p.x,dy=network.role==="guest"&&Number.isFinite(p.renderY)?p.renderY:p.y;ctx.save();ctx.globalAlpha=.5;ctx.fillStyle=COLORS[p.type];ctx.beginPath();ctx.ellipse(dx+17,dy+48,24,7,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.fillStyle="#fff";ctx.font='800 10px "Manrope"';ctx.textAlign="center";ctx.fillText(`KO · ${Math.ceil(p.reviveTimer)} sn`,dx+17,dy+33);ctx.textAlign="left";ctx.restore();return;}
-  const armored=Boolean(state.inventory[p.type].equipped),shooting=p.type==="atlas"&&p.actionTimer>0,casting=p.type==="nita"&&p.castTimer>0,color=COLORS[p.type],moving=!shooting&&!casting&&p.onGround&&Math.abs(p.vx)>18,bob=0;let sprite=armored?(p.type==="atlas"?sprites.wrathAtlas:sprites.wrathNita):sprites[p.type],frame=0,sheet=false,drawW=p.type==="atlas"?62:45,drawH=p.type==="atlas"?88:72;
+  const armored=Boolean(state.inventory[p.type].equipped),shooting=p.type==="atlas"&&p.actionTimer>0,casting=p.type==="nita"&&p.castTimer>0,color=COLORS[p.type],moving=!shooting&&!casting&&p.onGround&&Math.abs(p.vx)>18,bob=0;let sprite=armored?(p.type==="atlas"?sprites.wrathAtlas:sprites.wrathNita):sprites[p.type],frame=0,sheet=false,skyAction=false,drawW=p.type==="atlas"?62:45,drawH=p.type==="atlas"?88:72;
   if(moving){sprite=armored?(p.type==="atlas"?sprites.wrathAtlasWalk:sprites.wrathNitaWalk):(p.type==="atlas"?sprites.atlasWalk:sprites.nitaWalk);frame=Math.floor(p.walkCycle)%4;sheet=true;}
   if(shooting){sprite=armored?sprites.wrathAtlasAction:sprites.atlasAction;drawW=66;drawH=91;}
+  if(casting){sprite=armored?sprites.wrathNitaSkyWhisper:sprites.nitaSkyWhisper;frame=Math.min(4,Math.floor((1-p.castTimer/.85)*5));skyAction=true;drawH=104;}
   const recoil=shooting&&p.beamFired?Math.sin(Math.min(1,(.24-p.actionTimer)/.24)*Math.PI)*3:0,renderX=network.role==="guest"&&Number.isFinite(p.renderX)?p.renderX:p.x,renderY=network.role==="guest"&&Number.isFinite(p.renderY)?p.renderY:p.y;
   ctx.save();ctx.translate(renderX+p.w/2-recoil*p.facing,renderY+p.h);if(p.facing<0)ctx.scale(-1,1);ctx.rotate(shooting?0:(p.onGround?0:p.vx*.00015));ctx.globalAlpha=p.type==="nita"&&p.invisible>0?.27:1;ctx.shadowColor=COLORS[p.type];ctx.shadowBlur=p.actionTimer>0?22:9;
-  if(sprite.complete&&sprite.naturalWidth){if(shooting){const actionX=-drawW*.42,topOffset=38/286*drawW;ctx.drawImage(sprite,688,48,248,62,actionX+topOffset,-drawH,248/286*drawW,62/424*drawH);ctx.drawImage(sprite,650,110,286,362,actionX,-drawH+62/424*drawH,drawW,362/424*drawH);}else if(sheet){const crop=(armored?WRATH_WALK_CROPS:WALK_CROPS)[p.type][frame],centerOffset=(128-crop.cx)*drawW/256;ctx.drawImage(sprite,frame*256,crop.y,256,crop.h,-drawW/2+centerOffset,-drawH+bob,drawW,drawH);}else ctx.drawImage(sprite,0,10,256,364,-drawW/2,-drawH+bob,drawW,drawH);}else drawRounded(-p.w/2,-p.h,p.w,p.h,10,color);
-  if(casting){const lift=1-p.castTimer/.85;ctx.strokeStyle="#d58a60";ctx.lineWidth=6;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(-7,-43);ctx.lineTo(-15-lift*4,-58);ctx.lineTo(-18,-68);ctx.moveTo(7,-43);ctx.lineTo(15+lift*4,-58);ctx.lineTo(18,-68);ctx.stroke();ctx.fillStyle="#aefcff";ctx.shadowColor="#72edff";ctx.shadowBlur=18;ctx.beginPath();ctx.arc(-18,-70,3,0,Math.PI*2);ctx.arc(18,-70,3,0,Math.PI*2);ctx.fill();}
+  if(sprite.complete&&sprite.naturalWidth){if(shooting){const actionX=-drawW*.42,topOffset=38/286*drawW;ctx.drawImage(sprite,688,48,248,62,actionX+topOffset,-drawH,248/286*drawW,62/424*drawH);ctx.drawImage(sprite,650,110,286,362,actionX,-drawH+62/424*drawH,drawW,362/424*drawH);}else if(skyAction){const frameW=sprite.naturalWidth/5,actionW=frameW/sprite.naturalHeight*drawH;ctx.drawImage(sprite,frame*frameW,0,frameW,sprite.naturalHeight,-actionW/2,-drawH,actionW,drawH);}else if(sheet){const crop=(armored?WRATH_WALK_CROPS:WALK_CROPS)[p.type][frame],centerOffset=(128-crop.cx)*drawW/256;ctx.drawImage(sprite,frame*256,crop.y,256,crop.h,-drawW/2+centerOffset,-drawH+bob,drawW,drawH);}else ctx.drawImage(sprite,0,10,256,364,-drawW/2,-drawH+bob,drawW,drawH);}else drawRounded(-p.w/2,-p.h,p.w,p.h,10,color);
   ctx.restore();
   if(p.type==="nita"&&p.invisible>0){const label=`${p.invisible.toFixed(1)} sn`,cx=renderX+p.w/2,cy=renderY-(state.boss?53:37),pulse=.82+Math.sin(performance.now()*.012)*.18;ctx.save();ctx.font='800 10px "Manrope"';ctx.textAlign="center";ctx.textBaseline="middle";const width=Math.max(42,ctx.measureText(label).width+16);ctx.shadowColor="#54d8e8";ctx.shadowBlur=8*pulse;ctx.fillStyle="rgba(8,18,25,.55)";ctx.beginPath();ctx.roundRect(cx-width/2,cy-10,width,20,10);ctx.fill();ctx.shadowBlur=0;ctx.strokeStyle=`rgba(84,216,232,${.3+.17*pulse})`;ctx.lineWidth=1;ctx.stroke();ctx.fillStyle="rgba(201,251,255,.82)";ctx.fillText(label,cx,cy+.5);ctx.restore();}
   if(state.boss){ctx.fillStyle="rgba(0,0,0,.72)";ctx.fillRect(renderX-5,renderY-17,p.maxHp*10+4,7);for(let i=0;i<p.maxHp;i++){ctx.fillStyle=i<p.hp?COLORS[p.type]:"#30343a";ctx.fillRect(renderX-2+i*10,renderY-15,8,3);}}
