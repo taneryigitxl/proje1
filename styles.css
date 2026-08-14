@@ -92,7 +92,7 @@ kbd { min-width:21px; display:inline-grid; place-items:center; margin:0 2px; pad
 .market.active { opacity:1;visibility:visible;pointer-events:auto; }
 .market h2 { margin:7px 0 4px;font:800 clamp(2rem,5vw,4.2rem)/1 "Manrope",sans-serif;letter-spacing:-.055em; }
 .market-summary { margin:0 0 22px;color:rgba(245,239,227,.6);font-size:.78rem; }
-.market-grid { display:grid;grid-template-columns:repeat(3,minmax(230px,350px));gap:14px;width:min(1080px,94vw);animation:marketReveal .24s ease both; }
+.market-grid { display:grid;grid-template-columns:repeat(2,minmax(230px,420px));gap:14px;width:min(860px,94vw);animation:marketReveal .24s ease both; }
 .market-grid[hidden] { display:none; }
 @keyframes marketReveal { from{opacity:0;transform:translateY(10px) scale(.98)} to{opacity:1;transform:none} }
 .shop-card { position:relative;display:grid;grid-template-columns:72px 1fr;gap:16px;align-items:center;min-height:188px;padding:22px;text-align:left;border:1px solid rgba(245,239,227,.14);border-radius:22px;background:linear-gradient(145deg,rgba(255,255,255,.09),rgba(255,255,255,.025));box-shadow:0 26px 70px rgba(0,0,0,.25);overflow:hidden; }
@@ -105,6 +105,9 @@ kbd { min-width:21px; display:inline-grid; place-items:center; margin:0 2px; pad
 .dual-ring-shop { --item-color:#ffb12e; }
 .ancient-charm-icon { font-size:2rem;color:#dca0ff;text-shadow:0 0 10px #bd63ff,0 0 24px #ffb12e;background:radial-gradient(circle,rgba(185,108,255,.2),rgba(255,177,46,.06)); }
 .dual-ring-shop button { background:linear-gradient(100deg,#ffb62e,#b76cff); }
+.sky-whisper-shop { --item-color:#79eaff; }
+.sky-whisper-icon { color:#eaffff;text-shadow:0 0 8px #fff,0 0 24px #54d8e8;background:radial-gradient(circle,rgba(84,216,232,.24),rgba(84,216,232,.04)); }
+.sky-whisper-shop button { background:linear-gradient(100deg,#54d8e8,#a9f8ff); }
 .cloak-icon i { position:relative;width:42px;height:46px;border-radius:18px 18px 8px 8px;background:linear-gradient(135deg,rgba(255,255,255,.55),var(--item-color) 38%,rgba(8,15,23,.82));clip-path:polygon(28% 0,72% 0,100% 100%,52% 84%,0 100%);filter:drop-shadow(0 0 10px color-mix(in srgb,var(--item-color) 65%,transparent)); }
 .cloak-icon b { position:absolute;left:50%;top:5px;width:20px;height:18px;border:4px solid var(--item-color);border-bottom:0;border-radius:50% 50% 0 0;transform:translateX(-50%); }
 .shop-card small { color:var(--atlas);font-weight:800;font-size:.58rem;letter-spacing:.16em; }
