@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <meta name="description" content="Nita Yollarda — iki kişilik, on bölümlük 2D platform oyunu." />
+    <meta name="description" content="Nita Yollarda — iki kişilik, on bir bölümlük 2D platform oyunu." />
     <meta name="theme-color" content="#10141d" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -12,9 +12,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css?v=20260817-2" />
+    <link rel="stylesheet" href="styles.css?v=20260817-4" />
     <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js" defer></script>
-    <script src="script.js?v=20260817-3" defer></script>
+    <script src="script.js?v=20260817-4" defer></script>
   </head>
   <body>
     <main id="game" aria-label="Nita Yollarda oyun alanı">
@@ -22,12 +22,13 @@
 
       <header class="hud">
         <div class="brand"><span>NITA</span> YOLLARDA <b id="connection-badge">ÇEVRİMDIŞI</b></div>
-        <div class="level-info"><small>BÖLÜM</small><strong id="level-number">1 / 10</strong><span id="level-name">İlk Temas</span></div>
+        <div class="level-info"><small>BÖLÜM</small><strong id="level-number">1 / 11</strong><span id="level-name">İlk Temas</span></div>
         <div class="economy" aria-label="Altın ve ekipman durumu">
           <span class="atlas-wallet"><i></i><b id="atlas-gold">0</b><small id="atlas-gear">BEYAZ ELDİVEN</small></span>
           <span class="nita-wallet"><i></i><b id="nita-gold">0</b><small id="nita-gear">BEYAZ PELERİN · 1 sn</small></span>
         </div>
         <div class="hud-actions">
+          <button id="main-menu-button" type="button">ANA MENÜ</button>
           <button id="hud-market-button" type="button">MARKET</button>
           <button id="inventory-button" type="button">ENVANTER</button>
           <button id="village-button" type="button">KÖY</button>
@@ -78,7 +79,19 @@
           <button id="create-room" type="button">ODA KUR <span>＋</span></button>
           <button id="show-join" type="button" class="secondary">ODAYA KATIL <span>→</span></button>
           <button id="solo-game" type="button" class="text-button">TEK BİLGİSAYARDA OYNA</button>
+          <button id="show-levels" type="button" class="levels-button">BÖLÜMLER <span>◇</span></button>
         </div>
+        <section id="level-select" class="level-select" aria-labelledby="level-select-title" hidden>
+          <header class="level-select-header">
+            <div>
+              <p class="eyebrow">YOLCULUK HARİTASI</p>
+              <h2 id="level-select-title">Bölümünü Seç</h2>
+            </div>
+            <p>Normal ilerleyişte bölümler sırayla açılır. Tüm bölümleri açmak için <kbd>SHIFT</kbd> + <kbd>I</kbd> tuşlarına bas.</p>
+          </header>
+          <div id="level-grid" class="level-grid" aria-live="polite"></div>
+          <button id="level-select-back" type="button">← ANA MENÜYE DÖN</button>
+        </section>
         <form id="join-form" class="join-form" hidden>
           <label for="room-code">6 HANELİ ODA KODU</label>
           <div><input id="room-code" minlength="6" maxlength="6" pattern="[A-HJ-NP-Z2-9]{6}" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" inputmode="text" enterkeyhint="go" placeholder="ABC123" required /><button type="submit">KATIL</button></div>

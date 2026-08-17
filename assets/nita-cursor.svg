@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none">
+  <defs>
+    <linearGradient id="arrow" x1="3" y1="3" x2="23" y2="26" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F7F1E5"/>
+      <stop offset="0.48" stop-color="#54D8E8"/>
+      <stop offset="1" stop-color="#17899B"/>
+    </linearGradient>
+    <linearGradient id="ember" x1="12" y1="11" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFD06A"/>
+      <stop offset="1" stop-color="#FF704D"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="1.15" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <path d="M3 2.5 27.7 12.9l-10 3.65-4.12 10.7L3 2.5Z" fill="#080D14" stroke="#080D14" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M3 2.5 27.7 12.9l-10 3.65-4.12 10.7L3 2.5Z" fill="url(#arrow)" stroke="#D8FBFF" stroke-width="0.8" stroke-linejoin="round"/>
+  <path d="m7.15 6.8 13.9 6.06-6.12 1.91-1.69 6.2L7.15 6.8Z" fill="#101A24" opacity="0.9"/>
+  <path d="m10.4 10.15 7.28 3.18-3.25 1.02-.9 3.34-3.13-7.54Z" fill="url(#ember)" filter="url(#glow)"/>
+  <path d="M21.4 20.35a8 8 0 0 1-7.55 7.15M24.55 16.7a11.7 11.7 0 0 1-.9 7.25" stroke="#54D8E8" stroke-width="1.3" stroke-linecap="round" opacity="0.85"/>
+  <path d="m22.1 19.2.55 2.25 2.18.72-2.18.72-.55 2.25-.55-2.25-2.18-.72 2.18-.72.55-2.25Z" fill="#FF8A56" filter="url(#glow)"/>
+</svg>
