@@ -28,6 +28,8 @@ const nitaGearLabel = document.getElementById("nita-gear");
 const market = document.getElementById("market");
 const marketTitle = document.getElementById("market-title");
 const marketSummary = document.getElementById("market-summary");
+const marketAtlasGold = document.getElementById("market-atlas-gold");
+const marketNitaGold = document.getElementById("market-nita-gold");
 const marketToggle = document.getElementById("market-toggle");
 const marketGrid = document.getElementById("market-grid");
 const gloveName = document.getElementById("glove-name");
@@ -53,6 +55,7 @@ const roomInput = document.getElementById("room-code");
 const roomWait = document.getElementById("room-wait");
 const roomCodeDisplay = document.getElementById("room-code-display");
 const copyCodeButton = document.getElementById("copy-code");
+const roomWaitStatus = roomWait.querySelector("p");
 const characterSelect = document.getElementById("character-select");
 const characterSelectStatus = document.getElementById("character-select-status");
 const connectionBadge = document.getElementById("connection-badge");
@@ -111,15 +114,20 @@ sprites.wrathNitaSkyWhisper.src = "assets/wrath-nita-sky-whisper.png";
 sprites.enemy.src = "assets/enemy.png";
 sprites.enemyWalk.src = "assets/enemy-walk.png";
 
-function removeWhiteSpriteFringe(image){
+function removeWhiteSpriteFringe(image,clearAtlasArmPatch=false){
   image.addEventListener("load",()=>{
     const canvas=document.createElement("canvas"),width=image.naturalWidth,height=image.naturalHeight;canvas.width=width;canvas.height=height;
     const paint=canvas.getContext("2d",{willReadFrequently:true});paint.drawImage(image,0,0);const frame=paint.getImageData(0,0,width,height),pixels=frame.data,remove=[];
+    if(clearAtlasArmPatch&&width===256&&height===384){
+      const stack=[[100,150]],seen=new Uint8Array(width*height);
+      while(stack.length){const [x,y]=stack.pop(),pixelIndex=y*width+x;if(x<0||x>=width||y<0||y>=height||seen[pixelIndex])continue;seen[pixelIndex]=1;const i=pixelIndex*4;if(pixels[i+3]===0||pixels[i]<22||pixels[i+1]<22||pixels[i+2]<22)continue;pixels[i+3]=0;stack.push([x-1,y-1],[x,y-1],[x+1,y-1],[x-1,y],[x+1,y],[x-1,y+1],[x,y+1],[x+1,y+1]);}
+    }
     for(let y=3;y<height-3;y++)for(let x=3;x<width-3;x++){const i=(y*width+x)*4;if(pixels[i]<205||pixels[i+1]<205||pixels[i+2]<205||pixels[i+3]===0)continue;let edge=false;for(let oy=-3;oy<=3&&!edge;oy++)for(let ox=-3;ox<=3;ox++)if(pixels[((y+oy)*width+x+ox)*4+3]===0){edge=true;break;}if(edge)remove.push(i);}
     for(const i of remove)pixels[i+3]=0;paint.putImageData(frame,0,0);image.src=canvas.toDataURL("image/png");
   },{once:true});
 }
-for(const sprite of [sprites.wrathAtlas,sprites.wrathNita,sprites.wrathAtlasWalk,sprites.wrathNitaWalk,sprites.wrathAtlasAction])removeWhiteSpriteFringe(sprite);
+removeWhiteSpriteFringe(sprites.wrathAtlas,true);
+for(const sprite of [sprites.wrathNita,sprites.wrathAtlasWalk,sprites.wrathNitaWalk,sprites.wrathAtlasAction])removeWhiteSpriteFringe(sprite);
 const backgrounds = Array.from({length:5},(_,i)=>{const image=new Image();image.src=`assets/level-${i+1}-bg.jpg`;return image;});
 
 const levels = [
@@ -212,7 +220,7 @@ const state = {
   running: false, paused: false, level: 0, levelTime: 0, keys: {}, keysPressed: {}, platforms: [], hazards: [], enemies: [], cameras: [], lasers: [], coins: [], exits: [], projectiles: [], particles: [], healthOrbs: [], reviveCups: [], boss: null,
   gold: { atlas: 0, nita: 0 }, gear: { atlas: 0, nita: 0 }, weapons: { dualRing: false, skyWhisper: false, skyWhisperLevel: -1 }, inventory: {atlas:{hearts:0,armor:false,equipped:false},nita:{hearts:0,armor:false,equipped:false}}, collectedThisLevel: { atlas: 0, nita: 0 }, skyLightningTimer: 0, skyLightningX: 0, last: 0, audio: true, messageTimer: 0, transitionTimer: null, marketInGame: false, marketWasPaused: false, inventoryOpen: false, villageOpen: false, panelWasPaused: false, selectedArmor: null, autoPaused: false
 };
-const network = { role: "solo", character: null, hostCharacter: null, peer: null, connection: null, lastSync: 0 };
+const network = { role: "solo", character: null, hostCharacter: null, peer: null, connection: null, connectionTimer: null, attempt: 0, lastSync: 0 };
 
 function setupIosInstallTip(){
   const ua=navigator.userAgent,isIos=/iPhone|iPad|iPod/i.test(ua)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1),standalone=window.matchMedia("(display-mode: standalone)").matches||navigator.standalone===true,isSafari=/Safari/i.test(ua)&&!/CriOS|FxiOS|EdgiOS/i.test(ua);
@@ -258,7 +266,7 @@ function loadLevel(index) {
   state.reviveCups = [];
   state.skyLightningTimer = 0;
   state.boss = data.bossType==="mario"
-    ? {type:"mario",x:1035,y:470,w:105,h:155,vx:-68,vy:0,minX:610,maxX:1190,groundY:470,hp:10,maxHp:10,attackTimer:1.8,minionTimer:15,jumpTimer:10,slamPulse:0,hitCount:0,flash:0,ritualWait:10,ritualWindow:0,activeShrine:-1,ritualProgress:0,ritualDone:false,ritualCharge:0,lightningTimer:0,lightningX:0,dead:false}
+    ? {type:"mario",x:1035,y:470,w:105,h:155,vx:-68,vy:0,minX:610,maxX:1190,groundY:470,hp:10,maxHp:10,attackTimer:1.8,minionTimer:15,jumpTimer:10,slamPulse:0,hitCount:0,flash:0,ritualWait:10,ritualWindow:0,activeShrine:-1,ritualProgress:0,ritualDone:false,ritualCharge:0,lightningTimer:0,lightningX:0,dead:false,lootDropped:false,lootCollected:false}
     : data.bossType==="seraph"
       ? {type:"seraph",x:790,y:322,w:112,h:210,vx:-46,minX:520,maxX:1130,hp:36,maxHp:36,flash:0,dead:false,attackTimer:2.4,warningTimer:0,warningDuration:1.35,strikeTimer:0,strikeX:0,hitCount:0}
       : null;
@@ -284,6 +292,8 @@ function updateHud() {
   const glove = GEAR[state.gear.atlas], cloak = GEAR[state.gear.nita];
   atlasGoldLabel.textContent = state.gold.atlas;
   nitaGoldLabel.textContent = state.gold.nita;
+  marketAtlasGold.textContent = state.gold.atlas;
+  marketNitaGold.textContent = state.gold.nita;
   atlasGearLabel.textContent = (state.weapons.dualRing ? `${glove.name.toUpperCase()} KADİM TILSIM · SERİ ATIŞ` : `${glove.name.toUpperCase()} KUTSANMIŞ EL · ${glove.damage} HASAR`)+(state.inventory.atlas.equipped?" · ÖFKE ZIRHI":"");
   const whisper=SKY_WHISPER[Math.max(0,state.weapons.skyWhisperLevel)];
   nitaGearLabel.textContent = `${cloak.name.toUpperCase()} PELERİN · ${cloak.cloak} sn${state.weapons.skyWhisper?` · ${whisper.name.toUpperCase()} GÖKYÜZÜ FISILTISI`:""}${state.inventory.nita.equipped?" · ÖFKE ZIRHI":""}`;
@@ -449,9 +459,9 @@ function castRitualLightning(){
 
 function announceBossDefeat(boss){
   if(boss.type==="mario"&&!boss.lootDropped){
-    boss.lootDropped=true;state.inventory.atlas.hearts++;state.inventory.nita.hearts++;
+    boss.lootDropped=true;
     burst(boss.x+boss.w/2-25,boss.y+60,"#ff3428",28,-55);burst(boss.x+boss.w/2+25,boss.y+60,"#ff3428",28,55);
-    showMessage("MARIO YENİLDİ · ÖFKENİN KALBİ ×2 KAZANILDI!",4);tone(880,.25);return;
+    showMessage("MARIO YENİLDİ · DÜŞEN ÖFKENİN KALPLERİNİ AL!",4);tone(880,.25);return;
   }
   if(boss.type==="seraph"&&!boss.goldDropped){
     boss.goldDropped=true;state.gold.atlas+=50;state.gold.nita+=50;updateHud();
@@ -459,6 +469,22 @@ function announceBossDefeat(boss){
     showMessage("AK MUHAFIZ YENİLDİ · ATLAS +50 · NITA +50 ALTIN!",4);tone(980,.3);return;
   }
   showMessage(boss.type==="seraph"?"AK MUHAFIZ YENİLDİ!":"MARIO YENİLDİ!",3);
+}
+
+function updateBossLoot(){
+  const boss=state.boss;
+  if(!boss||boss.type!=="mario"||!boss.dead||!boss.lootDropped||boss.lootCollected)return;
+  const pickup={x:boss.x+boss.w/2-80,y:boss.y+48,w:160,h:105};
+  const collector=[atlas,nita].find(player=>!player.dead&&intersects(player,pickup));
+  if(!collector)return;
+  boss.lootCollected=true;
+  state.inventory.atlas.hearts++;
+  state.inventory.nita.hearts++;
+  burst(boss.x+boss.w/2,boss.y+92,"#ff3428",40,0);
+  showMessage(`${heroName(collector.type)} Öfkenin Kalplerini aldı · Atlas +1 · Nita +1`,2.5);
+  tone(1040,.24);
+  sendSnapshot();
+  completeLevel();
 }
 
 function damageBossSlot(source){
@@ -580,7 +606,7 @@ function update(dt) {
   updatePlayer(atlas,"a","d","w","s",dt);
   updatePlayer(nita,"arrowleft","arrowright","arrowup","arrowdown",dt);
   if(state.keysPressed.shift)castRitualLightning();
-  updateEnemies(dt);updateCameras(dt);updateLasers();updateBoss(dt);
+  updateEnemies(dt);updateCameras(dt);updateLasers();updateBoss(dt);updateBossLoot();
   state.particles.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=150*dt;p.life-=dt;});state.particles=state.particles.filter(p=>p.life>0);
   if(!state.boss&&atlas.atExit&&nita.atExit)completeLevel();
   state.keysPressed={};
@@ -595,7 +621,9 @@ function playLevelTransition(name,final,done){
 }
 
 function completeLevel(){
-  if(!state.running)return;state.running=false;tone(620,.15);const final=state.level===levels.length-1;sendPacket({type:"complete",level:state.level,final,gold:state.gold,gear:state.gear,inventory:state.inventory,collected:state.collectedThisLevel});
+  if(!state.running)return;
+  if(state.level===4&&state.boss?.type==="mario"&&!state.boss.lootCollected){showMessage(state.boss.dead?"Öfkenin Kalplerini almadan bölüm tamamlanamaz.":"Önce Mario'yu yenmelisin.",2.5);return;}
+  state.running=false;tone(620,.15);const final=state.level===levels.length-1;sendPacket({type:"complete",level:state.level,final,gold:state.gold,gear:state.gear,inventory:state.inventory,collected:state.collectedThisLevel});
   playLevelTransition(levels[state.level].name,final,showMarket);
 }
 
@@ -619,7 +647,7 @@ function managedCharacters(){return network.role==="solo"?["atlas","nita"]:netwo
 function heroName(owner){return owner==="atlas"?"Atlas":"Nita";}
 function renderInventory(){
   const owners=managedCharacters();
-  inventoryGrid.innerHTML=owners.map(owner=>{const item=state.inventory[owner],equipped=item.equipped,armorItem=item.armor&&!equipped,selected=state.selectedArmor===owner,avatar=equipped?`assets/wrath-${owner}-idle.png`:`assets/${owner}.png`;return `<article class="inventory-character ${owner} ${equipped?"armored":""}" data-owner="${owner}" style="--hero-color:${COLORS[owner]}"><div class="avatar-stage"><img src="${avatar}" alt="${heroName(owner)}${equipped?" · Öfke Zırhı":""}"></div><div class="character-inventory"><small>${owner.toUpperCase()}</small><h3>${heroName(owner)}</h3><div class="gear-slot ${equipped?"equipped":""}">${equipped?"ÖFKE ZIRHI · +2 CAN":"ZIRH YUVASI · EŞYA SÜRÜKLE"}</div><div class="inventory-items">${item.hearts?`<div class="inventory-item"><i class="item-gem">◆</i><span><b>Öfkenin Kalbi ×${item.hearts}</b><em>Demircide zırha dönüştürülür</em></span></div>`:""}${armorItem?`<button class="inventory-item ${selected?"selected":""}" type="button" draggable="true" data-armor-owner="${owner}"><i class="item-armor"></i><span><b>Öfke Zırhı</b><em>Sürükle veya dokunarak seç</em></span></button>`:""}${!item.hearts&&!armorItem&&!equipped?'<div class="empty-inventory">Henüz özel eşya yok. Öfkenin Kalbi, 5. bölüm boss’undan düşer.</div>':""}</div></div></article>`;}).join("");
+  inventoryGrid.innerHTML=owners.map(owner=>{const item=state.inventory[owner],equipped=item.equipped,armorItem=item.armor&&!equipped,selected=state.selectedArmor===owner,avatar=equipped?(owner==="atlas"?sprites.wrathAtlas.src:sprites.wrathNita.src):`assets/${owner}.png`;return `<article class="inventory-character ${owner} ${equipped?"armored":""}" data-owner="${owner}" style="--hero-color:${COLORS[owner]}"><div class="avatar-stage"><img src="${avatar}" alt="${heroName(owner)}${equipped?" · Öfke Zırhı":""}"></div><div class="character-inventory"><small>${owner.toUpperCase()}</small><h3>${heroName(owner)}</h3><div class="gear-slot ${equipped?"equipped":""}">${equipped?"ÖFKE ZIRHI · +2 CAN":"ZIRH YUVASI · EŞYA SÜRÜKLE"}</div><div class="inventory-items">${item.hearts?`<div class="inventory-item"><i class="item-gem">◆</i><span><b>Öfkenin Kalbi ×${item.hearts}</b><em>Demircide zırha dönüştürülür</em></span></div>`:""}${armorItem?`<button class="inventory-item ${selected?"selected":""}" type="button" draggable="true" data-armor-owner="${owner}"><i class="item-armor"></i><span><b>Öfke Zırhı</b><em>Sürükle veya dokunarak seç</em></span></button>`:""}${!item.hearts&&!armorItem&&!equipped?'<div class="empty-inventory">Henüz özel eşya yok. Öfkenin Kalbi, 5. bölüm boss’undan düşer.</div>':""}</div></div></article>`;}).join("");
 }
 function renderForge(){
   forgeOptions.innerHTML=managedCharacters().map(owner=>{const item=state.inventory[owner],status=item.armor?item.equipped?"Kuşanıldı":"Üretildi · Envanterde":item.hearts?"1 Öfkenin Kalbi hazır":"Öfkenin Kalbi gerekli";return `<article class="forge-option"><i class="item-armor"></i><span><b>${heroName(owner)} · Öfke Zırhı</b><small>${status} · Kalp: ${item.hearts}</small></span><button type="button" data-craft-owner="${owner}" ${item.armor||!item.hearts?"disabled":""}>${item.armor?"ÜRETİLDİ":"1 KALP İLE ÜRET"}</button></article>`;}).join("");
@@ -786,7 +814,7 @@ function drawHazard(h){
 
 function drawMarioBoss(){
   const boss=state.boss;if(!boss)return;const time=performance.now()*.001,bx=network.role==="guest"&&Number.isFinite(boss.renderX)?boss.renderX:boss.x;
-  if(boss.lootDropped)for(const side of [-1,1]){const x=bx+boss.w/2+side*42,y=boss.y+92+Math.sin(time*5+side)*7;ctx.save();ctx.translate(x,y);ctx.shadowColor="#ff241d";ctx.shadowBlur=25;const heart=ctx.createRadialGradient(-4,-5,2,0,0,20);heart.addColorStop(0,"#ffd0bd");heart.addColorStop(.3,"#ff4b35");heart.addColorStop(1,"#4a0710");ctx.fillStyle=heart;ctx.beginPath();ctx.moveTo(0,19);ctx.bezierCurveTo(-27,2,-20,-16,-8,-16);ctx.bezierCurveTo(-2,-16,0,-10,0,-8);ctx.bezierCurveTo(0,-10,2,-16,8,-16);ctx.bezierCurveTo(20,-16,27,2,0,19);ctx.fill();ctx.strokeStyle="#fff1df";ctx.lineWidth=1.5;ctx.stroke();ctx.restore();}
+  if(boss.lootDropped&&!boss.lootCollected){for(const side of [-1,1]){const x=bx+boss.w/2+side*42,y=boss.y+92+Math.sin(time*5+side)*7;ctx.save();ctx.translate(x,y);ctx.shadowColor="#ff241d";ctx.shadowBlur=25;const heart=ctx.createRadialGradient(-4,-5,2,0,0,20);heart.addColorStop(0,"#ffd0bd");heart.addColorStop(.3,"#ff4b35");heart.addColorStop(1,"#4a0710");ctx.fillStyle=heart;ctx.beginPath();ctx.moveTo(0,19);ctx.bezierCurveTo(-27,2,-20,-16,-8,-16);ctx.bezierCurveTo(-2,-16,0,-10,0,-8);ctx.bezierCurveTo(0,-10,2,-16,8,-16);ctx.bezierCurveTo(20,-16,27,2,0,19);ctx.fill();ctx.strokeStyle="#fff1df";ctx.lineWidth=1.5;ctx.stroke();ctx.restore();}ctx.save();ctx.fillStyle="#fff1df";ctx.font='800 11px "Manrope"';ctx.textAlign="center";ctx.shadowColor="#ff241d";ctx.shadowBlur=12;ctx.fillText("ÖFKENİN KALPLERİNİ AL",bx+boss.w/2,boss.y+142);ctx.restore();}
   for(const [index,shrine] of (levels[state.level].shrines||[]).entries()){const active=boss.ritualWindow>0&&boss.activeShrine===index&&!boss.ritualDone,pulse=.5+Math.sin(time*4+index)*.5;ctx.save();ctx.translate(shrine[0],shrine[1]);ctx.shadowColor=active?"#58ffe9":"#05070a";ctx.shadowBlur=active?18+8*pulse:9;ctx.fillStyle="rgba(0,0,0,.42)";ctx.beginPath();ctx.ellipse(0,0,46,10,0,0,Math.PI*2);ctx.fill();const base=ctx.createLinearGradient(-34,-28,35,2);base.addColorStop(0,"#171d22");base.addColorStop(.48,active?"#426d68":"#30373b");base.addColorStop(1,"#0a0d10");ctx.fillStyle=base;ctx.beginPath();ctx.moveTo(-36,0);ctx.lineTo(-28,-24);ctx.lineTo(28,-24);ctx.lineTo(38,0);ctx.closePath();ctx.fill();ctx.fillStyle="#11161a";ctx.beginPath();ctx.moveTo(-23,-24);ctx.lineTo(-16,-55);ctx.lineTo(17,-55);ctx.lineTo(24,-24);ctx.closePath();ctx.fill();ctx.strokeStyle=active?`rgba(91,255,235,${.65+.3*pulse})`:"#3f4b50";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,-48);ctx.lineTo(9,-38);ctx.lineTo(0,-29);ctx.lineTo(-9,-38);ctx.closePath();ctx.stroke();if(active){ctx.fillStyle="rgba(80,255,230,.13)";ctx.beginPath();ctx.ellipse(0,-5,48+6*pulse,13+2*pulse,0,0,Math.PI*2);ctx.fill();}ctx.restore();}
   if(!boss.dead){ctx.save();ctx.translate(bx+boss.w/2,boss.y+boss.h);ctx.scale(boss.vx<0?-.82:.82,.82);const stride=Math.sin(time*5)*5;ctx.shadowColor="#000";ctx.shadowBlur=35;ctx.fillStyle="#030405";ctx.beginPath();ctx.ellipse(0,4,65,13,0,0,Math.PI*2);ctx.fill();ctx.lineCap="round";ctx.strokeStyle="#090b0d";ctx.lineWidth=24;ctx.beginPath();ctx.moveTo(-27,-78);ctx.lineTo(-39+stride,0);ctx.moveTo(27,-78);ctx.lineTo(41-stride,0);ctx.stroke();const body=ctx.createRadialGradient(-18,-115,8,0,-100,85);body.addColorStop(0,boss.flash>0?"#765a64":"#343941");body.addColorStop(.35,"#13171a");body.addColorStop(1,"#020304");ctx.fillStyle=body;ctx.beginPath();ctx.moveTo(-52,-48);ctx.quadraticCurveTo(-72,-118,-43,-158);ctx.quadraticCurveTo(0,-187,44,-155);ctx.quadraticCurveTo(72,-110,51,-48);ctx.quadraticCurveTo(0,-24,-52,-48);ctx.fill();ctx.strokeStyle="#07090b";ctx.lineWidth=20;ctx.beginPath();ctx.moveTo(-42,-132);ctx.lineTo(-72,-88+stride);ctx.lineTo(-66,-39);ctx.moveTo(42,-132);ctx.lineTo(72,-90-stride);ctx.lineTo(67,-40);ctx.stroke();ctx.fillStyle="#090b0d";ctx.beginPath();ctx.arc(0,-159,43,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.moveTo(-35,-180);ctx.lineTo(-61,-207);ctx.lineTo(-23,-191);ctx.moveTo(35,-180);ctx.lineTo(61,-207);ctx.lineTo(23,-191);ctx.fill();ctx.strokeStyle="rgba(140,150,155,.13)";ctx.lineWidth=2;for(let i=0;i<7;i++){ctx.beginPath();ctx.moveTo(-32+i*10,-143);ctx.lineTo(-23+i*7,-70);ctx.stroke();}ctx.fillStyle="#ff342a";ctx.shadowColor="#ff2017";ctx.shadowBlur=22;ctx.beginPath();ctx.ellipse(-15,-163,7,4,-.15,0,Math.PI*2);ctx.ellipse(15,-163,7,4,.15,0,Math.PI*2);ctx.fill();ctx.fillStyle="#b7bcc0";ctx.shadowBlur=0;ctx.beginPath();ctx.moveTo(-18,-143);ctx.lineTo(-9,-132);ctx.lineTo(-4,-145);ctx.moveTo(18,-143);ctx.lineTo(9,-132);ctx.lineTo(4,-145);ctx.fill();ctx.restore();}
   const labelX=bx+boss.w/2,labelY=boss.y-48;ctx.fillStyle="rgba(3,4,6,.82)";ctx.fillRect(labelX-112,labelY,224,40);ctx.fillStyle="#fff";ctx.font='800 13px "Manrope"';ctx.textAlign="center";ctx.fillText("MARIO",labelX,labelY+15);for(let i=0;i<boss.maxHp;i++){const amount=Math.max(0,Math.min(1,boss.hp-i));ctx.fillStyle="#24282e";ctx.fillRect(labelX-103+i*21,labelY+25,18,7);if(amount>0){ctx.fillStyle="#e84536";ctx.fillRect(labelX-103+i*21,labelY+25,18*amount,7);}}ctx.textAlign="left";
@@ -839,8 +867,9 @@ function applyCharacterControl(character,control,down){const key=characterKeys(c
 function setPlayerControl(control,down){if(network.role==="solo"){applyCharacterControl("atlas",control,down);return;}if(network.role==="guest"){sendPacket({type:"control",control,down});return;}applyCharacterControl(network.character,control,down);}
 function setControl(key,down){if(network.role!=="solo"){const control={a:"left",arrowleft:"left",d:"right",arrowright:"right",w:"jump",arrowup:"jump",s:"action",arrowdown:"action"}[key];if(control)setPlayerControl(control,down);return;}if(down&&!state.keys[key])state.keysPressed[key]=true;state.keys[key]=down;}
 function fillTestGold(){state.gold.atlas=99;state.gold.nita=99;state.inventory.atlas.hearts+=2;state.inventory.nita.hearts+=2;updateHud();if(market.classList.contains("active"))refreshMarket();if(state.inventoryOpen)renderInventory();if(!forgePanel.hidden)renderForge();showMessage("TEST PAKETİ · 99 ALTIN · ÖFKENİN KALBİ ATLAS ×2 · NITA ×2",3);tone(980,.16);sendSnapshot();}
-window.addEventListener("keydown",e=>{const key=e.key.toLowerCase(),isIKey=e.code==="KeyI"||key==="ı"||key==="i"||key==="i̇";if(e.shiftKey&&isIKey){e.preventDefault();if(network.role==="guest")sendPacket({type:"cheatGold"});else fillTestGold();return;}if(e.ctrlKey&&isIKey){e.preventDefault();if(state.running&&network.role!=="guest"){showMessage("GİZLİ GEÇİŞ KODU AKTİF",1);completeLevel();}return;}if(key==="shift"&&network.role!=="solo"){e.preventDefault();if(network.character==="nita"){if(network.role==="guest")sendPacket({type:"sky-whisper"});else castRitualLightning();}return;}if(["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright","r","shift"].includes(key))e.preventDefault();setControl(key,true);if(key==="r"&&state.running&&network.role!=="guest")resetLevel("Bölüm yeniden başladı.");});
-window.addEventListener("keyup",e=>setControl(e.key.toLowerCase(),false));
+function isEditableTarget(target){return target instanceof HTMLInputElement||target instanceof HTMLTextAreaElement||Boolean(target?.isContentEditable);}
+window.addEventListener("keydown",e=>{if(isEditableTarget(e.target))return;const key=e.key.toLowerCase(),isIKey=e.code==="KeyI"||key==="ı"||key==="i"||key==="i̇";if(e.shiftKey&&isIKey){e.preventDefault();if(network.role==="guest")sendPacket({type:"cheatGold"});else fillTestGold();return;}if(e.ctrlKey&&isIKey){e.preventDefault();if(state.running&&network.role!=="guest"){showMessage("GİZLİ GEÇİŞ KODU AKTİF",1);completeLevel();}return;}if(key==="shift"&&network.role!=="solo"){e.preventDefault();if(network.character==="nita"){if(network.role==="guest")sendPacket({type:"sky-whisper"});else castRitualLightning();}return;}if(["w","a","s","d","arrowup","arrowdown","arrowleft","arrowright","r","shift"].includes(key))e.preventDefault();setControl(key,true);if(key==="r"&&state.running&&network.role!=="guest")resetLevel("Bölüm yeniden başladı.");});
+window.addEventListener("keyup",e=>{if(!isEditableTarget(e.target))setControl(e.key.toLowerCase(),false);});
 startButton.addEventListener("click",()=>{if(startButton.dataset.action==="restart")resetCampaign();state.running=true;state.paused=false;state.last=performance.now();startButton.dataset.action="";startButton.hidden=true;overlay.classList.add("hidden");sendPacket({type:"start",level:state.level,gold:state.gold,gear:state.gear});});
 pauseButton.addEventListener("click",()=>{if(!state.running)return;state.paused=!state.paused;pauseButton.textContent=state.paused?"DEVAM ET":"DURAKLAT";showMessage(state.paused?"Oyun duraklatıldı.":"Yola devam!",1.2);});
 soundButton.addEventListener("click",()=>{state.audio=!state.audio;soundButton.textContent=state.audio?"SES AÇIK":"SES KAPALI";soundButton.setAttribute("aria-label",state.audio?"Sesi kapat":"Sesi aç");});
@@ -879,12 +908,26 @@ document.addEventListener("visibilitychange",()=>document.hidden?suspendForBackg
 document.querySelectorAll(".touch-controls button").forEach(button=>{const control=button.dataset.control;const press=e=>{e.preventDefault();button.classList.add("active");setPlayerControl(control,true);};const release=e=>{e.preventDefault();button.classList.remove("active");setPlayerControl(control,false);};button.addEventListener("pointerdown",press);button.addEventListener("pointerup",release);button.addEventListener("pointercancel",release);button.addEventListener("pointerleave",e=>{if(e.buttons)release(e);});});
 document.querySelectorAll(".joystick").forEach(stick=>{const knob=stick.querySelector("i");function move(e){e.preventDefault();const r=stick.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2),distance=Math.hypot(dx,dy),limit=r.width*.31,factor=distance>limit?limit/distance:1;knob.style.transform=`translate(${dx*factor}px,${dy*factor}px)`;const threshold=r.width*.12;setPlayerControl("left",dx < -threshold);setPlayerControl("right",dx > threshold);}function release(e){e.preventDefault();knob.style.transform="";setPlayerControl("left",false);setPlayerControl("right",false);}stick.addEventListener("pointerdown",e=>{stick.setPointerCapture(e.pointerId);move(e);});stick.addEventListener("pointermove",e=>{if(stick.hasPointerCapture(e.pointerId))move(e);});stick.addEventListener("pointerup",release);stick.addEventListener("pointercancel",release);});
 
+const ROOM_CODE_PATTERN=/^[A-HJ-NP-Z2-9]{6}$/;
 function roomCode(){const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";return Array.from({length:6},()=>chars[Math.floor(Math.random()*chars.length)]).join("");}
+function normalizeRoomCode(value){return value.toUpperCase().replace(/[^A-HJ-NP-Z2-9]/g,"").slice(0,6);}
+function clearConnectionTimer(){clearTimeout(network.connectionTimer);network.connectionTimer=null;}
+function cleanupNetwork(){
+  network.attempt++;clearConnectionTimer();
+  const connection=network.connection,peer=network.peer;network.connection=null;network.peer=null;
+  try{connection?.close();}catch{}
+  try{if(peer&&!peer.destroyed)peer.destroy();}catch{}
+}
+function showJoinRetry(text){
+  roomWait.hidden=true;characterSelect.hidden=true;lobbyActions.hidden=true;joinForm.hidden=false;
+  connectionBadge.textContent="BAĞLANTI HATASI";overlayText.textContent=text;showMessage(text,4);
+  requestAnimationFrame(()=>roomInput.focus());
+}
 function sendPacket(packet){if(network.connection?.open)network.connection.send(packet);}
 function sendSnapshot(){sendPacket({type:"state",level:state.level,levelTime:state.levelTime,skyLightningTimer:state.skyLightningTimer,skyLightningX:state.skyLightningX,atlas:{...atlas,renderX:undefined,renderY:undefined},nita:{...nita,renderX:undefined,renderY:undefined},enemies:state.enemies.map(e=>({...e,renderX:undefined,renderY:undefined})),coins:state.coins.map(c=>c.collected),projectiles:state.projectiles.map(s=>({...s})),cameras:state.cameras.map(c=>({charge:c.charge,pulse:c.pulse})),gold:{...state.gold},gear:{...state.gear},weapons:{...state.weapons},inventory:{atlas:{...state.inventory.atlas},nita:{...state.inventory.nita}},boss:state.boss?{...state.boss}:null,healthOrbs:state.healthOrbs.map(o=>({...o})),reviveCups:state.reviveCups.map(c=>({...c}))});}
 function showCharacterSelect(hostChoice=null){roomWait.hidden=true;characterSelect.hidden=false;characterSelectStatus.textContent=network.role==="host"?"İlk seçim hakkı sende.":hostChoice?"Kalan karakteri seçerek onayla.":"Oda sahibi seçim yapıyor…";document.querySelectorAll("[data-character]").forEach(button=>{button.disabled=network.role==="guest"&&(!hostChoice||button.dataset.character===hostChoice);button.classList.remove("selected");});}
 function startSelectedGame(assignments){network.character=assignments[network.role];document.body.classList.remove("character-atlas","character-nita");document.body.classList.add(`character-${network.character}`);connectionBadge.textContent=`${network.character.toUpperCase()} · BAĞLI`;connectionBadge.style.color=COLORS[network.character];characterSelect.hidden=true;resetCampaign();state.running=network.role==="host";state.paused=false;state.last=performance.now();overlay.classList.add("hidden");document.querySelector('.touch-controls .action').textContent=network.character==="atlas"?"YETENEK":"GÖRÜNMEZ";}
-function beginMultiplayer(role){network.role=role;network.character=null;document.body.classList.remove("multiplayer-host","multiplayer-guest");document.body.classList.add(`multiplayer-${role}`);connectionBadge.textContent="KARAKTER SEÇİMİ";if(role==="host")showCharacterSelect();else{roomWait.hidden=true;characterSelect.hidden=false;characterSelectStatus.textContent="Oda sahibi seçim yapıyor…";document.querySelectorAll("[data-character]").forEach(button=>button.disabled=true);}}
+function beginMultiplayer(role){clearConnectionTimer();network.role=role;network.character=null;joinForm.hidden=true;document.body.classList.remove("multiplayer-host","multiplayer-guest");document.body.classList.add(`multiplayer-${role}`);connectionBadge.textContent="KARAKTER SEÇİMİ";if(role==="host")showCharacterSelect();else{roomWait.hidden=true;characterSelect.hidden=false;characterSelectStatus.textContent="Oda sahibi seçim yapıyor…";document.querySelectorAll("[data-character]").forEach(button=>button.disabled=true);}}
 function receivePacket(data){
   if(data.type==="control"&&network.role==="host")applyCharacterControl(network.character==="atlas"?"nita":"atlas",data.control,data.down);
   if(data.type==="host-choice"&&network.role==="guest"){network.hostCharacter=data.character;showCharacterSelect(data.character);}
@@ -902,13 +945,53 @@ function receivePacket(data){
   if(data.type==="state"&&network.role==="guest"){if(state.level!==data.level)loadLevel(data.level);const oldAtlas=[atlas.renderX??atlas.x,atlas.renderY??atlas.y],oldNita=[nita.renderX??nita.x,nita.renderY??nita.y],oldEnemies=state.enemies.map(e=>[e.renderX??e.x,e.renderY??e.y]),oldBoss=state.boss?[state.boss.renderX??state.boss.x,state.boss.renderY??state.boss.y]:null;state.levelTime=data.levelTime??state.levelTime;state.skyLightningTimer=data.skyLightningTimer??state.skyLightningTimer;state.skyLightningX=data.skyLightningX??state.skyLightningX;if(data.inventory)state.inventory={atlas:{...data.inventory.atlas},nita:{...data.inventory.nita}};Object.assign(atlas,data.atlas);Object.assign(nita,data.nita);atlas.renderX=oldAtlas[0];atlas.renderY=oldAtlas[1];nita.renderX=oldNita[0];nita.renderY=oldNita[1];state.enemies=data.enemies.map((e,i)=>({...e,renderX:oldEnemies[i]?.[0]??e.x,renderY:oldEnemies[i]?.[1]??e.y}));state.projectiles=data.projectiles;data.coins.forEach((collected,i)=>{if(state.coins[i])state.coins[i].collected=collected;});data.cameras.forEach((c,i)=>{if(state.cameras[i])Object.assign(state.cameras[i],c);});state.gold={...data.gold};state.gear={...data.gear};state.boss=data.boss?{...data.boss,renderX:oldBoss?.[0]??data.boss.x,renderY:oldBoss?.[1]??data.boss.y}:null;state.healthOrbs=(data.healthOrbs||[]).map(o=>({...o}));state.reviveCups=(data.reviveCups||[]).map(c=>({...c}));updateHud();if(state.inventoryOpen)renderInventory();if(!forgePanel.hidden)renderForge();if(market.classList.contains("active"))refreshMarket();}
   if(data.type==="complete"&&network.role==="guest"){state.running=false;state.gold={...data.gold};state.gear={...data.gear};if(data.inventory)state.inventory={atlas:{...data.inventory.atlas},nita:{...data.inventory.nita}};state.collectedThisLevel={...data.collected};updateHud();playLevelTransition(levels[data.level]?.name||"Bölüm",data.final,showMarket);}
 }
-function bindConnection(connection,role){network.connection=connection;connection.on("data",receivePacket);connection.on("open",()=>beginMultiplayer(role));connection.on("close",()=>{state.running=false;connectionBadge.textContent="BAĞLANTI KOPTU";showMessage("Diğer oyuncuyla bağlantı kesildi.",4);});}
-function peerError(error){roomWait.hidden=true;joinForm.hidden=false;connectionBadge.textContent="BAĞLANTI HATASI";showMessage(error.type==="peer-unavailable"?"Oda bulunamadı. Kodu kontrol et.":"Bağlantı kurulamadı. Tekrar dene.",4);}
-createRoomButton.addEventListener("click",()=>{if(typeof Peer==="undefined"){showMessage("Çevrimiçi oyun servisi yüklenemedi.",4);return;}const code=roomCode();lobbyActions.hidden=true;roomWait.hidden=false;roomCodeDisplay.textContent=code;connectionBadge.textContent="OYUNCU BEKLENİYOR";network.peer=new Peer(`nita-${code.toLowerCase()}`);network.peer.on("connection",conn=>bindConnection(conn,"host"));network.peer.on("error",peerError);});
-showJoinButton.addEventListener("click",()=>{lobbyActions.hidden=true;joinForm.hidden=false;roomInput.focus();});
-joinForm.addEventListener("submit",e=>{e.preventDefault();if(typeof Peer==="undefined"){showMessage("Çevrimiçi oyun servisi yüklenemedi.",4);return;}const code=roomInput.value.trim().toLowerCase();if(code.length!==6)return;joinForm.hidden=true;connectionBadge.textContent="BAĞLANIYOR";overlayText.textContent="Odaya bağlanılıyor…";network.peer=new Peer();network.peer.on("open",()=>bindConnection(network.peer.connect(`nita-${code}`,{reliable:true}),"guest"));network.peer.on("error",peerError);});
+function connectionProblem(role,text){
+  cleanupNetwork();network.role="solo";network.character=null;network.hostCharacter=null;
+  if(role==="guest"){showJoinRetry(text);return;}
+  roomWait.hidden=true;joinForm.hidden=true;characterSelect.hidden=true;lobbyActions.hidden=false;
+  connectionBadge.textContent="BAĞLANTI HATASI";overlayText.textContent=text;showMessage(text,4);
+}
+function bindConnection(connection,role,attempt=network.attempt){
+  if(attempt!==network.attempt){connection.close();return;}
+  if(network.connection&&network.connection!==connection){connection.close();return;}
+  network.connection=connection;clearConnectionTimer();let opened=false,finished=false;
+  const fail=text=>{if(finished||attempt!==network.attempt)return;finished=true;connectionProblem(role,text);};
+  network.connectionTimer=setTimeout(()=>fail(role==="guest"?"Odaya bağlantı zaman aşımına uğradı. Kodu kontrol edip tekrar dene.":"Oyuncuyla bağlantı kurulamadı. Odayı yeniden kurup tekrar dene."),15000);
+  connection.on("data",data=>{if(attempt===network.attempt)receivePacket(data);});
+  connection.on("open",()=>{if(attempt!==network.attempt){connection.close();return;}opened=true;finished=true;clearConnectionTimer();beginMultiplayer(role);});
+  connection.on("error",()=>{if(!opened)fail("Bağlantı kurulamadı. Kodu kontrol edip tekrar dene.");else showMessage("Bağlantıda bir ağ hatası oluştu.",4);});
+  connection.on("close",()=>{if(attempt!==network.attempt)return;if(!opened){fail("Bağlantı açılmadan kapandı. Tekrar dene.");return;}cleanupNetwork();network.role="solo";state.running=false;document.body.classList.remove("multiplayer-host","multiplayer-guest");overlay.classList.remove("hidden");characterSelect.hidden=true;roomWait.hidden=true;joinForm.hidden=true;lobbyActions.hidden=false;connectionBadge.textContent="BAĞLANTI KOPTU";overlayText.textContent="Diğer oyuncuyla bağlantı kesildi. Yeni bir oda kurabilir veya tekrar katılabilirsin.";showMessage("Diğer oyuncuyla bağlantı kesildi.",4);});
+}
+function peerError(error,role,attempt){
+  if(attempt!==network.attempt)return;
+  const text=error.type==="peer-unavailable"?"Oda bulunamadı. Kodu kontrol edip tekrar dene.":error.type==="unavailable-id"?"Bu oda kodu kullanımda. Yeniden oda kur.":"Çevrimiçi bağlantı kurulamadı. Tekrar dene.";
+  connectionProblem(role,text);
+}
+createRoomButton.addEventListener("click",()=>{
+  if(typeof Peer==="undefined"){showMessage("Çevrimiçi oyun servisi yüklenemedi.",4);return;}
+  cleanupNetwork();const attempt=network.attempt,code=roomCode();network.role="host";network.hostCharacter=null;
+  lobbyActions.hidden=true;joinForm.hidden=true;characterSelect.hidden=true;roomWait.hidden=false;roomCodeDisplay.textContent="------";copyCodeButton.disabled=true;copyCodeButton.textContent="KODU KOPYALA";roomWaitStatus.textContent="Oda hazırlanıyor…";connectionBadge.textContent="ODA HAZIRLANIYOR";
+  const peer=new Peer(`nita-${code.toLowerCase()}`);network.peer=peer;
+  network.connectionTimer=setTimeout(()=>{if(attempt===network.attempt)connectionProblem("host","Oda servisine ulaşılamadı. Tekrar oda kurmayı dene.");},15000);
+  peer.on("open",()=>{if(attempt!==network.attempt)return;clearConnectionTimer();roomCodeDisplay.textContent=code;copyCodeButton.disabled=false;roomWaitStatus.textContent="İkinci oyuncu bekleniyor…";connectionBadge.textContent="OYUNCU BEKLENİYOR";});
+  peer.on("connection",connection=>bindConnection(connection,"host",attempt));
+  peer.on("error",error=>peerError(error,"host",attempt));
+});
+showJoinButton.addEventListener("click",()=>{cleanupNetwork();network.role="solo";lobbyActions.hidden=true;roomWait.hidden=true;characterSelect.hidden=true;joinForm.hidden=false;overlayText.textContent="6 haneli oda kodunu gir.";roomInput.setCustomValidity("");requestAnimationFrame(()=>roomInput.focus());});
+roomInput.addEventListener("input",()=>{const normalized=normalizeRoomCode(roomInput.value);if(roomInput.value!==normalized)roomInput.value=normalized;roomInput.setCustomValidity("");});
+joinForm.addEventListener("submit",e=>{
+  e.preventDefault();
+  if(typeof Peer==="undefined"){showMessage("Çevrimiçi oyun servisi yüklenemedi.",4);return;}
+  const code=normalizeRoomCode(roomInput.value);roomInput.value=code;
+  if(!ROOM_CODE_PATTERN.test(code)){roomInput.setCustomValidity("6 haneli geçerli oda kodunu eksiksiz gir.");roomInput.reportValidity();showMessage("Oda kodu 6 geçerli harften veya rakamdan oluşmalı.",3);return;}
+  roomInput.setCustomValidity("");cleanupNetwork();const attempt=network.attempt;network.role="guest";network.hostCharacter=null;joinForm.hidden=true;connectionBadge.textContent="BAĞLANIYOR";overlayText.textContent="Odaya bağlanılıyor…";
+  const peer=new Peer();network.peer=peer;
+  network.connectionTimer=setTimeout(()=>{if(attempt===network.attempt)connectionProblem("guest","Oda servisine ulaşılamadı. Tekrar dene.");},15000);
+  peer.on("open",()=>{if(attempt!==network.attempt)return;clearConnectionTimer();bindConnection(peer.connect(`nita-${code.toLowerCase()}`,{reliable:true,serialization:"json"}),"guest",attempt);});
+  peer.on("error",error=>peerError(error,"guest",attempt));
+});
 copyCodeButton.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(roomCodeDisplay.textContent);copyCodeButton.textContent="KOPYALANDI";}catch{showMessage("Kodu elle paylaşabilirsin.",2);}});
 document.querySelectorAll("[data-character]").forEach(button=>button.addEventListener("click",()=>{const character=button.dataset.character;if(network.role==="host"){network.hostCharacter=character;document.querySelectorAll("[data-character]").forEach(b=>{b.disabled=true;b.classList.toggle("selected",b===button);});characterSelectStatus.textContent="Diğer oyuncu karakterini seçiyor…";sendPacket({type:"host-choice",character});}else if(network.role==="guest"&&network.hostCharacter&&character!==network.hostCharacter){button.classList.add("selected");document.querySelectorAll("[data-character]").forEach(b=>b.disabled=true);characterSelectStatus.textContent="Oyun başlatılıyor…";sendPacket({type:"guest-choice",character});}}));
-soloButton.addEventListener("click",()=>{network.role="solo";document.body.classList.remove("multiplayer-host","multiplayer-guest");connectionBadge.textContent="AYNI CİHAZ";resetCampaign();state.running=true;state.last=performance.now();overlay.classList.add("hidden");});
+soloButton.addEventListener("click",()=>{cleanupNetwork();network.role="solo";document.body.classList.remove("multiplayer-host","multiplayer-guest");connectionBadge.textContent="AYNI CİHAZ";resetCampaign();state.running=true;state.last=performance.now();overlay.classList.add("hidden");});
 
 setupIosInstallTip();loadLevel(0);resize();requestAnimationFrame(t=>{state.last=t;requestAnimationFrame(loop);});

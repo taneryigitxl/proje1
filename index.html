@@ -81,7 +81,7 @@
         </div>
         <form id="join-form" class="join-form" hidden>
           <label for="room-code">6 HANELİ ODA KODU</label>
-          <div><input id="room-code" maxlength="6" autocomplete="off" inputmode="text" placeholder="ABC123" required /><button type="submit">KATIL</button></div>
+          <div><input id="room-code" minlength="6" maxlength="6" pattern="[A-HJ-NP-Z2-9]{6}" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" inputmode="text" enterkeyhint="go" placeholder="ABC123" required /><button type="submit">KATIL</button></div>
         </form>
         <div id="room-wait" class="room-wait" hidden><span>ODA KODU</span><strong id="room-code-display">------</strong><button id="copy-code" type="button">KODU KOPYALA</button><p>İkinci oyuncu bekleniyor…</p></div>
         <div id="character-select" class="character-select" hidden>
@@ -96,6 +96,10 @@
       <section id="market" class="market" aria-labelledby="market-title" aria-hidden="true">
         <p class="eyebrow">BÖLÜM SONU PAZARI</p>
         <h2 id="market-title">Bölüm tamamlandı</h2>
+        <div class="market-wallets" aria-label="Karakter altınları">
+          <span class="atlas-market-wallet">ATLAS <b id="market-atlas-gold">0</b> ALTIN</span>
+          <span class="nita-market-wallet">NITA <b id="market-nita-gold">0</b> ALTIN</span>
+        </div>
         <p id="market-summary" class="market-summary"></p>
         <button id="market-toggle" class="market-toggle" type="button" aria-expanded="false" aria-controls="market-grid">MARKET <span>◇</span></button>
         <div id="market-grid" class="market-grid" hidden>
