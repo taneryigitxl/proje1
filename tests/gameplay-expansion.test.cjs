@@ -60,6 +60,7 @@ function jpegDimensions(buffer) {
 
 const levels = evaluateDeclaration("levels", "const LEVEL11_WAVES");
 const waves = evaluateDeclaration("LEVEL11_WAVES", "const PROGRESS_KEY");
+const skyWhisper = evaluateDeclaration("SKY_WHISPER", "const WALK_CROPS");
 
 // Campaign shape and the expanded world.
 assert.equal(levels.length, 11, "the campaign must contain exactly 11 levels");
@@ -105,6 +106,141 @@ const perries = waves.flat().filter(enemy => enemy.kind === "perry");
 assert.equal(perries.length, 1, "Perry must appear exactly once");
 assert.equal(perries[0].hp, 108, "Perry balance changed unexpectedly");
 assert.equal(waves[2].some(enemy => enemy.kind === "perry"), true, "Perry must arrive in wave three");
+
+// Sky Whisper has a long commitment, so every tier must deal more damage than
+// the original balance while still using the configured value at runtime.
+{
+  const previousDamage = [3, 4, 6, 8];
+  const balancedDamage = [4, 6, 9, 12];
+  assert.equal(skyWhisper.length, previousDamage.length, "Sky Whisper must keep all four tiers");
+  assert.deepEqual(skyWhisper.map(skill => skill.damage), balancedDamage,
+    "Sky Whisper must use the reviewed four-tier damage curve");
+  assert(skyWhisper.every((skill, index) => skill.damage > previousDamage[index]),
+    "every Sky Whisper tier must be stronger than its previous damage value");
+  assert(skyWhisper.every((skill, index) => index === 0 || skill.damage > skyWhisper[index - 1].damage),
+    "Sky Whisper damage must continue increasing with each upgrade");
+
+  const castSource = section("function castRitualLightning", "function announceBossDefeat");
+  skyWhisper.forEach((skill, level) => {
+    const messages = [];
+    const enemy = { dead: false, x: 100, y: 700, w: 34, h: 50, hp: 100, flash: 0 };
+    const context = {
+      SKY_WHISPER: skyWhisper,
+      SKY_WHISPER_RADIUS: 340,
+      SKY_WHISPER_EFFECT_DURATION: 0.72,
+      state: {
+        weapons: { skyWhisper: true, skyWhisperLevel: level },
+        boss: null,
+        enemies: [enemy],
+        skyLightningTimer: 0,
+        skyLightningX: 0,
+        level: 0,
+        platforms: [],
+      },
+      nita: {
+        dead: false, x: 100, y: 700, w: 34, h: 50, vx: 90,
+        lightningCooldown: 0, castTimer: 0, actionTimer: 0,
+      },
+      levels: [{ waveMode: false }],
+      currentWorld: () => ({ width: 1280, height: 720 }),
+      burst() {},
+      showMessage(message) { messages.push(message); },
+      tone() {},
+    };
+    vm.createContext(context);
+    vm.runInContext(castSource, context, { filename: `sky-whisper-tier-${level}.js` });
+    vm.runInContext("castRitualLightning()", context);
+
+    assert.equal(enemy.hp, 100 - skill.damage,
+      `Sky Whisper tier ${level + 1} must apply its full configured area damage`);
+    assert.equal(context.nita.w, 34, "casting must not mutate Nita's collision width");
+    assert.equal(context.nita.h, 50, "casting must not mutate Nita's collision height");
+    assert(messages.some(message => message.includes(`${skill.damage} ALAN HASARI`)),
+      "the cast feedback must report the upgraded area damage");
+  });
+}
+
+// Mario's ritual lightning spends one charge but now breaks two boss-health
+// slots, including when only the final slot remains.
+{
+  const marioLightningSource = section("function castRitualLightning", "function damageBossFromAtlas");
+  assert.match(marioLightningSource, /damageBossSlot\(["']lightning["']\s*,\s*2\)/,
+    "Mario lightning must explicitly request two boss-health slots");
+
+  function castAtMario(startingHp) {
+    const messages = [];
+    const bursts = [];
+    const boss = {
+      type: "mario", x: 77, y: 450, w: 80, h: 155,
+      hp: startingHp, maxHp: 10, dead: false, flash: 0,
+      ritualCharge: 1, lightningTimer: 0, lightningX: 0,
+      lootDropped: false, lootCollected: false, lootTimer: 0,
+    };
+    const context = {
+      SKY_WHISPER: skyWhisper,
+      SKY_WHISPER_RADIUS: 340,
+      SKY_WHISPER_EFFECT_DURATION: 0.72,
+      COLORS: { atlas: "#ff704d", nita: "#54d8e8" },
+      state: {
+        weapons: { skyWhisper: true, skyWhisperLevel: 0 },
+        boss,
+        enemies: [],
+        projectiles: [],
+        skyLightningTimer: 0,
+        skyLightningX: 0,
+        level: 0,
+        platforms: [],
+      },
+      nita: {
+        dead: false, x: 100, y: 550, w: 34, h: 50, vx: 0,
+        lightningCooldown: 0, castTimer: 0, actionTimer: 0,
+      },
+      levels: [{ waveMode: false }],
+      currentWorld: () => ({ width: 1280, height: 720 }),
+      burst(...args) { bursts.push(args); },
+      showMessage(message) { messages.push(message); },
+      tone() {},
+    };
+    vm.createContext(context);
+    vm.runInContext(marioLightningSource, context, { filename: `mario-lightning-${startingHp}.js` });
+    vm.runInContext("castRitualLightning()", context);
+    return { boss, messages, bursts, state: context.state };
+  }
+
+  const twoSlotHit = castAtMario(5);
+  assert.equal(twoSlotHit.boss.hp, 3, "one ritual lightning cast must remove two Mario health slots");
+  assert.equal(twoSlotHit.boss.dead, false);
+  assert.equal(twoSlotHit.boss.ritualCharge, 0, "the stronger cast must still spend one ritual charge");
+  assert(twoSlotHit.bursts.some(args => args[2] === "#54d8e8"),
+    "Mario's lightning impact burst must use Nita's color");
+  assert(twoSlotHit.messages.some(message => message.includes("2 BOSS CAN SLOTU")),
+    "Mario's cast feedback must report two boss-health slots");
+
+  const finishingHit = castAtMario(1);
+  assert.equal(finishingHit.boss.hp, 0, "two-slot lightning must clamp the final Mario slot to zero");
+  assert.equal(finishingHit.boss.dead, true, "Nita's lightning must be able to break Mario's final slot");
+  assert.equal(finishingHit.boss.lootDropped, true,
+    "finishing Mario with lightning must trigger the normal loot sequence");
+}
+
+// The final lightning flash must be allowed to fade after the cast kills Mario;
+// the dead-boss gameplay early return must not freeze its effect timer.
+{
+  const context = {
+    state: { boss: { type: "mario", dead: true, lightningTimer: 0.72 } },
+  };
+  vm.createContext(context);
+  vm.runInContext(section("function updateMarioBoss", "function updateSeraphBoss"), context, {
+    filename: "dead-mario-lightning-timer.js",
+  });
+
+  vm.runInContext("updateMarioBoss(0.25)", context);
+  assert(Math.abs(context.state.boss.lightningTimer - 0.47) < 1e-9,
+    "a dead Mario's lightning timer must continue decreasing");
+  vm.runInContext("updateMarioBoss(1)", context);
+  assert.equal(context.state.boss.lightningTimer, 0,
+    "a dead Mario's final lightning effect must expire cleanly at zero");
+}
 
 // Perry uses dedicated four-frame walk/attack strips and a multi-move boss state machine.
 {
@@ -298,6 +434,129 @@ assert.match(playerDrawSource, /airborne\s*=\s*!p\.onGround/);
 assert.match(playerDrawSource, /p\.takeoffTimer\s*>\s*0\s*\|\|\s*p\.vy\s*<\s*-180/);
 assert.match(playerDrawSource, /p\.vy\s*<\s*110/);
 assert.match(playerDrawSource, /if\(landing\)/);
+
+// Nita's cast sheets contain different amounts of transparent padding. These
+// crop-aware destination sizes keep the visible body aligned with her idle
+// sprite instead of deriving a misleading scale from the full sheet aspect.
+{
+  function renderedCastSize(armored) {
+    const drawCalls = [];
+    const context = {
+      network: { role: "solo" },
+      state: {
+        level: 0,
+        boss: null,
+        inventory: {
+          atlas: { equipped: false },
+          nita: { equipped: armored },
+        },
+      },
+      levels: [{ waveMode: false }],
+      COLORS: { atlas: "#ff704d", nita: "#54d8e8" },
+      sprites: {
+        nita: { complete: true, naturalWidth: 256, naturalHeight: 384 },
+        wrathNita: { complete: true, naturalWidth: 256, naturalHeight: 384 },
+        nitaSkyWhisper: { complete: true, naturalWidth: 1983, naturalHeight: 793 },
+        wrathNitaSkyWhisper: { complete: true, naturalWidth: 1774, naturalHeight: 887 },
+      },
+      solids: () => [],
+      drawRounded() {},
+      performance: { now: () => 0 },
+      ctx: {
+        save() {}, restore() {}, translate() {}, scale() {}, rotate() {},
+        drawImage(...args) { drawCalls.push(args); },
+      },
+    };
+    const player = {
+      type: "nita", dead: false, x: 100, y: 100, w: 34, h: 50,
+      renderX: 100, renderY: 100, facing: 1, castTimer: 0.5, actionTimer: 0.5,
+      onGround: true, landTimer: 0, vx: 0, invisible: 0, maxHp: 4, hp: 4,
+    };
+    vm.createContext(context);
+    vm.runInContext(playerDrawSource, context, { filename: `nita-cast-${armored ? "armored" : "base"}.js` });
+    context.player = player;
+    vm.runInContext("drawPlayer(player)", context);
+    assert.equal(drawCalls.length, 1, "a Nita cast frame must draw exactly one sprite frame");
+    const call = drawCalls[0];
+    return { y: call[6], width: call[7], height: call[8] };
+  }
+
+  assert.deepEqual(renderedCastSize(false), { y: -85, width: 44, height: 98 },
+    "base Nita's padded cast sheet must keep its body scale and feet anchored");
+  assert.deepEqual(renderedCastSize(true), { y: -92, width: 34, height: 102 },
+    "armored Nita's padded cast sheet must keep its body scale and feet anchored");
+  assert.doesNotMatch(playerDrawSource, /actionW\s*=\s*frameW\s*\/\s*sprite\.naturalHeight\s*\*\s*drawH/,
+    "cast size must not be derived from the padded sheet aspect ratio");
+}
+
+// The bolt flash is deliberately subdued, while the full damage radius remains
+// outlined on the ground so players can still read where the strike landed.
+{
+  const effects = { alpha: [], blur: [], ellipses: [], ellipseStrokes: [] };
+  let alpha = 1;
+  let shadowBlur = 0;
+  let lineWidth = 1;
+  let strokeStyle = "";
+  let ellipseInPath = false;
+  const ctx = {
+    save() {}, restore() {}, beginPath() { ellipseInPath = false; },
+    moveTo() {}, lineTo() {}, fill() {}, fillRect() {}, setLineDash() {},
+    ellipse(...args) { ellipseInPath = true; effects.ellipses.push(args); },
+    stroke() {
+      if (ellipseInPath) effects.ellipseStrokes.push({ alpha, lineWidth, strokeStyle });
+    },
+    set globalAlpha(value) { alpha = value; effects.alpha.push(value); },
+    get globalAlpha() { return alpha; },
+    set shadowBlur(value) { shadowBlur = value; effects.blur.push(value); },
+    get shadowBlur() { return shadowBlur; },
+    set lineWidth(value) { lineWidth = value; },
+    get lineWidth() { return lineWidth; },
+    set strokeStyle(value) { strokeStyle = value; },
+    get strokeStyle() { return strokeStyle; },
+    set fillStyle(_value) {},
+    set shadowColor(_value) {},
+    set globalCompositeOperation(_value) {},
+  };
+  const context = {
+    ctx,
+    state: {
+      skyLightningTimer: 0.72,
+      skyLightningX: 640,
+      boss: null,
+      level: 0,
+      platforms: [],
+    },
+    levels: [{ waveMode: false }],
+    SKY_WHISPER_RADIUS: 340,
+    SKY_WHISPER_EFFECT_DURATION: 0.72,
+    currentWorld: () => ({ width: 1280, height: 720 }),
+    performance: { now: () => 0 },
+  };
+  vm.createContext(context);
+  vm.runInContext(section("function drawNitaLightningEffect", "function drawBossFireball"), context, {
+    filename: "sky-whisper-render.js",
+  });
+  vm.runInContext("drawSkyWhisper()", context);
+
+  assert(effects.alpha.length > 0, "the lightning renderer must set an explicit reduced opacity");
+  assert(Math.max(...effects.alpha) <= 0.6,
+    "the lightning flash opacity must remain at or below 60% at peak");
+  assert(effects.blur.length > 0 && Math.max(...effects.blur) <= 14,
+    "the lightning glow must stay subdued to reduce eye strain");
+  assert(effects.ellipses.length >= 1,
+    "the lightning must draw a filled and outlined ground hit area");
+  const marker = effects.ellipses.find(ellipse => ellipse[2] === 340);
+  assert(marker, "the lightning must outline the exact 340px hit area");
+  const [areaX, , radiusX, radiusY] = marker;
+  assert.equal(areaX, context.state.skyLightningX);
+  assert.equal(radiusX, 340, "the ground marker must match the 340px damage radius");
+  assert(radiusY >= 30, "the ground marker must keep enough depth to remain readable");
+  assert.equal(effects.ellipseStrokes.length, 1, "the hit area must retain a visible outline");
+  assert(effects.ellipseStrokes[0].lineWidth >= 2,
+    "the hit area outline must be thick enough to remain readable");
+  assert(effects.ellipseStrokes[0].alpha >= 0.25,
+    "the hit area outline must remain visible after reducing the flash");
+}
 const drawSource = section("function draw()", "function loop");
 assert.match(drawSource, /world\s*=\s*currentWorld\(\)/);
 assert.match(drawSource, /for\s*\(const pad of state\.bouncePads\)drawBouncePad\(pad\)/);
@@ -307,7 +566,7 @@ for (const id of ["main-menu-button", "show-levels", "level-select", "level-grid
   assert(indexSource.includes(`id="${id}"`), `missing menu element #${id}`);
 }
 assert(indexSource.includes('styles.css?v=20260817-5'));
-assert(indexSource.includes('script.js?v=20260817-5'));
+assert(indexSource.includes('script.js?v=20260817-6'));
 assert.match(stylesSource, /\.level-grid\s*\{/);
 assert.match(stylesSource, /\.level-card\s*\{/);
 const renderLevelSelectSource = section("function renderLevelSelect", "function showMainLobby");

@@ -86,11 +86,13 @@ const DUAL_RING = [
   { accent:"#ff8a3d", damage:3.6, bossDamage:.1 }
 ];
 const SKY_WHISPER = [
-  {name:"Beyaz",color:"#f7f4e8",damage:3,cost:50},
-  {name:"Mavi",color:"#4ea8ff",damage:4,cost:3},
-  {name:"Mor",color:"#c36cff",damage:6,cost:4},
-  {name:"Sarı · Legendary",color:"#ffd34d",damage:8,cost:5}
+  {name:"Beyaz",color:"#f7f4e8",damage:4,cost:50},
+  {name:"Mavi",color:"#4ea8ff",damage:6,cost:3},
+  {name:"Mor",color:"#c36cff",damage:9,cost:4},
+  {name:"Sarı · Legendary",color:"#ffd34d",damage:12,cost:5}
 ];
+const SKY_WHISPER_RADIUS = 340;
+const SKY_WHISPER_EFFECT_DURATION = .72;
 const WALK_CROPS = {
   atlas: [{y:62,h:383,cx:137},{y:64,h:381,cx:109},{y:62,h:383,cx:107},{y:64,h:381,cx:109}],
   nita: [{y:38,h:427,cx:147},{y:40,h:425,cx:127},{y:42,h:423,cx:115},{y:40,h:425,cx:114}]
@@ -537,11 +539,11 @@ function castRitualLightning(){
   const boss=state.boss,mario=boss?.type==="mario";
   if(mario&&boss.ritualCharge<=0){showMessage("5. bölümde yıldırım için önce anıtta ritüeli tamamla.",1.5);return;}
   if(!mario&&nita.lightningCooldown>0){showMessage(`Gökyüzü Fısıltısı ${nita.lightningCooldown.toFixed(1)} sn sonra hazır.`,1);return;}
-  const level=Math.max(0,state.weapons.skyWhisperLevel),skill=SKY_WHISPER[level],x=nita.x+nita.w/2;if(mario)boss.ritualCharge--;else nita.lightningCooldown=2;nita.castTimer=.85;nita.actionTimer=.85;nita.vx=0;state.skyLightningTimer=.9;state.skyLightningX=x;
-  if(mario){boss.lightningTimer=.9;boss.lightningX=x;}
-  const radius=340;for(const enemy of state.enemies)if(!enemy.dead&&Math.abs(enemy.x+enemy.w/2-x)<=radius){enemy.hp=Math.max(0,enemy.hp-skill.damage);enemy.flash=.18;burst(enemy.x+enemy.w/2,enemy.y+enemy.h/2,skill.color,14,0);if(enemy.hp<=0)enemy.dead=true;}
-  if(boss&&!boss.dead&&Math.abs(boss.x+boss.w/2-x)<=radius){if(mario)damageBossSlot("lightning");else{boss.hp=Math.max(0,boss.hp-skill.damage/12);boss.flash=.18;if(boss.hp<=0){boss.dead=true;announceBossDefeat(boss);setTimeout(()=>completeLevel(),1200);}}}
-  const strikeGround=levels[state.level]?.waveMode?(state.platforms[0]?.y??currentWorld().height-75):600;burst(x,strikeGround,skill.color,42,0);showMessage(`${skill.name.toUpperCase()} GÖKYÜZÜ FISILTISI · ${skill.damage} ALAN HASARI`,1.4);tone(1040,.25);
+  const level=Math.max(0,state.weapons.skyWhisperLevel),skill=SKY_WHISPER[level],x=nita.x+nita.w/2;if(mario)boss.ritualCharge--;else nita.lightningCooldown=2;nita.castTimer=.85;nita.actionTimer=.85;nita.vx=0;state.skyLightningTimer=SKY_WHISPER_EFFECT_DURATION;state.skyLightningX=x;
+  if(mario){boss.lightningTimer=SKY_WHISPER_EFFECT_DURATION;boss.lightningX=x;}
+  for(const enemy of state.enemies)if(!enemy.dead&&Math.abs(enemy.x+enemy.w/2-x)<=SKY_WHISPER_RADIUS){enemy.hp=Math.max(0,enemy.hp-skill.damage);enemy.flash=.18;burst(enemy.x+enemy.w/2,enemy.y+enemy.h/2,skill.color,8,0);if(enemy.hp<=0)enemy.dead=true;}
+  if(boss&&!boss.dead&&Math.abs(boss.x+boss.w/2-x)<=SKY_WHISPER_RADIUS){if(mario)damageBossSlot("lightning",2);else{boss.hp=Math.max(0,boss.hp-skill.damage/8);boss.flash=.18;if(boss.hp<=0){boss.dead=true;announceBossDefeat(boss);setTimeout(()=>completeLevel(),1200);}}}
+  const strikeGround=levels[state.level]?.waveMode?(state.platforms[0]?.y??currentWorld().height-75):600,damageLabel=mario?"2 BOSS CAN SLOTU":`${skill.damage} ALAN HASARI`;burst(x,strikeGround,skill.color,22,0);showMessage(`${skill.name.toUpperCase()} GÖKYÜZÜ FISILTISI · ${damageLabel}`,1.4);tone(1040,.25);
 }
 
 function announceBossDefeat(boss){
@@ -570,8 +572,8 @@ function updateBossLoot(dt){
   if(boss.lootTimer<=0){if(boss.lootCollected)completeLevel();else if(!boss.lootReminderShown){boss.lootReminderShown=true;showMessage("Öfkenin Kalplerini almadan çıkış açılmaz!",4);}}
 }
 
-function damageBossSlot(source){
-  const boss=state.boss;if(!boss||boss.dead)return;if(source==="atlas"&&boss.hp<=1){showMessage("Son can slotunu yalnızca Nita'nın ritüeli kırabilir!",2);return;}boss.hp=Math.max(0,boss.hp-1);boss.flash=.22;burst(boss.x+boss.w/2,boss.y+70,source==="ritual"?COLORS.nita:COLORS.atlas,28,0);tone(boss.hp?150:80,.2);
+function damageBossSlot(source,amount=1){
+  const boss=state.boss;if(!boss||boss.dead)return;if(source==="atlas"&&boss.hp<=1){showMessage("Son can slotunu yalnızca Nita'nın ritüeli kırabilir!",2);return;}boss.hp=Math.max(0,boss.hp-amount);boss.flash=.22;burst(boss.x+boss.w/2,boss.y+70,source==="ritual"||source==="lightning"?COLORS.nita:COLORS.atlas,28,0);tone(boss.hp?150:80,.2);
   if(boss.hp<=0){boss.dead=true;announceBossDefeat(boss);}
 }
 
@@ -585,11 +587,10 @@ function spawnSuperSoldiers(){
 }
 
 function updateMarioBoss(dt){
-  const boss=state.boss;if(!boss||boss.dead)return;boss.flash=Math.max(0,boss.flash-dt);
+  const boss=state.boss;if(!boss)return;boss.lightningTimer=Math.max(0,boss.lightningTimer-dt);if(boss.dead)return;boss.flash=Math.max(0,boss.flash-dt);
   boss.x+=boss.vx*dt;if(boss.x<boss.minX){boss.x=boss.minX;boss.vx=Math.abs(boss.vx);}if(boss.x+boss.w>boss.maxX){boss.x=boss.maxX-boss.w;boss.vx=-Math.abs(boss.vx);}
   boss.jumpTimer-=dt;boss.slamPulse=Math.max(0,boss.slamPulse-dt);if(boss.jumpTimer<=0&&boss.y>=boss.groundY){boss.jumpTimer=10;boss.vy=-610;tone(85,.16);}if(boss.y<boss.groundY||boss.vy<0){const wasAirborne=boss.y<boss.groundY;boss.vy+=1320*dt;boss.y+=boss.vy*dt;if(wasAirborne&&boss.y>=boss.groundY){boss.y=boss.groundY;boss.vy=0;boss.slamPulse=.75;for(const player of [atlas,nita])if(!player.dead&&player.onGround)damagePlayer(player,2);burst(boss.x+boss.w/2,625,"#ff6a24",38,0);tone(62,.3);}}
   boss.minionTimer-=dt;if(boss.minionTimer<=0){boss.minionTimer=15;spawnSuperSoldiers();}
-  boss.lightningTimer=Math.max(0,boss.lightningTimer-dt);
   if(state.weapons.skyWhisper){
     if(boss.ritualWindow>0){boss.ritualWindow=Math.max(0,boss.ritualWindow-dt);if(boss.ritualProgress>0&&!boss.ritualDone){const shrine=levels[state.level].shrines[boss.activeShrine],near=Math.hypot(nita.x+nita.w/2-shrine[0],nita.y+nita.h-shrine[1])<=78;if(near&&nita.invisible>0){boss.ritualProgress+=dt;if(boss.ritualProgress>=4){boss.ritualDone=true;boss.ritualProgress=0;boss.ritualCharge=Math.min(2,boss.ritualCharge+1);showMessage("Ritüel hazır: SHIFT ile Gökyüzü Fısıltısı!",3);tone(920,.22);}}else{boss.ritualProgress=0;showMessage("Ritüel bozuldu.",1);}}
       if(boss.ritualWindow===0){boss.ritualWait=4;boss.activeShrine=-1;boss.ritualProgress=0;}
@@ -1091,18 +1092,18 @@ function drawPlayer(p){
   const renderX=network.role==="guest"&&Number.isFinite(p.renderX)?p.renderX:p.x,renderY=network.role==="guest"&&Number.isFinite(p.renderY)?p.renderY:p.y;
   if(p.dead){ctx.save();ctx.globalAlpha=.5;ctx.fillStyle=COLORS[p.type];ctx.beginPath();ctx.ellipse(renderX+17,renderY+48,24,7,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.fillStyle="#fff";ctx.font='800 10px "Manrope"';ctx.textAlign="center";ctx.fillText(`KO · ${Math.ceil(p.reviveTimer)} sn`,renderX+17,renderY+33);ctx.textAlign="left";ctx.restore();return;}
   const armored=Boolean(state.inventory[p.type].equipped),shooting=p.type==="atlas"&&p.actionTimer>0,casting=p.type==="nita"&&p.castTimer>0,color=COLORS[p.type],airborne=!p.onGround&&!shooting&&!casting,landing=p.onGround&&p.landTimer>0&&!shooting&&!casting,moving=!shooting&&!casting&&!landing&&p.onGround&&Math.abs(p.vx)>18;
-  let sprite=armored?(p.type==="atlas"?sprites.wrathAtlas:sprites.wrathNita):sprites[p.type],frame=0,sheet=false,skyAction=false,drawW=p.type==="atlas"?62:45,drawH=p.type==="atlas"?88:72;
+  let sprite=armored?(p.type==="atlas"?sprites.wrathAtlas:sprites.wrathNita):sprites[p.type],frame=0,sheet=false,skyAction=false,skyActionW=0,skyActionH=0,skyActionYOffset=0,drawW=p.type==="atlas"?62:45,drawH=p.type==="atlas"?88:72;
   if(moving||airborne||landing){sprite=armored?(p.type==="atlas"?sprites.wrathAtlasWalk:sprites.wrathNitaWalk):(p.type==="atlas"?sprites.atlasWalk:sprites.nitaWalk);sheet=true;frame=moving?Math.floor(p.walkCycle)%4:landing?2:p.takeoffTimer>0||p.vy<-180?1:p.vy<110?0:3;}
   if(shooting){sprite=armored?sprites.wrathAtlasAction:sprites.atlasAction;drawW=66;drawH=91;}
-  if(casting){sprite=armored?sprites.wrathNitaSkyWhisper:sprites.nitaSkyWhisper;frame=Math.min(4,Math.floor((1-p.castTimer/.85)*5));skyAction=true;drawH=104;}
+  if(casting){sprite=armored?sprites.wrathNitaSkyWhisper:sprites.nitaSkyWhisper;frame=Math.min(4,Math.floor((1-p.castTimer/.85)*5));skyAction=true;skyActionW=armored?34:44;skyActionH=armored?102:98;skyActionYOffset=armored?10:13;}
   const support=solids().filter(solid=>solid.y>=renderY+p.h-2&&renderX+p.w>solid.x&&renderX<solid.x+solid.w).sort((a,b)=>a.y-b.y)[0];
   if(support){const height=Math.max(0,support.y-(renderY+p.h)),shadowScale=Math.max(.32,1-height/300);ctx.save();ctx.globalAlpha=.12+.18*shadowScale;ctx.fillStyle="#020609";ctx.beginPath();ctx.ellipse(renderX+p.w/2,support.y+2,24*shadowScale,5.5*shadowScale,0,0,Math.PI*2);ctx.fill();ctx.restore();}
   let scaleX=1,scaleY=1,tilt=0;
   if(airborne){if(p.takeoffTimer>0){scaleX=1.05;scaleY=.94;}else if(p.vy<-180){scaleX=.97;scaleY=1.035;}else if(p.vy<110){scaleX=1.025;scaleY=.975;}else{scaleX=.985;scaleY=1.025;}tilt=Math.max(-.05,Math.min(.05,p.vx*.00018));}
   if(landing){const strength=Math.min(1,p.landTimer/.14);scaleX=1+.07*strength;scaleY=1-.09*strength;}
   const recoil=shooting&&p.beamFired?Math.sin(Math.min(1,(.24-p.actionTimer)/.24)*Math.PI)*3:0;
-  ctx.save();ctx.translate(renderX+p.w/2-recoil*p.facing,renderY+p.h);ctx.scale(p.facing<0?-scaleX:scaleX,scaleY);ctx.rotate(shooting?0:tilt);ctx.globalAlpha=p.type==="nita"&&p.invisible>0?.27:1;ctx.shadowColor=color;ctx.shadowBlur=p.actionTimer>0?22:9;
-  if(sprite.complete&&sprite.naturalWidth){if(shooting){const actionX=-drawW*.42,topOffset=38/286*drawW;ctx.drawImage(sprite,688,48,248,62,actionX+topOffset,-drawH,248/286*drawW,62/424*drawH);ctx.drawImage(sprite,650,110,286,362,actionX,-drawH+62/424*drawH,drawW,362/424*drawH);}else if(skyAction){const frameW=sprite.naturalWidth/5,actionW=frameW/sprite.naturalHeight*drawH;ctx.drawImage(sprite,frame*frameW,0,frameW,sprite.naturalHeight,-actionW/2,-drawH,actionW,drawH);}else if(sheet){const crop=(armored?WRATH_WALK_CROPS:WALK_CROPS)[p.type][frame],centerOffset=(128-crop.cx)*drawW/256;ctx.drawImage(sprite,frame*256,crop.y,256,crop.h,-drawW/2+centerOffset,-drawH,drawW,drawH);}else ctx.drawImage(sprite,0,10,256,364,-drawW/2,-drawH,drawW,drawH);}else drawRounded(-p.w/2,-p.h,p.w,p.h,10,color);
+  ctx.save();ctx.translate(renderX+p.w/2-recoil*p.facing,renderY+p.h);ctx.scale(p.facing<0?-scaleX:scaleX,scaleY);ctx.rotate(shooting?0:tilt);ctx.globalAlpha=p.type==="nita"&&p.invisible>0?.27:1;ctx.shadowColor=color;ctx.shadowBlur=casting?12:p.actionTimer>0?22:9;
+  if(sprite.complete&&sprite.naturalWidth){if(shooting){const actionX=-drawW*.42,topOffset=38/286*drawW;ctx.drawImage(sprite,688,48,248,62,actionX+topOffset,-drawH,248/286*drawW,62/424*drawH);ctx.drawImage(sprite,650,110,286,362,actionX,-drawH+62/424*drawH,drawW,362/424*drawH);}else if(skyAction){const frameW=sprite.naturalWidth/5;ctx.drawImage(sprite,frame*frameW,0,frameW,sprite.naturalHeight,-skyActionW/2,-skyActionH+skyActionYOffset,skyActionW,skyActionH);}else if(sheet){const crop=(armored?WRATH_WALK_CROPS:WALK_CROPS)[p.type][frame],centerOffset=(128-crop.cx)*drawW/256;ctx.drawImage(sprite,frame*256,crop.y,256,crop.h,-drawW/2+centerOffset,-drawH,drawW,drawH);}else ctx.drawImage(sprite,0,10,256,364,-drawW/2,-drawH,drawW,drawH);}else drawRounded(-p.w/2,-p.h,p.w,p.h,10,color);
   ctx.restore();
   if(p.type==="nita"&&p.invisible>0){const label=`${p.invisible.toFixed(1)} sn`,cx=renderX+p.w/2,cy=renderY-(state.boss?53:37),pulse=.82+Math.sin(performance.now()*.012)*.18;ctx.save();ctx.font='800 10px "Manrope"';ctx.textAlign="center";ctx.textBaseline="middle";const width=Math.max(42,ctx.measureText(label).width+16);ctx.shadowColor="#54d8e8";ctx.shadowBlur=8*pulse;ctx.fillStyle="rgba(8,18,25,.55)";ctx.beginPath();ctx.roundRect(cx-width/2,cy-10,width,20,10);ctx.fill();ctx.shadowBlur=0;ctx.strokeStyle=`rgba(84,216,232,${.3+.17*pulse})`;ctx.lineWidth=1;ctx.stroke();ctx.fillStyle="rgba(201,251,255,.82)";ctx.fillText(label,cx,cy+.5);ctx.restore();}
   if(state.boss||levels[state.level].waveMode){ctx.fillStyle="rgba(0,0,0,.72)";ctx.fillRect(renderX-5,renderY-17,p.maxHp*10+4,7);for(let i=0;i<p.maxHp;i++){ctx.fillStyle=i<p.hp?COLORS[p.type]:"#30343a";ctx.fillRect(renderX-2+i*10,renderY-15,8,3);}}
@@ -1203,6 +1204,29 @@ function drawHazard(h){
   ctx.shadowBlur=8;for(let i=0;i<Math.max(1,Math.floor(h.w/38));i++){const bx=h.x+12+(i*41+time*13)%Math.max(14,h.w-24),phase=(time*.42+i*.37)%1,by=h.y+h.h-10-phase*(h.h-20),r=2+phase*3;ctx.globalAlpha=1-phase;ctx.fillStyle=i%2?"#ffd75d":"#ff6a21";ctx.beginPath();ctx.arc(bx,by,r,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;ctx.restore();
 }
 
+function drawNitaLightningEffect(x,strikeY,timer){
+  if(timer<=0)return;
+  const fade=Math.max(0,Math.min(1,timer/SKY_WHISPER_EFFECT_DURATION)),time=performance.now()*.001;
+  ctx.save();
+  ctx.globalCompositeOperation="source-over";
+  ctx.globalAlpha=Math.min(.42,fade*.42);
+  ctx.fillStyle="rgba(43,184,211,.18)";
+  ctx.beginPath();ctx.ellipse(x,strikeY+5,SKY_WHISPER_RADIUS,38,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="rgba(174,250,255,.82)";ctx.lineWidth=3;ctx.setLineDash([14,10]);ctx.stroke();ctx.setLineDash([]);
+  for(const side of [-1,1]){ctx.fillStyle="rgba(190,252,255,.8)";ctx.fillRect(x+side*SKY_WHISPER_RADIUS-2,strikeY-5,4,20);}
+  ctx.restore();
+  ctx.save();
+  ctx.globalCompositeOperation="lighter";
+  ctx.globalAlpha=Math.min(.5,fade*.5);
+  ctx.shadowColor="#80edf5";ctx.shadowBlur=13;
+  for(let bolt=-1;bolt<=1;bolt++){
+    ctx.strokeStyle=bolt?"rgba(105,218,240,.48)":"rgba(226,253,255,.86)";ctx.lineWidth=bolt?2:5;ctx.beginPath();ctx.moveTo(x+bolt*48,0);
+    for(let y=0;y<strikeY-25;y+=62)ctx.lineTo(x+bolt*36+Math.sin(y*.085+bolt*3+time*15)*18,y);
+    ctx.lineTo(x+bolt*30,strikeY);ctx.stroke();
+  }
+  ctx.restore();
+}
+
 function drawMarioBoss(){
   const boss=state.boss;if(!boss)return;const time=performance.now()*.001,bx=network.role==="guest"&&Number.isFinite(boss.renderX)?boss.renderX:boss.x;
   if(boss.lootDropped){if(!boss.lootCollected)for(const side of [-1,1]){const x=bx+boss.w/2+side*42,y=boss.y+92+Math.sin(time*5+side)*7;ctx.save();ctx.translate(x,y);ctx.shadowColor="#ff241d";ctx.shadowBlur=25;const heart=ctx.createRadialGradient(-4,-5,2,0,0,20);heart.addColorStop(0,"#ffd0bd");heart.addColorStop(.3,"#ff4b35");heart.addColorStop(1,"#4a0710");ctx.fillStyle=heart;ctx.beginPath();ctx.moveTo(0,19);ctx.bezierCurveTo(-27,2,-20,-16,-8,-16);ctx.bezierCurveTo(-2,-16,0,-10,0,-8);ctx.bezierCurveTo(0,-10,2,-16,8,-16);ctx.bezierCurveTo(20,-16,27,2,0,19);ctx.fill();ctx.strokeStyle="#fff1df";ctx.lineWidth=1.5;ctx.stroke();ctx.restore();}const countdown=(boss.lootTimer||0)>0?` · ${(boss.lootTimer||0).toFixed(1)} sn`:"";ctx.save();ctx.fillStyle="#fff1df";ctx.font='800 11px "Manrope"';ctx.textAlign="center";ctx.shadowColor="#ff241d";ctx.shadowBlur=12;ctx.fillText(boss.lootCollected?`ÇIKIŞ AÇILIYOR${countdown}`:(boss.lootTimer>0?`ÖFKENİN KALPLERİNİ AL${countdown}`:"KALPLERİ ALMADAN ÇIKIŞ AÇILMAZ"),bx+boss.w/2,boss.y+142);ctx.restore();}
@@ -1210,7 +1234,7 @@ function drawMarioBoss(){
   if(!boss.dead){ctx.save();ctx.translate(bx+boss.w/2,boss.y+boss.h);ctx.scale(boss.vx<0?-.82:.82,.82);const stride=Math.sin(time*5)*5;ctx.shadowColor="#000";ctx.shadowBlur=35;ctx.fillStyle="#030405";ctx.beginPath();ctx.ellipse(0,4,65,13,0,0,Math.PI*2);ctx.fill();ctx.lineCap="round";ctx.strokeStyle="#090b0d";ctx.lineWidth=24;ctx.beginPath();ctx.moveTo(-27,-78);ctx.lineTo(-39+stride,0);ctx.moveTo(27,-78);ctx.lineTo(41-stride,0);ctx.stroke();const body=ctx.createRadialGradient(-18,-115,8,0,-100,85);body.addColorStop(0,boss.flash>0?"#765a64":"#343941");body.addColorStop(.35,"#13171a");body.addColorStop(1,"#020304");ctx.fillStyle=body;ctx.beginPath();ctx.moveTo(-52,-48);ctx.quadraticCurveTo(-72,-118,-43,-158);ctx.quadraticCurveTo(0,-187,44,-155);ctx.quadraticCurveTo(72,-110,51,-48);ctx.quadraticCurveTo(0,-24,-52,-48);ctx.fill();ctx.strokeStyle="#07090b";ctx.lineWidth=20;ctx.beginPath();ctx.moveTo(-42,-132);ctx.lineTo(-72,-88+stride);ctx.lineTo(-66,-39);ctx.moveTo(42,-132);ctx.lineTo(72,-90-stride);ctx.lineTo(67,-40);ctx.stroke();ctx.fillStyle="#090b0d";ctx.beginPath();ctx.arc(0,-159,43,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.moveTo(-35,-180);ctx.lineTo(-61,-207);ctx.lineTo(-23,-191);ctx.moveTo(35,-180);ctx.lineTo(61,-207);ctx.lineTo(23,-191);ctx.fill();ctx.strokeStyle="rgba(140,150,155,.13)";ctx.lineWidth=2;for(let i=0;i<7;i++){ctx.beginPath();ctx.moveTo(-32+i*10,-143);ctx.lineTo(-23+i*7,-70);ctx.stroke();}ctx.fillStyle="#ff342a";ctx.shadowColor="#ff2017";ctx.shadowBlur=22;ctx.beginPath();ctx.ellipse(-15,-163,7,4,-.15,0,Math.PI*2);ctx.ellipse(15,-163,7,4,.15,0,Math.PI*2);ctx.fill();ctx.fillStyle="#b7bcc0";ctx.shadowBlur=0;ctx.beginPath();ctx.moveTo(-18,-143);ctx.lineTo(-9,-132);ctx.lineTo(-4,-145);ctx.moveTo(18,-143);ctx.lineTo(9,-132);ctx.lineTo(4,-145);ctx.fill();ctx.restore();}
   const labelX=bx+boss.w/2,labelY=boss.y-48;ctx.fillStyle="rgba(3,4,6,.82)";ctx.fillRect(labelX-112,labelY,224,40);ctx.fillStyle="#fff";ctx.font='800 13px "Manrope"';ctx.textAlign="center";ctx.fillText("MARIO",labelX,labelY+15);for(let i=0;i<boss.maxHp;i++){const amount=Math.max(0,Math.min(1,boss.hp-i));ctx.fillStyle="#24282e";ctx.fillRect(labelX-103+i*21,labelY+25,18,7);if(amount>0){ctx.fillStyle="#e84536";ctx.fillRect(labelX-103+i*21,labelY+25,18*amount,7);}}ctx.textAlign="left";
   if(boss.slamPulse>0){const progress=1-boss.slamPulse/.75,radius=35+progress*330;ctx.save();ctx.globalAlpha=1-progress;ctx.strokeStyle="#ff7a2b";ctx.shadowColor="#ff421c";ctx.shadowBlur=22;ctx.lineWidth=10-progress*7;ctx.beginPath();ctx.ellipse(bx+boss.w/2,624,radius,radius*.12,0,0,Math.PI*2);ctx.stroke();ctx.restore();}
-  if(boss.lightningTimer>0){const fade=boss.lightningTimer/.9,x=boss.lightningX;ctx.save();ctx.globalCompositeOperation="lighter";ctx.globalAlpha=fade;ctx.shadowColor="#8ffcff";ctx.shadowBlur=28;for(let bolt=-2;bolt<=2;bolt++){ctx.strokeStyle=bolt?"rgba(105,225,255,.7)":"#ecffff";ctx.lineWidth=bolt?3:8;ctx.beginPath();ctx.moveTo(x+bolt*55,0);for(let y=0;y<590;y+=55)ctx.lineTo(x+bolt*43+Math.sin(y*.09+bolt*3+time*18)*28,y);ctx.lineTo(x+bolt*38,615);ctx.stroke();}ctx.fillStyle="rgba(88,235,255,.2)";ctx.beginPath();ctx.ellipse(x,620,340*(1-fade*.25),42,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#caffff";ctx.lineWidth=5;ctx.stroke();ctx.restore();}
+  if(boss.lightningTimer>0)drawNitaLightningEffect(boss.lightningX,615,boss.lightningTimer);
   if(boss.ritualWindow>0||boss.ritualCharge>0){ctx.fillStyle="#61fff0";ctx.font='700 12px "Manrope"';ctx.textAlign="center";ctx.fillText(boss.ritualCharge>0?`YILDIRIM HAZIR ×${boss.ritualCharge} · SHIFT`:`RİTÜEL ${boss.ritualWindow.toFixed(1)} sn${boss.ritualProgress>0?` · ${Math.min(100,Math.round(boss.ritualProgress/4*100))}%`:""}`,640,178);ctx.textAlign="left";}
   for(const orb of state.healthOrbs){const y=orb.y+Math.sin(time*5+orb.bob)*4;ctx.shadowColor="#4dff82";ctx.shadowBlur=18;ctx.fillStyle="#50f080";ctx.beginPath();ctx.arc(orb.x+11,y+11,10,0,Math.PI*2);ctx.fill();ctx.fillStyle="#eaffef";ctx.fillRect(orb.x+8,y+4,6,14);ctx.fillRect(orb.x+4,y+8,14,6);ctx.shadowBlur=0;}
   for(const cup of state.reviveCups){const y=cup.y+Math.sin(time*4+cup.bob)*4;ctx.save();ctx.shadowColor="#ffe66c";ctx.shadowBlur=18;ctx.fillStyle="#e5b83c";ctx.fillRect(cup.x+5,y+3,14,16);ctx.beginPath();ctx.arc(cup.x+12,y+4,9,Math.PI,0);ctx.fill();ctx.strokeStyle="#fff1a8";ctx.lineWidth=3;ctx.beginPath();ctx.arc(cup.x+20,y+9,7,-Math.PI/2,Math.PI/2);ctx.stroke();ctx.fillRect(cup.x+10,y+19,4,7);ctx.fillRect(cup.x+5,y+26,14,4);ctx.restore();}
@@ -1234,9 +1258,9 @@ function drawSeraphBoss(){
 function drawBoss(){if(state.boss?.type==="seraph")drawSeraphBoss();else drawMarioBoss();}
 
 function drawSkyWhisper(){
-  if(state.skyLightningTimer<=0||state.boss?.type==="mario")return;const fade=state.skyLightningTimer/.9,x=state.skyLightningX,time=performance.now()*.001,strikeY=levels[state.level]?.waveMode?(state.platforms[0]?.y??currentWorld().height-75):615;ctx.save();ctx.globalCompositeOperation="lighter";ctx.globalAlpha=fade;ctx.shadowColor="#8ffcff";ctx.shadowBlur=28;
-  for(let bolt=-2;bolt<=2;bolt++){ctx.strokeStyle=bolt?"rgba(105,225,255,.7)":"#ecffff";ctx.lineWidth=bolt?3:8;ctx.beginPath();ctx.moveTo(x+bolt*55,0);for(let y=0;y<strikeY-25;y+=55)ctx.lineTo(x+bolt*43+Math.sin(y*.09+bolt*3+time*18)*28,y);ctx.lineTo(x+bolt*38,strikeY);ctx.stroke();}
-  ctx.fillStyle="rgba(88,235,255,.2)";ctx.beginPath();ctx.ellipse(x,strikeY+5,340*(1-fade*.25),42,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#caffff";ctx.lineWidth=5;ctx.stroke();ctx.restore();
+  if(state.skyLightningTimer<=0||state.boss?.type==="mario")return;
+  const strikeY=levels[state.level]?.waveMode?(state.platforms[0]?.y??currentWorld().height-75):615;
+  drawNitaLightningEffect(state.skyLightningX,strikeY,state.skyLightningTimer);
 }
 
 function drawBossFireball(shot){const speed=Math.hypot(shot.vx,shot.vy)||1,ux=shot.vx/speed,uy=shot.vy/speed,cx=shot.x+9,cy=shot.y+9,t=performance.now()*.012+(shot.phase||0);ctx.save();ctx.globalCompositeOperation="lighter";for(let i=5;i>0;i--){const wobble=Math.sin(t+i)*3,tx=cx-ux*i*11-uy*wobble,ty=cy-uy*i*11+ux*wobble;ctx.globalAlpha=.12+i*.08;ctx.fillStyle=i%2?"#ff321c":"#ff9b22";ctx.beginPath();ctx.arc(tx,ty,4+i*1.6,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;const flame=ctx.createRadialGradient(cx-3,cy-3,1,cx,cy,13);flame.addColorStop(0,"#fff4b0");flame.addColorStop(.28,"#ffbd2e");flame.addColorStop(.65,"#ff3a16");flame.addColorStop(1,"rgba(120,0,0,0)");ctx.shadowColor="#ff3a16";ctx.shadowBlur=24;ctx.fillStyle=flame;ctx.beginPath();ctx.arc(cx,cy,13,0,Math.PI*2);ctx.fill();ctx.restore();}
@@ -1245,7 +1269,7 @@ function draw(){
   const rect=canvas.getBoundingClientRect(),mobileFill=matchMedia("(max-width:950px) and (orientation:landscape)").matches,world=currentWorld(),scaleX=rect.width/world.width,scaleY=rect.height/world.height,scale=mobileFill?Math.max(scaleX,scaleY):Math.min(scaleX,scaleY),ox=(rect.width-world.width*scale)/2,verticalOverflow=rect.height-world.height*scale,oy=mobileFill?verticalOverflow*.72:verticalOverflow/2,level=levels[state.level]||levels[0];ctx.fillStyle=COLORS.dark;ctx.fillRect(0,0,rect.width,rect.height);ctx.save();ctx.translate(ox,oy);ctx.scale(scale,scale);drawBackground(level);
   if(!level.boss&&!level.waveMode)drawHazard({x:0,y:world.height-72,w:world.width,h:72});for(const p of state.platforms)drawPlatform(p,level.theme);for(const obstacle of state.obstacles)drawObstacle(obstacle);for(const pad of state.bouncePads)drawBouncePad(pad);if(level.boss)for(const h of state.hazards)drawHazard(h);for(const e of state.exits)drawExit(e,level.theme);for(const c of state.cameras)drawCamera(c);for(const laser of state.lasers)drawLaser(laser);for(const coin of state.coins)drawCoin(coin);for(const enemy of state.enemies)drawEnemy(enemy);if(state.boss)drawBoss();
   for(const shot of state.projectiles){if(shot.bossShot){drawBossFireball(shot);continue;}const speed=Math.hypot(shot.vx,shot.vy||0)||1,ux=shot.vx/speed,uy=(shot.vy||0)/speed,cx=shot.x+shot.w/2,cy=shot.y+shot.h/2,tail=shot.dualRing?38:76,reach=shot.dualRing?15:24,tailX=cx-ux*tail,tailY=cy-uy*tail,tipX=cx+ux*reach,tipY=cy+uy*reach,beam=ctx.createLinearGradient(tailX,tailY,tipX,tipY);beam.addColorStop(0,"rgba(255,255,255,0)");beam.addColorStop(.45,shot.color);beam.addColorStop(1,"#ffffff");ctx.strokeStyle=beam;ctx.lineCap="round";ctx.lineWidth=shot.dualRing?5:8;ctx.shadowColor=shot.color;ctx.shadowBlur=shot.dualRing?15:22;ctx.beginPath();ctx.moveTo(tailX,tailY);ctx.lineTo(tipX,tipY);ctx.stroke();ctx.strokeStyle="#fff";ctx.lineWidth=shot.dualRing?1.3:2;ctx.beginPath();ctx.moveTo(cx-ux*(shot.dualRing?12:30),cy-uy*(shot.dualRing?12:30));ctx.lineTo(tipX,tipY);ctx.stroke();if(shot.dualRing){ctx.save();ctx.translate(cx,cy);ctx.rotate(Math.atan2(uy,ux));ctx.strokeStyle=shot.color;ctx.lineWidth=2;ctx.globalAlpha=.8;ctx.beginPath();ctx.ellipse(0,0,3,8,0,0,Math.PI*2);ctx.stroke();ctx.restore();}ctx.shadowBlur=0;}
-  drawPlayer(atlas);drawPlayer(nita);drawSkyWhisper();for(const p of state.particles){ctx.globalAlpha=Math.max(0,p.life*2);ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,p.size,p.size);}ctx.globalAlpha=1;drawWaveHud();ctx.restore();
+  drawSkyWhisper();drawPlayer(atlas);drawPlayer(nita);for(const p of state.particles){ctx.globalAlpha=Math.max(0,p.life*2);ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,p.size,p.size);}ctx.globalAlpha=1;drawWaveHud();ctx.restore();
 }
 
 function resize(){const dpr=Math.min(devicePixelRatio||1,3),r=canvas.getBoundingClientRect();canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";draw();}
