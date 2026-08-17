@@ -1065,7 +1065,7 @@ function peerError(error,role,attempt){
   }
   if(error.type==="webrtc"){
     if(role==="host"){
-      if(network.connection?.__nitaFail)network.connection.__nitaFail("Oyuncunun bağlantısı tamamlanamadı. Oda açık; aynı kodla tekrar katıl.");
+      if(network.connection?.__nitaFail)showMessage("Oyuncu bağlantısı doğrulanıyor…",2);
       else if(network.peer?.open)restoreHostWaiting("Bir oyuncu bağlantısı tamamlanamadı. Oda açık; aynı kodla tekrar katıl.");
       return;
     }
@@ -1082,7 +1082,7 @@ function reconnectPeerSignal(peer,role,attempt){
   peer.on("disconnected",()=>{
     if(attempt!==network.attempt||peer.destroyed)return;
     if(!network.connection?.open){connectionBadge.textContent="ODA SERVİSİNE YENİDEN BAĞLANIYOR";if(role==="host")roomWaitStatus.textContent="Oda servisine yeniden bağlanılıyor…";}
-    clearTimeout(reconnectTimer);reconnectTimer=setTimeout(()=>{if(attempt!==network.attempt||peer.destroyed)return;try{peer.reconnect();reconnectDelay=Math.min(reconnectDelay*2,4000);}catch{}},reconnectDelay);
+    clearTimeout(reconnectTimer);reconnectTimer=setTimeout(()=>{if(attempt!==network.attempt||peer.destroyed||!peer.disconnected)return;try{peer.reconnect();reconnectDelay=Math.min(reconnectDelay*2,4000);}catch{}},reconnectDelay);
   });
 }
 createRoomButton.addEventListener("click",async()=>{

@@ -182,9 +182,9 @@ const wait = milliseconds => new Promise(resolve => setTimeout(resolve, millisec
     h.context.hostPeer = { destroyed: false, open: true };
     h.context.pendingConnection = new Emitter();
     h.run('network.attempt=8;network.role="host";network.peer=hostPeer;bindConnection(pendingConnection,"host",8);peerError({type:"webrtc"},"host",8)');
-    assert.equal(h.run("network.connection"), null, "host WebRTC errors must release the pending connection immediately");
-    assert.equal(h.context.hostPeer.destroyed, false, "a failed guest must keep the host room open");
-    assert.equal(h.context.roomWait.hidden, false);
+    assert.equal(h.run("network.connection===pendingConnection"), true, "an unscoped late WebRTC error must not kill a newer pending connection");
+    assert.equal(h.context.pendingConnection.closed, false);
+    h.context.pendingConnection.__nitaCancel();
   }
 
   {
