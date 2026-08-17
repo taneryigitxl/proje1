@@ -219,6 +219,12 @@ globalThis.__game = {
   unlockAllLevels,
   beginWave,
   updateWaveLevel,
+  spawnWaveEnemy,
+  updateEnemies,
+  updateWaveMinion,
+  moveWaveEnemyBody,
+  updatePerry,
+  setPerryState,
   updatePlayer,
   announceBossDefeat,
   updateBossLoot
@@ -250,6 +256,243 @@ assert.equal(game.currentWorld().width, 1536);
 assert.equal(game.currentWorld().height, 864);
 assert.equal(game.state.bouncePads.length, 3);
 assert.equal(game.state.finalGate, null);
+
+function stepEnemies(targetGame, frames, observe = () => {}) {
+  for (let frame = 0; frame < frames; frame++) {
+    targetGame.updateEnemies(1 / 60);
+    observe(frame);
+  }
+}
+
+function assertEnemyInsideWorld(targetGame, enemy, message) {
+  const world = targetGame.currentWorld();
+  assert(Number.isFinite(enemy.x), `${message}: x must stay finite`);
+  assert(Number.isFinite(enemy.y), `${message}: y must stay finite`);
+  assert(enemy.x >= 16 - 1e-6, `${message}: enemy left the world's left bound`);
+  assert(enemy.x + enemy.w <= world.width - 16 + 1e-6, `${message}: enemy left the world's right bound`);
+  assert(enemy.y >= -enemy.h, `${message}: enemy jumped above the world`);
+  assert(enemy.y <= world.height + 70, `${message}: enemy fell below the world`);
+}
+
+// A level-11 shadow must pursue heroes into the old x<370 dead zone at the
+// intended deliberately slower first-wave speed.
+{
+  const chaseGame = createRuntime().game;
+  chaseGame.state.audio = false;
+  chaseGame.loadLevel(10);
+  chaseGame.atlas.x = 80;
+  chaseGame.atlas.y = 729;
+  chaseGame.atlas.dead = false;
+  chaseGame.atlas.invulnerable = 99;
+  chaseGame.nita.dead = true;
+  chaseGame.spawnWaveEnemy({ kind: "shadow", hp: 18 }, 2, 1);
+  const shadow = chaseGame.state.enemies[0];
+  shadow.x = 420;
+  shadow.y = 739;
+  shadow.vx = 0;
+  shadow.vy = 0;
+  shadow.onGround = true;
+  shadow.jumpCooldown = 0;
+  const startX = shadow.x;
+
+  stepEnemies(chaseGame, 60, () => assertEnemyInsideWorld(chaseGame, shadow, "chasing shadow"));
+  const oneSecondTravel = startX - shadow.x;
+  assert(oneSecondTravel >= 40 && oneSecondTravel <= 70,
+    `shadow speed must stay in the 40-70 px/s band, got ${oneSecondTravel}`);
+  stepEnemies(chaseGame, 12);
+  assert(shadow.x < 370, "the shadow must be able to pursue a hero left of the former x=370 limit");
+}
+
+// Wave navigation must vault solid obstacles, climb one-way platforms and
+// keep all movement values finite and inside the expanded world.
+{
+  const navigationGame = createRuntime().game;
+  navigationGame.state.audio = false;
+  navigationGame.loadLevel(10);
+  navigationGame.atlas.x = 850;
+  navigationGame.atlas.y = 729;
+  navigationGame.atlas.dead = false;
+  navigationGame.atlas.invulnerable = 99;
+  navigationGame.nita.dead = true;
+  navigationGame.spawnWaveEnemy({ kind: "shadow", hp: 18 }, 0, 1);
+  const obstacleShadow = navigationGame.state.enemies[0];
+  const crate = navigationGame.state.obstacles[0];
+  obstacleShadow.x = crate.x - obstacleShadow.w - 34;
+  obstacleShadow.y = 739;
+  obstacleShadow.vx = 0;
+  obstacleShadow.vy = 0;
+  obstacleShadow.onGround = true;
+  obstacleShadow.jumpCooldown = 0;
+  let vaulted = false;
+  let clearedCrate = false;
+
+  stepEnemies(navigationGame, 360, () => {
+    vaulted ||= obstacleShadow.vy < -1 || !obstacleShadow.onGround;
+    clearedCrate ||= obstacleShadow.x > crate.x + crate.w;
+    assertEnemyInsideWorld(navigationGame, obstacleShadow, "obstacle-navigation shadow");
+  });
+  assert(vaulted, "an approaching wave enemy must jump instead of walking forever into an obstacle");
+  assert(clearedCrate, "an approaching wave enemy must eventually clear the crate");
+
+  obstacleShadow.x = Number.NaN;
+  obstacleShadow.y = navigationGame.currentWorld().height + 200;
+  navigationGame.moveWaveEnemyBody(obstacleShadow, 1 / 60, obstacleShadow.moveSpeed);
+  assertEnemyInsideWorld(navigationGame, obstacleShadow, "recovered wave enemy");
+
+  const platformGame = createRuntime().game;
+  platformGame.state.audio = false;
+  platformGame.loadLevel(10);
+  const upperPlatform = platformGame.state.platforms.find(platform => platform.x === 420 && platform.y === 600);
+  platformGame.atlas.x = 490;
+  platformGame.atlas.y = upperPlatform.y - platformGame.atlas.h;
+  platformGame.atlas.dead = false;
+  platformGame.atlas.invulnerable = 99;
+  platformGame.nita.dead = true;
+  platformGame.spawnWaveEnemy({ kind: "shadow", hp: 18 }, 2, 1);
+  const climbingShadow = platformGame.state.enemies[0];
+  climbingShadow.x = 480;
+  climbingShadow.y = 739;
+  climbingShadow.vx = 0;
+  climbingShadow.vy = 0;
+  climbingShadow.onGround = true;
+  climbingShadow.jumpCooldown = 0;
+  let platformJump = false;
+  let landedOnUpperPlatform = false;
+
+  stepEnemies(platformGame, 120, () => {
+    platformJump ||= climbingShadow.vy < -1 || !climbingShadow.onGround;
+    landedOnUpperPlatform ||= climbingShadow.onGround
+      && Math.abs(climbingShadow.y + climbingShadow.h - upperPlatform.y) < 1e-6;
+    assertEnemyInsideWorld(platformGame, climbingShadow, "platform-navigation shadow");
+  });
+  assert(platformJump, "a wave enemy must jump toward a hero on an upper platform");
+  assert(landedOnUpperPlatform, "a wave enemy must be able to land on the hero's upper platform");
+}
+
+// Soldiers may swing only when their target is also vertically in range; a
+// hero directly above them must not take a hit through the platform.
+{
+  const soldierGame = createRuntime().game;
+  soldierGame.state.audio = false;
+  soldierGame.loadLevel(10);
+  soldierGame.atlas.x = 480;
+  soldierGame.atlas.y = 540;
+  soldierGame.atlas.dead = false;
+  soldierGame.atlas.invulnerable = 0;
+  soldierGame.nita.dead = true;
+  soldierGame.spawnWaveEnemy({ kind: "soldier", hp: 36 }, 2, 2);
+  const soldier = soldierGame.state.enemies[0];
+  soldier.x = 480;
+  soldier.y = 739;
+  soldier.vx = 0;
+  soldier.vy = 0;
+  soldier.onGround = true;
+  soldier.jumpCooldown = 10;
+  soldier.attackTimer = 0.22;
+  soldier.attackCooldown = 1;
+  const hpBefore = soldierGame.atlas.hp;
+
+  stepEnemies(soldierGame, 45);
+  assert.equal(soldierGame.atlas.hp, hpBefore, "a ground soldier must not hit a hero on a different-height platform");
+}
+
+// Perry's area marker locks for the full 1.35-second warning, deals one hit
+// only after filling, and then advances through strike and recovery states.
+{
+  const areaGame = createRuntime().game;
+  areaGame.state.audio = false;
+  areaGame.loadLevel(10);
+  areaGame.atlas.x = 800;
+  areaGame.atlas.y = 729;
+  areaGame.atlas.vx = 0;
+  areaGame.atlas.dead = false;
+  areaGame.atlas.invulnerable = 0;
+  areaGame.nita.x = 100;
+  areaGame.nita.y = 739;
+  areaGame.nita.dead = false;
+  areaGame.nita.invisible = 0;
+  areaGame.spawnWaveEnemy({ kind: "perry", hp: 108 }, 9, 3);
+  const areaPerry = areaGame.state.enemies[0];
+  assert.equal(areaPerry.moveSpeed, 58, "Perry's hunt speed must be 58 px/s");
+  areaPerry.areaCooldown = 0;
+  areaGame.updatePerry(areaPerry, 0);
+  assert.equal(areaPerry.attackState, "areaWindup");
+  assert.equal(areaPerry.stateDuration, 1.35);
+  const lockedStrikeX = areaPerry.strikeX;
+  const atlasHpBefore = areaGame.atlas.hp;
+  const nitaHpBefore = areaGame.nita.hp;
+
+  areaGame.atlas.x = lockedStrikeX + 190;
+  for (let frame = 0; frame < 26; frame++) {
+    areaGame.updatePerry(areaPerry, 0.05);
+    assert.equal(areaPerry.strikeX, lockedStrikeX, "Perry must not retarget an area already being telegraphed");
+    assert.equal(areaGame.atlas.hp, atlasHpBefore, "Perry's area windup must not deal early damage");
+    assert.equal(areaGame.nita.hp, nitaHpBefore, "Perry's area windup must not damage an outside hero");
+  }
+
+  areaGame.atlas.x = lockedStrikeX - areaGame.atlas.w / 2;
+  areaGame.nita.x = lockedStrikeX + areaPerry.strikeRadius + 30;
+  areaGame.updatePerry(areaPerry, 0.06);
+  assert.equal(areaPerry.attackState, "areaStrike", "a full marker must advance into the damaging strike state");
+  assert.equal(areaGame.atlas.hp, atlasHpBefore, "the transition frame must not damage before the strike is applied");
+  areaGame.updatePerry(areaPerry, 0.016);
+  assert.equal(areaGame.atlas.hp, atlasHpBefore - 1, "a hero inside the completed area must take exactly one damage");
+  assert.equal(areaGame.nita.hp, nitaHpBefore, "a hero outside the completed area must take no damage");
+  areaGame.atlas.invulnerable = 0;
+  areaGame.updatePerry(areaPerry, 0.05);
+  assert.equal(areaGame.atlas.hp, atlasHpBefore - 1, "the same Perry area strike must not hit a hero twice");
+
+  for (let frame = 0; frame < 20 && areaPerry.attackState === "areaStrike"; frame++) areaGame.updatePerry(areaPerry, 0.02);
+  assert.equal(areaPerry.attackState, "recover", "Perry must leave areaStrike for recovery");
+  for (let frame = 0; frame < 30 && areaPerry.attackState === "recover"; frame++) areaGame.updatePerry(areaPerry, 0.02);
+  assert.equal(areaPerry.attackState, "hunt", "Perry must return to hunting after recovery");
+}
+
+// Perry walks at 58 px/s while hunting and a dash that reaches a solid
+// obstacle must end in the explicit stunned vulnerability state.
+{
+  const walkGame = createRuntime().game;
+  walkGame.state.audio = false;
+  walkGame.loadLevel(10);
+  walkGame.atlas.x = 1000;
+  walkGame.atlas.y = 729;
+  walkGame.atlas.dead = false;
+  walkGame.nita.dead = true;
+  walkGame.spawnWaveEnemy({ kind: "perry", hp: 108 }, 9, 3);
+  const walkPerry = walkGame.state.enemies[0];
+  walkPerry.x = 700;
+  walkPerry.y = 679;
+  walkPerry.vx = 0;
+  walkPerry.vy = 0;
+  walkPerry.onGround = true;
+  walkPerry.areaCooldown = 99;
+  walkPerry.dashCooldown = 99;
+  walkPerry.meleeCooldown = 99;
+  const walkStart = walkPerry.x;
+  stepEnemies(walkGame, 60);
+  const walkDistance = walkPerry.x - walkStart;
+  assert(Math.abs(walkDistance - 58) < 0.01, `Perry must walk at 58 px/s, got ${walkDistance}`);
+
+  const dashGame = createRuntime().game;
+  dashGame.state.audio = false;
+  dashGame.loadLevel(10);
+  dashGame.spawnWaveEnemy({ kind: "perry", hp: 108 }, 9, 3);
+  const dashPerry = dashGame.state.enemies[0];
+  const crate = dashGame.state.obstacles[0];
+  dashGame.atlas.dead = true;
+  dashGame.nita.dead = true;
+  dashPerry.x = crate.x - dashPerry.w - 1;
+  dashPerry.y = 789 - dashPerry.h;
+  dashPerry.vx = 0;
+  dashPerry.vy = 0;
+  dashPerry.onGround = true;
+  dashPerry.facing = 1;
+  dashGame.setPerryState(dashPerry, "dash", 0.38);
+  dashGame.updatePerry(dashPerry, 1 / 60);
+  assert.equal(dashPerry.attackState, "stunned", "Perry's dash must stun him when it hits an obstacle");
+  assert.equal(dashPerry.stateDuration, 0.9);
+  assert.equal(dashPerry.vx, 0);
+}
 
 // During wave survival, a lone fallen hero returns after the revive countdown.
 game.atlas.dead = true;

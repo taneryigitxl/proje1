@@ -28,6 +28,36 @@ function evaluateDeclaration(name, endMarker) {
   return JSON.parse(JSON.stringify(context.result));
 }
 
+function jpegDimensions(buffer) {
+  assert(buffer.length >= 4, "JPEG file is unexpectedly short");
+  assert.equal(buffer[0], 0xff, "JPEG must start with an SOI marker");
+  assert.equal(buffer[1], 0xd8, "JPEG must start with an SOI marker");
+
+  let offset = 2;
+  while (offset + 3 < buffer.length) {
+    if (buffer[offset] !== 0xff) {
+      offset++;
+      continue;
+    }
+    while (offset < buffer.length && buffer[offset] === 0xff) offset++;
+    const marker = buffer[offset++];
+    if (marker === 0xd8 || marker === 0xd9 || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) continue;
+    assert(offset + 1 < buffer.length, "JPEG segment length is truncated");
+    const segmentLength = buffer.readUInt16BE(offset);
+    assert(segmentLength >= 2 && offset + segmentLength <= buffer.length, "JPEG segment is invalid");
+    const isStartOfFrame = (marker >= 0xc0 && marker <= 0xc3)
+      || (marker >= 0xc5 && marker <= 0xc7)
+      || (marker >= 0xc9 && marker <= 0xcb)
+      || (marker >= 0xcd && marker <= 0xcf);
+    if (isStartOfFrame) {
+      assert(segmentLength >= 7, "JPEG SOF segment is truncated");
+      return { width: buffer.readUInt16BE(offset + 5), height: buffer.readUInt16BE(offset + 3) };
+    }
+    offset += segmentLength;
+  }
+  assert.fail("JPEG dimensions could not be found");
+}
+
 const levels = evaluateDeclaration("levels", "const LEVEL11_WAVES");
 const waves = evaluateDeclaration("LEVEL11_WAVES", "const PROGRESS_KEY");
 
@@ -43,6 +73,31 @@ assert(level11.finalGate?.length === 4, "Kayıp Hisar must define its final gate
 assert.match(source, /level11Background\.src\s*=\s*["']assets\/level-11-bg\.jpg["']/);
 assert(fs.existsSync(path.join(root, "assets", "level-11-bg.jpg")), "level 11 background asset is missing");
 
+// Every level card has its own optimized 16:9 JPEG, keeping the menu lightweight.
+{
+  const cardPaths = levels.map(level => level.card);
+  assert.equal(cardPaths.length, 11);
+  assert.equal(new Set(cardPaths).size, 11, "every level must use a unique card image");
+  assert(cardPaths.every(card => /^assets\/level-cards\/[^/]+\.jpg$/i.test(card)),
+    "all level cards must reference JPEGs in assets/level-cards");
+
+  let totalBytes = 0;
+  for (const card of cardPaths) {
+    const cardPath = path.join(root, ...card.split("/"));
+    assert(fs.existsSync(cardPath), `level card asset is missing: ${card}`);
+    const bytes = fs.readFileSync(cardPath);
+    assert.deepEqual(jpegDimensions(bytes), { width: 480, height: 270 },
+      `${card} must remain a 480x270 image`);
+    assert(bytes.length < 50 * 1024, `${card} must remain under 50KB`);
+    totalBytes += bytes.length;
+  }
+  assert(totalBytes < 350 * 1024, "all level card JPEGs together must remain under 350KB");
+
+  const cardDirectory = path.join(root, "assets", "level-cards");
+  const shippedJpegs = fs.readdirSync(cardDirectory).filter(file => /\.jpe?g$/i.test(file));
+  assert.equal(shippedJpegs.length, 11, "the level-card directory must ship exactly 11 JPEGs");
+}
+
 // Three increasing waves, with Perry as the deliberately durable wave-three finale.
 assert.equal(waves.length, 3);
 assert.deepEqual(waves.map(wave => wave.length), [5, 7, 10]);
@@ -50,6 +105,33 @@ const perries = waves.flat().filter(enemy => enemy.kind === "perry");
 assert.equal(perries.length, 1, "Perry must appear exactly once");
 assert.equal(perries[0].hp, 108, "Perry balance changed unexpectedly");
 assert.equal(waves[2].some(enemy => enemy.kind === "perry"), true, "Perry must arrive in wave three");
+
+// Perry uses dedicated four-frame walk/attack strips and a multi-move boss state machine.
+{
+  assert.match(source, /sprites\.perryWalk\.src\s*=\s*["']assets\/perry-walk-v2\.png["']/);
+  assert.match(source, /sprites\.perryAttack\.src\s*=\s*["']assets\/perry-attack-v2\.png["']/);
+  for (const asset of ["perry-walk-v2.png", "perry-attack-v2.png"]) {
+    assert(fs.existsSync(path.join(root, "assets", asset)), `Perry sprite is missing: ${asset}`);
+  }
+
+  const perryUpdateSource = section("function updatePerry", "function updateEnemies");
+  for (const stateName of ["areaWindup", "areaStrike", "cleaveWindup", "cleaveStrike"]) {
+    assert(perryUpdateSource.includes(`"${stateName}"`), `Perry state is missing: ${stateName}`);
+  }
+  assert.match(perryUpdateSource, /setPerryState\(enemy,"areaWindup",/);
+  assert.match(perryUpdateSource, /setPerryState\(enemy,"areaStrike",/);
+  assert.match(perryUpdateSource, /setPerryState\(enemy,"cleaveWindup",/);
+  assert.match(perryUpdateSource, /setPerryState\(enemy,"cleaveStrike",/);
+  assert.doesNotMatch(perryUpdateSource, /attackState\s*===\s*["']windup["']/,
+    "Perry must not regress to the old windup/dash-only state chain");
+
+  const perryDrawSource = section("function drawPerry", "function drawEnemy");
+  assert.match(perryDrawSource, /sprite\s*=\s*sprites\.perryWalk;frames\s*=\s*4/);
+  assert.match(perryDrawSource, /sprite\s*=\s*sprites\.perryAttack;frames\s*=\s*4/);
+  assert.match(perryDrawSource, /frameWidth\s*=\s*sprite\.naturalWidth\?Math\.floor\(sprite\.naturalWidth\/frames\)/);
+  assert.match(perryDrawSource, /ctx\.drawImage\(sprite,sourceX,sourceY,sourceW,sourceH,/);
+  assert.match(perryDrawSource, /\["areaWindup","areaStrike","cleaveWindup","cleaveStrike","dashWindup","dash","recover"\]/);
+}
 
 // The rift gate is created only after the final wave and completion needs both heroes.
 {
@@ -224,10 +306,20 @@ assert.match(drawSource, /for\s*\(const pad of state\.bouncePads\)drawBouncePad\
 for (const id of ["main-menu-button", "show-levels", "level-select", "level-grid", "level-select-back"]) {
   assert(indexSource.includes(`id="${id}"`), `missing menu element #${id}`);
 }
-assert(indexSource.includes('styles.css?v=20260817-4'));
-assert(indexSource.includes('script.js?v=20260817-4'));
+assert(indexSource.includes('styles.css?v=20260817-5'));
+assert(indexSource.includes('script.js?v=20260817-5'));
 assert.match(stylesSource, /\.level-grid\s*\{/);
 assert.match(stylesSource, /\.level-card\s*\{/);
+const renderLevelSelectSource = section("function renderLevelSelect", "function showMainLobby");
+assert.match(renderLevelSelectSource, /<img class="level-card-art"/);
+assert.match(renderLevelSelectSource, /alt=""/,
+  "level card artwork must remain decorative for screen readers");
+assert.match(renderLevelSelectSource, /width="480" height="270"/);
+assert.match(renderLevelSelectSource, /loading="lazy"/);
+assert.match(renderLevelSelectSource, /decoding="async"/);
+assert.match(stylesSource, /\.level-card-art\s*\{/);
+assert.match(stylesSource, /\.level-card:hover[^\{]*\.level-card-art[^\{]*\{[^}]*transform\s*:\s*scale\(/);
+assert.match(stylesSource, /\.level-card\.locked\s+\.level-card-art[^\{]*\{[^}]*filter\s*:[^;}]*grayscale\(1\)/);
 
 // The CSS cursor URL must resolve to a real, valid SVG asset.
 const cursorMatch = stylesSource.match(/cursor\s*:\s*url\(["']?(assets\/[^"')]+\.svg)/);

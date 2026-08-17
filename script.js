@@ -102,7 +102,7 @@ const WRATH_WALK_CROPS = {
 const sprites = {
   atlas: new Image(), nita: new Image(), atlasWalk: new Image(), atlasAction: new Image(), nitaWalk: new Image(),
   wrathAtlas: new Image(), wrathNita: new Image(), wrathAtlasWalk: new Image(), wrathNitaWalk: new Image(), wrathAtlasAction: new Image(), nitaSkyWhisper: new Image(), wrathNitaSkyWhisper: new Image(),
-  enemy: new Image(), enemyWalk: new Image(), perry: new Image()
+  enemy: new Image(), enemyWalk: new Image(), perry: new Image(), perryWalk: new Image(), perryAttack: new Image()
 };
 sprites.atlas.src = "assets/atlas.png";
 sprites.nita.src = "assets/nita.png";
@@ -119,6 +119,8 @@ sprites.wrathNitaSkyWhisper.src = "assets/wrath-nita-sky-whisper.png";
 sprites.enemy.src = "assets/enemy.png";
 sprites.enemyWalk.src = "assets/enemy-walk.png";
 sprites.perry.src = "assets/perry.png";
+sprites.perryWalk.src = "assets/perry-walk-v2.png";
+sprites.perryAttack.src = "assets/perry-attack-v2.png";
 
 function removeWhiteSpriteFringe(image,clearAtlasArmPatch=false){
   image.addEventListener("load",()=>{
@@ -140,7 +142,7 @@ level11Background.src = "assets/level-11-bg.jpg";
 
 const levels = [
   {
-    name: "İlk Temas", theme: "meadow", sky: ["#8acfe0", "#d9c79d"], starts: [[62, 590], [116, 590]],
+    name: "İlk Temas", card: "assets/level-cards/01-ilk-temas.jpg", theme: "meadow", sky: ["#8acfe0", "#d9c79d"], starts: [[62, 590], [116, 590]],
     platforms: [[0,650,250,70],[310,585,150,30],[520,515,165,30],[750,580,155,30],[965,505,155,30],[1170,650,110,70]],
     hazards: [[250,648,60,72],[460,648,60,72],[685,648,65,72],[905,648,60,72],[1120,648,50,72]],
     enemies: [[350,535,320,430]], cameras: [[715,350,1,230]], exits: [[1024,445,"atlas"],[1206,590,"nita"]],
@@ -148,7 +150,7 @@ const levels = [
     hint: "Altınları topla. Atlas S ile güç ışını atar; Nita ↓ ile 1 saniye görünmez olur."
   },
   {
-    name: "Kanyon Devriyesi", theme: "ruins", sky: ["#d9a866", "#6b6657"], starts: [[55,590],[108,590]],
+    name: "Kanyon Devriyesi", card: "assets/level-cards/02-kanyon-devriyesi.jpg", theme: "ruins", sky: ["#d9a866", "#6b6657"], starts: [[55,590],[108,590]],
     platforms: [[0,650,205,70],[265,565,170,30],[490,480,155,30],[700,565,160,30],[915,480,155,30],[1130,565,150,155],[360,379,165,26],[650,395,145,26]],
     hazards: [[205,648,60,72],[435,648,55,72],[645,648,55,72],[860,648,55,72],[1070,648,60,72]],
     enemies: [[300,515,280,390],[735,515,720,820]], cameras: [[835,330,-1,235],[1095,330,-1,235]], exits: [[982,420,"atlas"],[1208,505,"nita"]],
@@ -156,7 +158,7 @@ const levels = [
     hint: "Mavi pelerin 2 saniye sürer. Kamerayı zamanlayabilir veya üst rotadan dolaşabilirsin."
   },
   {
-    name: "Derin Maden", theme: "mine", sky: ["#292735", "#574047"], starts: [[50,590],[105,590]],
+    name: "Derin Maden", card: "assets/level-cards/03-derin-maden.jpg", theme: "mine", sky: ["#292735", "#574047"], starts: [[50,590],[105,590]],
     platforms: [[0,650,180,70],[235,575,145,30],[435,490,145,30],[635,405,150,30],[835,520,145,30],[1030,435,250,285],[530,625,100,25],[805,325,135,26],[650,565,100,24]],
     hazards: [[180,648,55,72],[380,648,55,72],[630,648,205,72],[980,648,50,72]],
     enemies: [[260,525,250,350],[665,355,650,745],[1060,385,1050,1170]], cameras: [[610,335,-1,230],[800,260,1,265],[1005,350,-1,240]], exits: [[1120,375,"atlas"],[1210,375,"nita"]],
@@ -164,7 +166,7 @@ const levels = [
     hint: "Mor ekipman bu bölümü kolaylaştırır: 3 saniye görünmezlik, düşmanlara 2 atış."
   },
   {
-    name: "Fırtına Hattı", theme: "storm", sky: ["#153746", "#347a7f"], starts: [[45,590],[98,590]],
+    name: "Fırtına Hattı", card: "assets/level-cards/04-firtina-hatti.jpg", theme: "storm", sky: ["#153746", "#347a7f"], starts: [[45,590],[98,590]],
     platforms: [[0,650,160,70],[215,565,130,30],[400,480,145,30],[600,560,150,30],[805,475,145,30],[1010,555,270,165],[545,395,150,26],[870,374,150,26]],
     hazards: [[160,648,55,72],[345,648,55,72],[545,648,55,72],[750,648,55,72],[950,648,60,72]],
     enemies: [[240,515,225,315],[625,510,615,710],[830,425,820,910]], cameras: [[380,375,-1,210],[780,360,-1,245],[1035,310,-1,280]], exits: [[930,314,"atlas"],[1205,495,"nita"]],
@@ -172,13 +174,13 @@ const levels = [
     hint: "Sarı Legendary ekipman tek atış ve 5 saniye görünmezlik sağlar; alternatif rotalar hâlâ açık."
   },
   {
-    name: "MARIO ??", theme: "boss", boss: true, bossType: "mario", sky: ["#06070a", "#11141a"], starts: [[110,565],[175,565]],
+    name: "MARIO ??", card: "assets/level-cards/05-ofke-arenasi.jpg", theme: "boss", boss: true, bossType: "mario", sky: ["#06070a", "#11141a"], starts: [[110,565],[175,565]],
     platforms: [[0,625,1280,25]], hazards: [[0,650,1280,70]], enemies: [], cameras: [], exits: [], coins: [],
     shrines: [[285,625],[625,625],[940,625]],
     hint: "BOSS: Gökyüzü Fısıltısı için Nita anıtta ↓ ile 4 sn ritüel yapsın; ritüel tamamlanınca SHIFT ile yıldırımı kullansın."
   },
   {
-    name: "Kızıl Geçit", theme: "ruins", sky: ["#c8784f", "#392c35"], starts: [[48,590],[102,590]],
+    name: "Kızıl Geçit", card: "assets/level-cards/06-kizil-gecit.jpg", theme: "ruins", sky: ["#c8784f", "#392c35"], starts: [[48,590],[102,590]],
     platforms: [[0,650,220,70],[275,560,170,30],[500,480,170,30],[725,555,160,30],[935,465,170,30],[1155,650,125,70]],
     hazards: [[220,648,55,72],[445,648,55,72],[670,648,55,72],[885,648,50,72],[1105,648,50,72]],
     enemies: [[305,510,285,425],[535,430,520,650],[755,505,740,865],[965,415,950,1085]],
@@ -188,7 +190,7 @@ const levels = [
     hint: "Zırhlı gölgeler artık 24 can taşıyor: sarı el bile 2 vuruş ister. Kızıl lazerin söndüğü anı kolla."
   },
   {
-    name: "Saat Kulesi", theme: "mine", sky: ["#394052", "#191924"], starts: [[45,590],[98,590]],
+    name: "Saat Kulesi", card: "assets/level-cards/07-saat-kulesi.jpg", theme: "mine", sky: ["#394052", "#191924"], starts: [[45,590],[98,590]],
     platforms: [[0,650,185,70],[235,570,145,30],[425,485,150,30],[615,395,155,30],[815,490,145,30],[1005,405,275,315]],
     hazards: [[185,648,50,72],[380,648,45,72],[600,648,185,72],[960,648,45,72]],
     enemies: [[255,520,245,360],[455,435,445,555],[650,345,635,750],[840,440,830,940],[1050,355,1030,1160]],
@@ -198,7 +200,7 @@ const levels = [
     hint: "İki lazer farklı ritimde çalışıyor. Güvenli platformlarda bekle; alçak tavan veya kör sıçrayış yok."
   },
   {
-    name: "Fırtına Çekirdeği", theme: "storm", sky: ["#173c51", "#101b2b"], starts: [[42,590],[94,590]],
+    name: "Fırtına Çekirdeği", card: "assets/level-cards/08-firtina-cekirdegi.jpg", theme: "storm", sky: ["#173c51", "#101b2b"], starts: [[42,590],[94,590]],
     platforms: [[0,650,170,70],[220,555,145,30],[415,460,150,30],[615,550,145,30],[810,445,155,30],[1015,535,265,185]],
     hazards: [[170,648,50,72],[365,648,50,72],[565,648,50,72],[760,648,50,72],[965,648,50,72]],
     enemies: [[240,505,230,345],[445,410,430,545],[640,500,630,740],[840,395,825,945],[1050,485,1035,1165]],
@@ -208,7 +210,7 @@ const levels = [
     hint: "Lazer aralıkları kısaldı, gölgeler hızlandı. İki karakteri sırayla güvenli ceplere geçir."
   },
   {
-    name: "Sessiz Katedral", theme: "temple", sky: ["#4d4165", "#171522"], starts: [[45,590],[98,590]],
+    name: "Sessiz Katedral", card: "assets/level-cards/09-sessiz-katedral.jpg", theme: "temple", sky: ["#4d4165", "#171522"], starts: [[45,590],[98,590]],
     platforms: [[0,650,155,70],[205,565,135,30],[390,475,145,30],[585,380,155,30],[790,480,145,30],[985,385,150,30],[1180,650,100,70]],
     hazards: [[155,648,50,72],[340,648,50,72],[595,648,195,72],[935,648,245,72]],
     enemies: [[225,515,215,320],[415,425,405,515],[620,330,605,720],[815,430,805,915],[1010,335,1000,1115]],
@@ -218,17 +220,17 @@ const levels = [
     hint: "Üçlü mühür lazeri ve beş zırhlı gölge son sınavın. Her sıçrayışta geniş baş mesafesi bırakıldı."
   },
   {
-    name: "AK MUHAFIZ", theme: "heaven", boss: true, bossType: "seraph", sky: ["#dce9f5", "#607086"], starts: [[120,565],[180,575]],
+    name: "AK MUHAFIZ", card: "assets/level-cards/10-ak-muhafiz.jpg", theme: "heaven", boss: true, bossType: "seraph", sky: ["#dce9f5", "#607086"], starts: [[120,565],[180,575]],
     platforms: [[0,625,1280,25]], hazards: [[0,650,1280,70]], enemies: [], cameras: [], exits: [], coins: [],
     hint: "SON BOSS: Kırmızı alan en parlak hâline gelmeden yana kaç. Kılıç 2 can slotu götürür; bossa temas zarar vermez."
   },
   {
-    name: "Kayıp Hisar", theme: "rift", waveMode: true, world: {width:1536,height:864}, sky: ["#07141d", "#172c35"], starts: [[20,729],[61,739]],
+    name: "Kayıp Hisar", card: "assets/level-cards/11-kayip-hisar.jpg", theme: "rift", waveMode: true, world: {width:1536,height:864}, sky: ["#07141d", "#172c35"], starts: [[20,729],[61,739]],
     platforms: [[0,789,1536,75],[190,690,175,26],[420,600,170,26],[660,682,185,26],[920,580,180,26],[1190,672,185,26]],
     obstacles: [[600,719,56,70,"crate"],[1105,709,68,80,"pillar"],[1335,729,58,60,"barricade"]],
     bouncePads: [[95,777,70,12,690],[850,777,70,12,690],[1260,777,70,12,690]],
     finalGate: [1420,659,90,130], hazards: [], enemies: [], cameras: [], lasers: [], exits: [], coins: [],
-    hint: "KAYIP HİSAR: Üç dalgayı temizle. Enerji sıçratıcılarıyla engelleri aş; Perry düştüğünde açılan kapıya koş."
+    hint: "KAYIP HİSAR: Yaratıklar artık peşinizden platformlara çıkar. Perry'nin rift alanı turuncuya dolmadan kaç; üç dalga bitince kapıya koş."
   }
 ];
 
@@ -345,7 +347,7 @@ function resetCampaign(startLevel=0,checkpoint=false) {
 
 function renderLevelSelect(){
   if(!levelGrid)return;
-  levelGrid.innerHTML=levels.map((level,index)=>{const locked=index>progress.maxUnlocked,current=state.running&&state.level===index,status=locked?"KİLİTLİ":current?"ŞU ANKİ BÖLÜM":index===progress.maxUnlocked?"YENİ AÇILDI":"OYNA";return `<button type="button" class="level-card ${locked?"locked":""} ${current?"selected":""}" data-level-index="${index}" ${locked?"disabled":""} aria-label="Bölüm ${index+1}: ${level.name}${locked?" kilitli":""}" aria-current="${current?"true":"false"}"><span class="level-card-number">BÖLÜM ${String(index+1).padStart(2,"0")}</span><strong class="level-card-name">${level.name}</strong><small class="level-card-status">${status}</small></button>`;}).join("");
+  levelGrid.innerHTML=levels.map((level,index)=>{const locked=index>progress.maxUnlocked,current=state.running&&state.level===index,status=locked?"KİLİTLİ":current?"ŞU ANKİ BÖLÜM":index===progress.maxUnlocked?"YENİ AÇILDI":"OYNA",art=level.card?`<img class="level-card-art" src="${level.card}" alt="" width="480" height="270" loading="lazy" decoding="async">`:"";return `<button type="button" class="level-card ${locked?"locked":""} ${current?"selected":""}" data-level-index="${index}" ${locked?"disabled":""} aria-label="Bölüm ${index+1}: ${level.name}${locked?" kilitli":""}" aria-current="${current?"true":"false"}">${art}<span class="level-card-number">BÖLÜM ${String(index+1).padStart(2,"0")}</span><strong class="level-card-name">${level.name}</strong><small class="level-card-status">${status}</small></button>`;}).join("");
 }
 
 function showMainLobby(){
@@ -636,33 +638,199 @@ function updateBoss(dt){
   if(state.boss.type==="seraph")updateSeraphBoss(dt);else updateMarioBoss(dt);
 }
 
-function updatePerry(enemy,dt){
-  enemy.flash=Math.max(0,enemy.flash-dt);enemy.contactCooldown=Math.max(0,(enemy.contactCooldown||0)-dt);enemy.attackCooldown=Math.max(0,(enemy.attackCooldown||0)-dt);enemy.stateTimer=Math.max(0,(enemy.stateTimer||0)-dt);
-  const targets=[atlas,nita].filter(player=>!player.dead&&(player.type!=="nita"||player.invisible<=0));
-  const target=targets.sort((a,b)=>Math.abs(a.x-enemy.x)-Math.abs(b.x-enemy.x))[0];
-  if(enemy.attackState==="windup"){
-    enemy.vx=0;
-    if(enemy.stateTimer<=0){enemy.attackState="dash";enemy.stateTimer=.45;enemy.vx=(enemy.facing||-1)*350;tone(105,.12);}
-  }else if(enemy.attackState==="dash"){
-    if(enemy.stateTimer<=0){enemy.attackState="stunned";enemy.stateTimer=.8;enemy.vx=0;}
-  }else if(enemy.attackState==="stunned"){
-    enemy.vx=0;if(enemy.stateTimer<=0){enemy.attackState="hunt";enemy.attackCooldown=2.6;}
-  }else if(target){
-    const dx=target.x+target.w/2-(enemy.x+enemy.w/2),distance=Math.abs(dx);enemy.facing=Math.sign(dx)||enemy.facing||-1;enemy.vx=enemy.facing*88;
-    if(enemy.attackCooldown<=0&&distance<470){enemy.attackState="windup";enemy.stateTimer=.75;enemy.vx=0;tone(160,.09);}
-  }
+function waveEnemyTarget(enemy){
+  return [atlas,nita]
+    .filter(player=>!player.dead&&(player.type!=="nita"||player.invisible<=0))
+    .map(player=>({player,score:Math.abs(player.x+player.w/2-(enemy.x+enemy.w/2))+Math.abs(player.y+player.h-(enemy.y+enemy.h))*.42}))
+    .sort((a,b)=>a.score-b.score)[0]?.player||null;
+}
+
+function waveSurfaceBelow(target,x=target.x+target.w/2){
+  const feet=target.y+target.h;
+  return [...state.platforms,...state.obstacles]
+    .filter(surface=>x>=surface.x-4&&x<=surface.x+surface.w+4&&surface.y>=feet-8)
+    .sort((a,b)=>a.y-b.y)[0]?.y??(state.platforms[0]?.y??currentWorld().height-75);
+}
+
+function obstacleAhead(enemy,direction,distance=38){
+  if(!direction)return false;
+  return state.obstacles.some(obstacle=>{
+    const vertical=enemy.y+enemy.h>obstacle.y+5&&enemy.y<obstacle.y+obstacle.h-4;
+    const gap=direction>0?obstacle.x-(enemy.x+enemy.w):enemy.x-(obstacle.x+obstacle.w);
+    return vertical&&gap>=-2&&gap<=distance;
+  });
+}
+
+function prepareWaveEnemyJump(enemy,target,direction){
+  enemy.jumpCooldown=Math.max(0,(enemy.jumpCooldown||0));
+  if(!enemy.onGround||enemy.jumpCooldown>0)return;
+  const targetAbove=target&&target.y+target.h<enemy.y+enemy.h-48&&Math.abs(target.x+target.w/2-(enemy.x+enemy.w/2))<285;
+  const blocked=obstacleAhead(enemy,direction);
+  const stuck=(enemy.stuckTimer||0)>=.48;
+  if(!targetAbove&&!blocked&&!stuck)return;
+  if(blocked||stuck){enemy.vaultDirection=direction||enemy.facing||1;enemy.vaultTimer=1.05;}
+  enemy.vy=targetAbove?-760:-545;
+  enemy.onGround=false;
+  enemy.jumpCooldown=targetAbove?.72:.52;
+  enemy.stuckTimer=0;
+  burst(enemy.x+enemy.w/2,enemy.y+enemy.h,"rgba(93,255,239,.52)",5,0);
+}
+
+function moveWaveEnemyBody(enemy,dt,desiredVx){
+  const world=currentWorld(),previousX=enemy.x,previousBottom=enemy.y+enemy.h;
+  enemy.vaultTimer=Math.max(0,(enemy.vaultTimer||0)-dt);
+  const vaulting=enemy.vaultTimer>0&&enemy.vaultDirection;
+  enemy.vx=vaulting?enemy.vaultDirection*Math.max(150,Math.abs(desiredVx)):desiredVx;
   enemy.x+=enemy.vx*dt;
-  let struckObstacle=false;
-  for(const obstacle of state.obstacles)if(intersects(enemy,obstacle)){struckObstacle=true;if(enemy.vx>0)enemy.x=obstacle.x-enemy.w;else if(enemy.vx<0)enemy.x=obstacle.x+obstacle.w;break;}
-  if(struckObstacle){if(enemy.attackState==="dash"){enemy.attackState="stunned";enemy.stateTimer=.8;burst(enemy.x+enemy.w/2,enemy.y+enemy.h*.45,"#72fff1",18,0);tone(82,.15);}else{enemy.facing*=-1;enemy.vx*=-1;}}
-  if(enemy.x<enemy.minX){enemy.x=enemy.minX;enemy.facing=1;enemy.vx=Math.abs(enemy.vx);}if(enemy.x+enemy.w>enemy.maxX){enemy.x=enemy.maxX-enemy.w;enemy.facing=-1;enemy.vx=-Math.abs(enemy.vx);}
-  for(const player of [atlas,nita])if(!player.dead&&(player.type!=="nita"||player.invisible<=0)&&intersects(player,enemy)&&enemy.contactCooldown<=0){damagePlayer(player,1);enemy.contactCooldown=1;player.vx=(player.x<enemy.x?-1:1)*240;}
+  let blocked=false;
+  for(const obstacle of state.obstacles)if(intersects(enemy,obstacle)){
+    blocked=true;
+    if(enemy.vx>0)enemy.x=obstacle.x-enemy.w;
+    else if(enemy.vx<0)enemy.x=obstacle.x+obstacle.w;
+    enemy.vx=0;
+    break;
+  }
+  enemy.vy=Math.min(880,(enemy.vy||0)+1260*dt);
+  enemy.y+=enemy.vy*dt;
+  enemy.onGround=false;
+  if(enemy.vy>=0){
+    const nextBottom=enemy.y+enemy.h;
+    const landing=[...state.platforms,...state.obstacles]
+      .filter(surface=>enemy.x+enemy.w>surface.x+3&&enemy.x<surface.x+surface.w-3&&previousBottom<=surface.y+4&&nextBottom>=surface.y)
+      .sort((a,b)=>a.y-b.y)[0];
+    if(landing){enemy.y=landing.y-enemy.h;enemy.vy=0;enemy.onGround=true;}
+  }
+  const minX=16,maxX=world.width-enemy.w-16;
+  if(enemy.x<minX){enemy.x=minX;enemy.vx=Math.abs(enemy.vx);enemy.facing=1;}
+  if(enemy.x>maxX){enemy.x=maxX;enemy.vx=-Math.abs(enemy.vx);enemy.facing=-1;}
+  const expected=Math.abs(desiredVx*dt);
+  if(expected>.15&&Math.abs(enemy.x-previousX)<Math.max(.08,expected*.18))enemy.stuckTimer=(enemy.stuckTimer||0)+dt;
+  else enemy.stuckTimer=Math.max(0,(enemy.stuckTimer||0)-dt*2.4);
+  if(!Number.isFinite(enemy.x)||!Number.isFinite(enemy.y)||enemy.y>world.height+70){
+    const floor=state.platforms[0]?.y??world.height-75;
+    enemy.x=Math.max(minX,Math.min(maxX,Number.isFinite(enemy.x)?enemy.x:world.width/2));
+    enemy.y=floor-enemy.h;enemy.vx=0;enemy.vy=0;enemy.onGround=true;enemy.stuckTimer=0;
+  }
+  enemy.animTime=(enemy.animTime||0)+Math.abs(enemy.vx)*dt/34;
+  return blocked;
+}
+
+function updateWaveMinion(enemy,dt){
+  enemy.flash=Math.max(0,enemy.flash-dt);
+  enemy.contactCooldown=Math.max(0,(enemy.contactCooldown||0)-dt);
+  enemy.attackCooldown=Math.max(0,(enemy.attackCooldown||0)-dt);
+  enemy.jumpCooldown=Math.max(0,(enemy.jumpCooldown||0)-dt);
+  const previousAttack=enemy.attackTimer||0;
+  enemy.attackTimer=Math.max(0,previousAttack-dt);
+  const target=waveEnemyTarget(enemy);
+  let desiredVx=enemy.vx||enemy.moveSpeed||50;
+  if(target){
+    const offset=enemy.formationOffset||0;
+    const dx=target.x+target.w/2+offset-(enemy.x+enemy.w/2);
+    const dy=Math.abs(target.y+target.h-(enemy.y+enemy.h));
+    const direction=Math.sign(dx)||enemy.facing||1;
+    enemy.facing=direction;
+    if(enemy.superSoldier&&Math.abs(dx)<=72&&dy<=52){
+      desiredVx=0;
+      if(enemy.attackCooldown<=0){enemy.attackCooldown=1.25;enemy.attackTimer=.5;enemy.hitMask=0;}
+      if(previousAttack>.21&&enemy.attackTimer<=.21&&!enemy.hitMask){
+        const hitbox={x:direction>0?enemy.x+enemy.w-4:enemy.x-48,y:enemy.y+6,w:52,h:enemy.h-8};
+        if(intersects(target,hitbox)){damagePlayer(target,1);target.vx=direction*210;enemy.hitMask=1;}
+      }
+    }else{
+      const speed=enemy.moveSpeed||50;
+      desiredVx=direction*speed;
+      prepareWaveEnemyJump(enemy,target,direction);
+    }
+  }else{
+    enemy.roamTimer=Math.max(0,(enemy.roamTimer||0)-dt);
+    if(enemy.roamTimer<=0){enemy.roamTimer=1.4+Math.random()*1.8;enemy.facing=Math.random()<.5?-1:1;}
+    desiredVx=(enemy.facing||1)*(enemy.moveSpeed||50)*.62;
+    prepareWaveEnemyJump(enemy,null,enemy.facing||1);
+  }
+  moveWaveEnemyBody(enemy,dt,desiredVx);
+  if(!enemy.superSoldier){
+    const contactDamage=1;
+    if(intersects(atlas,enemy)&&!atlas.dead&&enemy.contactCooldown<=0){if(damagePlayer(atlas,contactDamage))return;enemy.contactCooldown=1.25;atlas.vx=(atlas.x<enemy.x?-1:1)*185;}
+    if(nita.invisible<=0&&intersects(nita,enemy)&&!nita.dead&&enemy.contactCooldown<=0){if(damagePlayer(nita,contactDamage))return;enemy.contactCooldown=1.25;nita.vx=(nita.x<enemy.x?-1:1)*185;}
+  }
+}
+
+function setPerryState(enemy,state,duration){
+  enemy.attackState=state;enemy.stateTimer=duration;enemy.stateDuration=duration;enemy.hitMask=0;
+}
+
+function damagePerryHitbox(enemy,hitbox,damage=1,knockback=230){
+  for(const player of [atlas,nita]){
+    const mask=player.type==="atlas"?1:2;
+    if(player.dead||(enemy.hitMask&mask)||!intersects(player,hitbox))continue;
+    const hpBefore=player.hp;damagePlayer(player,damage);enemy.hitMask|=mask;
+    if(player.hp<hpBefore)player.vx=(player.x+player.w/2<enemy.x+enemy.w/2?-1:1)*knockback;
+  }
+}
+
+function updatePerry(enemy,dt){
+  enemy.flash=Math.max(0,enemy.flash-dt);
+  enemy.jumpCooldown=Math.max(0,(enemy.jumpCooldown||0)-dt);
+  enemy.areaCooldown=Math.max(0,(enemy.areaCooldown||0)-dt);
+  enemy.dashCooldown=Math.max(0,(enemy.dashCooldown||0)-dt);
+  enemy.meleeCooldown=Math.max(0,(enemy.meleeCooldown||0)-dt);
+  enemy.stateTimer=Math.max(0,(enemy.stateTimer||0)-dt);
+  const target=waveEnemyTarget(enemy);
+  const dx=target?target.x+target.w/2-(enemy.x+enemy.w/2):0;
+  const dy=target?Math.abs(target.y+target.h-(enemy.y+enemy.h)):Infinity;
+  const distance=Math.abs(dx);
+  if(target)enemy.facing=Math.sign(dx)||enemy.facing||-1;
+  let desiredVx=0;
+
+  if(enemy.attackState==="hunt"){
+    if(target&&enemy.areaCooldown<=0&&distance<620){
+      enemy.strikeX=Math.max(86,Math.min(currentWorld().width-86,target.x+target.w/2+target.vx*.22));
+      enemy.strikeGroundY=waveSurfaceBelow(target,enemy.strikeX);enemy.strikeRadius=92;enemy.strikeApplied=false;
+      enemy.areaCooldown=4.15+Math.random()*.55;setPerryState(enemy,"areaWindup",1.35);tone(155,.12);
+    }else if(target&&enemy.meleeCooldown<=0&&distance<102&&dy<70){
+      enemy.meleeCooldown=1.5;setPerryState(enemy,"cleaveWindup",.46);tone(120,.08);
+    }else if(target&&enemy.dashCooldown<=0&&distance>265&&distance<590&&dy<72){
+      enemy.dashCooldown=4.4;setPerryState(enemy,"dashWindup",.62);tone(105,.09);
+    }else if(target){
+      desiredVx=(enemy.facing||1)*(enemy.moveSpeed||58);prepareWaveEnemyJump(enemy,target,enemy.facing||1);
+    }
+  }else if(enemy.attackState==="areaWindup"){
+    if(enemy.stateTimer<=0){enemy.strikeApplied=false;setPerryState(enemy,"areaStrike",.32);tone(68,.3);}
+  }else if(enemy.attackState==="areaStrike"){
+    if(!enemy.strikeApplied){
+      const radius=enemy.strikeRadius||92,ground=enemy.strikeGroundY||waveSurfaceBelow(enemy,enemy.strikeX);
+      const hitbox={x:enemy.strikeX-radius,y:ground-250,w:radius*2,h:258};
+      damagePerryHitbox(enemy,hitbox,1,285);enemy.strikeApplied=true;burst(enemy.strikeX,ground,"#ff6f31",42,0);
+    }
+    if(enemy.stateTimer<=0)setPerryState(enemy,"recover",.46);
+  }else if(enemy.attackState==="cleaveWindup"){
+    if(enemy.stateTimer<=0){enemy.strikeApplied=false;setPerryState(enemy,"cleaveStrike",.24);tone(82,.18);}
+  }else if(enemy.attackState==="cleaveStrike"){
+    desiredVx=(enemy.facing||1)*72;
+    if(!enemy.strikeApplied){const direction=enemy.facing||1,hitbox={x:direction>0?enemy.x+enemy.w-8:enemy.x-86,y:enemy.y+8,w:94,h:enemy.h-12};damagePerryHitbox(enemy,hitbox,1,270);enemy.strikeApplied=true;}
+    if(enemy.stateTimer<=0)setPerryState(enemy,"recover",.38);
+  }else if(enemy.attackState==="dashWindup"){
+    if(enemy.stateTimer<=0){setPerryState(enemy,"dash",.38);tone(96,.14);}
+  }else if(enemy.attackState==="dash"){
+    desiredVx=(enemy.facing||1)*285;
+    damagePerryHitbox(enemy,{x:enemy.x-7,y:enemy.y+6,w:enemy.w+14,h:enemy.h-10},1,320);
+    if(enemy.stateTimer<=0)setPerryState(enemy,"recover",.42);
+  }else if(enemy.attackState==="stunned"){
+    if(enemy.stateTimer<=0){enemy.dashCooldown=2.7;setPerryState(enemy,"recover",.34);}
+  }else if(enemy.attackState==="recover"){
+    if(enemy.stateTimer<=0)setPerryState(enemy,"hunt",0);
+  }else setPerryState(enemy,"hunt",0);
+
+  const blocked=moveWaveEnemyBody(enemy,dt,desiredVx);
+  if(enemy.attackState==="dash"&&blocked){setPerryState(enemy,"stunned",.9);burst(enemy.x+enemy.w/2,enemy.y+enemy.h*.45,"#72fff1",18,0);tone(72,.18);}
 }
 
 function updateEnemies(dt) {
   for (const enemy of state.enemies) {
     if (enemy.dead) continue;
     if(enemy.kind==="perry"){updatePerry(enemy,dt);continue;}
+    if(levels[state.level].waveMode){updateWaveMinion(enemy,dt);continue;}
     enemy.flash=Math.max(0,enemy.flash-dt);enemy.contactCooldown=Math.max(0,(enemy.contactCooldown||0)-dt);enemy.attackCooldown=Math.max(0,(enemy.attackCooldown||0)-dt);const previousAttack=enemy.attackTimer||0;enemy.attackTimer=Math.max(0,previousAttack-dt);
     if(enemy.superSoldier){const targets=[atlas,nita].filter(p=>!p.dead&&(p.type!=="nita"||p.invisible<=0)),target=targets.sort((a,b)=>Math.abs(a.x-enemy.x)-Math.abs(b.x-enemy.x))[0];if(target){const dx=target.x+target.w/2-(enemy.x+enemy.w/2),distance=Math.abs(dx);enemy.facing=Math.sign(dx)||enemy.facing||1;if(distance<=68){enemy.vx=0;if(enemy.attackCooldown<=0){enemy.attackCooldown=1.15;enemy.attackTimer=.48;}if(previousAttack>.2&&enemy.attackTimer<=.2&&distance<=78)damagePlayer(target);}else enemy.vx=enemy.facing*92;}}
     enemy.x+=enemy.vx*dt;
@@ -798,7 +966,8 @@ function refreshMarket(){
 
 function spawnWaveEnemy(spec,slot,waveIndex){
   const spawnX=[420,520,690,780,970,1030,1190,1410,470,1000][slot%10],perry=spec.kind==="perry",soldier=spec.kind==="soldier",w=perry?82:46,h=perry?110:50,hp=spec.hp;
-  const enemy={id:`wave-${waveIndex}-${state.nextEnemyId++}`,kind:spec.kind,x:perry?1210:spawnX,y:789-h,w,h,minX:370,maxX:1518,vx:(slot%2?-1:1)*(soldier?92:65+waveIndex*8),hp,maxHp:hp,flash:0,dead:false,tier:soldier||perry?3:Math.min(3,waveIndex+1),armored:waveIndex>1,superSoldier:soldier,contactCooldown:0,attackCooldown:perry?2.2:0,attackState:perry?"hunt":undefined,stateTimer:0,facing:slot%2?-1:1};
+  const moveSpeed=perry?58:soldier?62:[48,52,56][waveIndex-1];
+  const enemy={id:`wave-${waveIndex}-${state.nextEnemyId++}`,kind:spec.kind,x:perry?1210:spawnX,y:789-h,w,h,minX:16,maxX:1520,vx:0,vy:0,onGround:true,moveSpeed,formationOffset:((slot%5)-2)*14,jumpCooldown:slot*.035,stuckTimer:0,animTime:slot*.55,hp,maxHp:hp,flash:0,dead:false,tier:soldier||perry?3:Math.min(3,waveIndex+1),armored:waveIndex>1,superSoldier:soldier,contactCooldown:0,attackCooldown:0,attackTimer:0,hitMask:0,attackState:perry?"hunt":undefined,stateTimer:0,stateDuration:0,areaCooldown:perry?2.15:0,dashCooldown:perry?1.4:0,meleeCooldown:0,strikeX:0,strikeGroundY:789,strikeRadius:92,strikeApplied:false,facing:slot%2?-1:1};
   state.enemies.push(enemy);burst(enemy.x+enemy.w/2,enemy.y+enemy.h,"#55f6e7",18,0);tone(perry?72:125,.08);
 }
 
@@ -940,12 +1109,55 @@ function drawPlayer(p){
 }
 
 function drawPerry(enemy){
-  const ex=network.role==="guest"&&Number.isFinite(enemy.renderX)?enemy.renderX:enemy.x,ey=network.role==="guest"&&Number.isFinite(enemy.renderY)?enemy.renderY:enemy.y,time=performance.now()*.001,pulse=.5+Math.sin(time*8)*.5;
+  const ex=network.role==="guest"&&Number.isFinite(enemy.renderX)?enemy.renderX:enemy.x;
+  const ey=network.role==="guest"&&Number.isFinite(enemy.renderY)?enemy.renderY:enemy.y;
+  const time=performance.now()*.001,pulse=.5+Math.sin(time*8)*.5,stateName=enemy.attackState||"hunt";
+  const duration=Math.max(.001,enemy.stateDuration||1),progress=Math.max(0,Math.min(1,1-(enemy.stateTimer||0)/duration));
+
+  if(stateName==="areaWindup"||stateName==="areaStrike"){
+    const areaProgress=stateName==="areaStrike"?1:progress,radius=enemy.strikeRadius||92,ground=enemy.strikeGroundY||789;
+    const red=Math.floor(54+201*areaProgress),green=Math.floor(225-156*areaProgress);
+    ctx.save();ctx.translate(enemy.strikeX,ground+2);ctx.scale(1,.28);ctx.globalCompositeOperation="lighter";
+    ctx.fillStyle="rgba(35,255,231,.12)";ctx.beginPath();ctx.arc(0,0,radius,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=`rgba(${red},${green},43,${.2+areaProgress*.45})`;ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,radius,-Math.PI/2,-Math.PI/2+Math.PI*2*areaProgress);ctx.closePath();ctx.fill();
+    ctx.strokeStyle=`rgba(255,${Math.floor(215-150*areaProgress)},55,${.55+areaProgress*.4})`;ctx.lineWidth=4+areaProgress*8;ctx.shadowColor=areaProgress>.78?"#ff442d":"#55fff0";ctx.shadowBlur=18+areaProgress*34;ctx.beginPath();ctx.arc(0,0,radius-(1-areaProgress)*7,0,Math.PI*2);ctx.stroke();ctx.restore();
+    if(stateName==="areaWindup"&&areaProgress>.8){ctx.save();ctx.fillStyle=`rgba(255,225,185,${.55+Math.sin(time*30)*.3})`;ctx.font='900 12px "Manrope"';ctx.textAlign="center";ctx.fillText("KAÇ!",enemy.strikeX,ground-20);ctx.restore();}
+    if(stateName==="areaStrike"){
+      const fade=Math.max(0,(enemy.stateTimer||0)/.32);ctx.save();ctx.globalCompositeOperation="lighter";ctx.globalAlpha=.45+.55*fade;ctx.shadowColor="#ff6338";ctx.shadowBlur=34;const beam=ctx.createLinearGradient(enemy.strikeX,ground-260,enemy.strikeX,ground);beam.addColorStop(0,"rgba(85,255,238,0)");beam.addColorStop(.55,"#78fff0");beam.addColorStop(1,"#ff6a31");ctx.fillStyle=beam;ctx.beginPath();ctx.moveTo(enemy.strikeX-14,ground-260);ctx.lineTo(enemy.strikeX+14,ground-260);ctx.lineTo(enemy.strikeX+32,ground);ctx.lineTo(enemy.strikeX-32,ground);ctx.closePath();ctx.fill();ctx.strokeStyle="#fff1cf";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(enemy.strikeX,ground-245);ctx.lineTo(enemy.strikeX,ground);ctx.stroke();ctx.restore();
+    }
+  }
+
   ctx.save();ctx.globalAlpha=.5;ctx.fillStyle="#02070a";ctx.beginPath();ctx.ellipse(ex+enemy.w/2,ey+enemy.h+4,55,10,0,0,Math.PI*2);ctx.fill();ctx.restore();
-  if(enemy.attackState==="windup"){const charge=1-Math.max(0,enemy.stateTimer)/.75;ctx.save();ctx.globalCompositeOperation="lighter";ctx.strokeStyle=`rgba(255,69,40,${.35+charge*.6})`;ctx.lineWidth=3+charge*6;ctx.shadowColor="#ff3a22";ctx.shadowBlur=18+charge*26;ctx.beginPath();ctx.ellipse(ex+enemy.w/2,ey+enemy.h,58+charge*18,12+charge*5,0,0,Math.PI*2);ctx.stroke();ctx.restore();}
-  if(enemy.attackState==="dash"){ctx.save();ctx.globalAlpha=.32;ctx.fillStyle="#4ffff0";ctx.shadowColor="#4ffff0";ctx.shadowBlur=22;const direction=enemy.facing||-1;for(let i=1;i<=4;i++)ctx.fillRect(ex+enemy.w/2-direction*i*30,ey+34+i*5,direction*i*24,4);ctx.restore();}
-  ctx.save();ctx.translate(ex+enemy.w/2,ey+enemy.h);if((enemy.facing||enemy.vx)<0)ctx.scale(-1,1);ctx.rotate(enemy.attackState==="stunned"?Math.sin(time*24)*.035:0);ctx.shadowColor=enemy.flash>0?"#fff":"#54fff0";ctx.shadowBlur=enemy.flash>0?30:14;if(sprites.perry.complete&&sprites.perry.naturalWidth)ctx.drawImage(sprites.perry,-83,-180,138,180);else{ctx.fillStyle="#111b24";ctx.fillRect(-34,-110,68,110);ctx.fillStyle="#5affee";ctx.fillRect(-17,-83,34,5);}ctx.restore();
-  const barX=ex+enemy.w/2-64,barY=ey-70;ctx.save();ctx.fillStyle="rgba(3,8,12,.84)";ctx.beginPath();ctx.roundRect(barX-8,barY-18,144,36,8);ctx.fill();ctx.fillStyle="#dffffb";ctx.font='800 11px "Manrope"';ctx.textAlign="center";ctx.fillText(enemy.attackState==="stunned"?"PERRY · SERSEMLEDİ":"PERRY",ex+enemy.w/2,barY-4);ctx.fillStyle="#18252b";ctx.fillRect(barX,barY+3,128,7);const hp=ctx.createLinearGradient(barX,0,barX+128,0);hp.addColorStop(0,"#43d9d0");hp.addColorStop(.7,"#78fff0");hp.addColorStop(1,"#ff7b3c");ctx.fillStyle=hp;ctx.shadowColor="#5affee";ctx.shadowBlur=8+5*pulse;ctx.fillRect(barX,barY+3,128*Math.max(0,enemy.hp/enemy.maxHp),7);ctx.restore();
+  if(stateName==="dash"){ctx.save();ctx.globalAlpha=.28;ctx.fillStyle="#4ffff0";ctx.shadowColor="#4ffff0";ctx.shadowBlur=22;const direction=enemy.facing||-1;for(let i=1;i<=4;i++)ctx.fillRect(ex+enemy.w/2-direction*i*30,ey+34+i*5,direction*i*24,4);ctx.restore();}
+
+  const walking=stateName==="hunt"&&Math.abs(enemy.vx)>6;
+  const attackStates=["areaWindup","areaStrike","cleaveWindup","cleaveStrike","dashWindup","dash","recover"];
+  const useAttack=attackStates.includes(stateName)&&sprites.perryAttack.complete&&sprites.perryAttack.naturalWidth;
+  const useWalk=walking&&sprites.perryWalk.complete&&sprites.perryWalk.naturalWidth;
+  let sprite=sprites.perry,frame=0,frames=1;
+  if(useWalk){sprite=sprites.perryWalk;frames=4;frame=Math.floor(enemy.animTime||0)%4;}
+  if(useAttack){sprite=sprites.perryAttack;frames=4;if(stateName==="areaWindup"||stateName==="cleaveWindup"||stateName==="dashWindup")frame=Math.min(1,Math.floor(progress*2));else if(stateName==="areaStrike"||stateName==="cleaveStrike"||stateName==="dash")frame=2;else frame=3;}
+  const frameWidth=sprite.naturalWidth?Math.floor(sprite.naturalWidth/frames):0;
+  const attackCrops=[{x:90,y:25,w:235,h:325},{x:80,y:18,w:255,h:325},{x:45,y:45,w:310,h:295},{x:75,y:40,w:225,h:300}];
+  const crop=useAttack?attackCrops[frame]:{x:0,y:0,w:frameWidth,h:sprite.naturalHeight||1};
+  const sourceX=frame*frameWidth+crop.x,sourceY=crop.y,sourceW=crop.w,sourceH=crop.h,aspect=sourceW/sourceH;
+  const drawH=190,drawW=Math.max(138,Math.min(192,drawH*aspect));
+  const step=walking?Math.sin((enemy.animTime||0)*Math.PI*.5):0,bob=walking?-Math.abs(step)*3:stateName==="areaWindup"?Math.sin(progress*Math.PI)*4:0;
+  let tilt=walking?step*.025:0,scaleX=1,scaleY=1;
+  if(stateName==="cleaveWindup"||stateName==="dashWindup"){tilt=-(enemy.facing||1)*.055;scaleX=.98;scaleY=1.025;}
+  if(stateName==="cleaveStrike"||stateName==="dash"){tilt=(enemy.facing||1)*.08;scaleX=1.045;scaleY=.965;}
+  if(stateName==="stunned")tilt=Math.sin(time*24)*.045;
+  ctx.save();ctx.translate(ex+enemy.w/2,ey+enemy.h);if((enemy.facing||enemy.vx)<0)ctx.scale(-1,1);ctx.rotate(tilt);ctx.scale(scaleX,scaleY);ctx.shadowColor=enemy.flash>0?"#fff":"#54fff0";ctx.shadowBlur=enemy.flash>0?30:14;ctx.globalAlpha=enemy.flash>0?.72:1;
+  if(sprite.complete&&sprite.naturalWidth)ctx.drawImage(sprite,sourceX,sourceY,sourceW,sourceH,-drawW/2,-drawH+bob,drawW,drawH);
+  else{ctx.fillStyle="#111b24";ctx.fillRect(-34,-110,68,110);ctx.fillStyle="#5affee";ctx.fillRect(-17,-83,34,5);}
+  ctx.restore();
+
+  if(stateName==="cleaveStrike"){
+    const direction=enemy.facing||1;ctx.save();ctx.translate(ex+enemy.w/2,ey+55);ctx.scale(direction,1);ctx.globalCompositeOperation="lighter";ctx.strokeStyle="#d8fffa";ctx.shadowColor="#55fff0";ctx.shadowBlur=26;ctx.lineWidth=7;ctx.beginPath();ctx.arc(5,0,86,-1.05,.78);ctx.stroke();ctx.strokeStyle="#ff8b3d";ctx.lineWidth=3;ctx.beginPath();ctx.arc(5,0,73,-.95,.62);ctx.stroke();ctx.restore();
+  }
+
+  const labels={stunned:"PERRY · SERSEMLEDİ",areaWindup:"PERRY · RİFT ALANI",areaStrike:"PERRY · YARIK VURUŞU",cleaveWindup:"PERRY · BİÇME HAZIRLIĞI",cleaveStrike:"PERRY · BİÇME"};
+  const barX=ex+enemy.w/2-64,barY=ey-70;ctx.save();ctx.fillStyle="rgba(3,8,12,.84)";ctx.beginPath();ctx.roundRect(barX-8,barY-18,144,36,8);ctx.fill();ctx.fillStyle="#dffffb";ctx.font='800 11px "Manrope"';ctx.textAlign="center";ctx.fillText(labels[stateName]||"PERRY",ex+enemy.w/2,barY-4);ctx.fillStyle="#18252b";ctx.fillRect(barX,barY+3,128,7);const hp=ctx.createLinearGradient(barX,0,barX+128,0);hp.addColorStop(0,"#43d9d0");hp.addColorStop(.7,"#78fff0");hp.addColorStop(1,"#ff7b3c");ctx.fillStyle=hp;ctx.shadowColor="#5affee";ctx.shadowBlur=8+5*pulse;ctx.fillRect(barX,barY+3,128*Math.max(0,enemy.hp/enemy.maxHp),7);ctx.restore();
 }
 
 function drawEnemy(enemy){

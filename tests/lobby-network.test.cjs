@@ -220,7 +220,7 @@ const wait = milliseconds => new Promise(resolve => setTimeout(resolve, millisec
   assert.match(source, /let peer;try\{peer=await createGamePeer/g, "Async Peer construction guard missing");
   assert(source.includes('createRoomButton.addEventListener("click",async()=>'), "host handler must await TURN setup");
   assert(source.includes('joinForm.addEventListener("submit",async e=>'), "guest handler must await TURN setup");
-  assert(indexSource.includes('script.js?v=20260817-4'), "script cache version was not updated");
+  assert(indexSource.includes('script.js?v=20260817-5'), "script cache version was not updated");
   assert.equal(source.includes("secretKey="), false, "an account Secret Key must never be shipped to the browser");
   console.log("Lobby network tests passed.");
 })().catch(error => {
