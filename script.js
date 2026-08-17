@@ -859,7 +859,7 @@ function draw(){
 
 function resize(){const dpr=Math.min(devicePixelRatio||1,3),r=canvas.getBoundingClientRect();canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality="high";draw();}
 function smoothGuest(dt){const factor=1-Math.exp(-dt*18);for(const body of [atlas,nita,...state.enemies,state.boss].filter(Boolean)){body.renderX=Number.isFinite(body.renderX)?body.renderX+(body.x-body.renderX)*factor:body.x;body.renderY=Number.isFinite(body.renderY)?body.renderY+(body.y-body.renderY)*factor:body.y;}}
-function loop(time){const dt=Math.min((time-state.last)/1000,.032);state.last=time;if(state.running&&!state.paused&&network.role!=="guest")update(dt);if(network.role==="guest")smoothGuest(dt);if(network.role==="host"&&state.running&&time-network.lastSync>30){sendSnapshot();network.lastSync=time;}draw();requestAnimationFrame(loop);}
+function loop(time){const dt=Math.min((time-state.last)/1000,.032);state.last=time;if(state.running&&!state.paused&&network.role!=="guest")update(dt);if(network.role==="guest")smoothGuest(dt);if(network.role==="host"&&state.running&&time-network.lastSync>50){sendSnapshot();network.lastSync=time;}draw();requestAnimationFrame(loop);}
 function tone(freq,duration){if(!state.audio)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;state.ac||=new AC();const o=state.ac.createOscillator(),g=state.ac.createGain();o.frequency.value=freq;o.type="triangle";g.gain.setValueAtTime(.04,state.ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,state.ac.currentTime+duration);o.connect(g);g.connect(state.ac.destination);o.start();o.stop(state.ac.currentTime+duration);}
 
 function characterKeys(character){return character==="atlas"?{left:"a",right:"d",jump:"w",action:"s"}:{left:"arrowleft",right:"arrowright",jump:"arrowup",action:"arrowdown"};}
@@ -901,27 +901,79 @@ function releaseAllInputs(){
   if(network.role==="guest")for(const control of ["left","right","jump","action"])sendPacket({type:"control",control,down:false});
   state.keys={};state.keysPressed={};document.querySelectorAll(".touch-controls button.active").forEach(button=>button.classList.remove("active"));document.querySelectorAll(".joystick i").forEach(knob=>knob.style.transform="");
 }
-function suspendForBackground(){releaseAllInputs();if(state.running&&!state.paused&&!state.marketInGame){state.paused=true;state.autoPaused=true;pauseButton.textContent="DEVAM ET";}}
-function resumeFromBackground(){releaseAllInputs();if(state.autoPaused&&state.running){state.autoPaused=false;state.paused=false;state.last=performance.now();pauseButton.textContent="DURAKLAT";showMessage("Oyun devam ediyor.",1);}}
+let backgroundedAt=0;
+function suspendForBackground(){backgroundedAt=Date.now();releaseAllInputs();if(state.running&&!state.paused&&!state.marketInGame){state.paused=true;state.autoPaused=true;pauseButton.textContent="DEVAM ET";}}
+function resumeFromBackground(){
+  releaseAllInputs();
+  const peer=network.peer,backgroundDuration=backgroundedAt?Date.now()-backgroundedAt:0;backgroundedAt=0;
+  if(peer&&!peer.destroyed&&!network.connection?.open&&(peer.disconnected||backgroundDuration>1500)){
+    if(!network.connection?.open){connectionBadge.textContent="ODA SERVİSİNE YENİDEN BAĞLANIYOR";if(network.role==="host")roomWaitStatus.textContent="Oda yeniden etkinleştiriliyor…";}
+    try{if(!peer.disconnected&&typeof peer.disconnect==="function")peer.disconnect();peer.reconnect();}catch{}
+  }
+  if(state.autoPaused&&state.running){state.autoPaused=false;state.paused=false;state.last=performance.now();pauseButton.textContent="DURAKLAT";showMessage("Oyun devam ediyor.",1);}
+}
 document.addEventListener("visibilitychange",()=>document.hidden?suspendForBackground():resumeFromBackground());window.addEventListener("blur",suspendForBackground);window.addEventListener("focus",()=>{if(!document.hidden)resumeFromBackground();});window.addEventListener("pagehide",releaseAllInputs);window.addEventListener("resize",resize);
 
 document.querySelectorAll(".touch-controls button").forEach(button=>{const control=button.dataset.control;const press=e=>{e.preventDefault();button.classList.add("active");setPlayerControl(control,true);};const release=e=>{e.preventDefault();button.classList.remove("active");setPlayerControl(control,false);};button.addEventListener("pointerdown",press);button.addEventListener("pointerup",release);button.addEventListener("pointercancel",release);button.addEventListener("pointerleave",e=>{if(e.buttons)release(e);});});
 document.querySelectorAll(".joystick").forEach(stick=>{const knob=stick.querySelector("i");function move(e){e.preventDefault();const r=stick.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2),distance=Math.hypot(dx,dy),limit=r.width*.31,factor=distance>limit?limit/distance:1;knob.style.transform=`translate(${dx*factor}px,${dy*factor}px)`;const threshold=r.width*.12;setPlayerControl("left",dx < -threshold);setPlayerControl("right",dx > threshold);}function release(e){e.preventDefault();knob.style.transform="";setPlayerControl("left",false);setPlayerControl("right",false);}stick.addEventListener("pointerdown",e=>{stick.setPointerCapture(e.pointerId);move(e);});stick.addEventListener("pointermove",e=>{if(stick.hasPointerCapture(e.pointerId))move(e);});stick.addEventListener("pointerup",release);stick.addEventListener("pointercancel",release);});
 
 const ROOM_CODE_PATTERN=/^[A-HJ-NP-Z2-9]{6}$/;
+const BASE_ICE_SERVERS=[{urls:["stun:stun.l.google.com:19302","stun:stun.cloudflare.com:3478","stun:stun.relay.metered.ca:80"]}];
+const METERED_TURN_CREDENTIALS_URL="https://nitayollarda.metered.live/api/v1/turn/credentials?apiKey=2c4de2c00d44112deb9c29401778455bd9da";
+const TURN_ICE_CACHE_TTL=5*60*1000;
 const PEER_OPTIONS={
   host:"0.peerjs.com",port:443,path:"/",secure:true,pingInterval:5000,debug:1,
   config:{
-    iceServers:[{urls:["stun:stun.l.google.com:19302","stun:stun.cloudflare.com:3478","stun:stun.relay.metered.ca:80"]}],
-    iceCandidatePoolSize:4,sdpSemantics:"unified-plan"
+    iceServers:BASE_ICE_SERVERS,
+    iceCandidatePoolSize:1,sdpSemantics:"unified-plan"
   }
 };
+let turnIceServersPromise=null,turnIceServersCache=null;
 function roomCode(){const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";return Array.from({length:6},()=>chars[Math.floor(Math.random()*chars.length)]).join("");}
 function normalizeRoomCode(value){return value.toUpperCase().replace(/[^A-HJ-NP-Z2-9]/g,"").slice(0,6);}
 function guestPeerId(){const random=crypto.randomUUID?.().replace(/[^a-z0-9]/gi,"")||`${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;return `nita-guest-${random}`;}
-function createGamePeer(id){
-  const extra=Array.isArray(window.NITA_ICE_SERVERS)?window.NITA_ICE_SERVERS:[];
-  const iceServers=[...PEER_OPTIONS.config.iceServers,...extra.filter(server=>server&&server.urls)];
+function normalizeIceServer(server){
+  if(!server||typeof server!=="object")return null;
+  const rawUrls=Array.isArray(server.urls)?server.urls:[server.urls];
+  const urls=rawUrls.slice(0,12).filter(url=>typeof url==="string"&&/^(?:stun|turn)s?:/i.test(url));
+  if(!urls.length)return null;
+  const usesRelay=urls.some(url=>/^turns?:/i.test(url));
+  if(usesRelay&&(!(typeof server.username==="string"&&server.username)||!(typeof server.credential==="string"&&server.credential)))return null;
+  const normalized={urls:Array.isArray(server.urls)?urls:urls[0]};
+  if(typeof server.username==="string")normalized.username=server.username;
+  if(typeof server.credential==="string")normalized.credential=server.credential;
+  if(typeof server.credentialType==="string")normalized.credentialType=server.credentialType;
+  return normalized;
+}
+function hasTurnServer(servers){return servers.some(server=>(Array.isArray(server.urls)?server.urls:[server.urls]).some(url=>/^turns?:/i.test(url)));}
+function cloneIceServers(servers){return servers.map(server=>({...server,urls:Array.isArray(server.urls)?[...server.urls]:server.urls}));}
+function invalidateTurnIceServers(){turnIceServersCache=null;}
+async function fetchTurnIceServers(){
+  if(turnIceServersCache&&turnIceServersCache.expiresAt>Date.now())return cloneIceServers(turnIceServersCache.servers);
+  if(!turnIceServersPromise)turnIceServersPromise=(async()=>{
+      const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),10000);
+      try{
+        const response=await fetch(METERED_TURN_CREDENTIALS_URL,{signal:controller.signal,cache:"no-store",credentials:"omit",referrerPolicy:"no-referrer",headers:{Accept:"application/json"}});
+        if(!response.ok)throw new Error(`TURN servisi HTTP ${response.status}`);
+        const payload=await response.json(),rawServers=Array.isArray(payload)?payload:payload?.iceServers;
+        const servers=Array.isArray(rawServers)?rawServers.slice(0,12).map(normalizeIceServer).filter(Boolean):[];
+        if(!hasTurnServer(servers))throw new Error("TURN servisi relay adresi döndürmedi.");
+        return servers;
+      }finally{clearTimeout(timeout);}
+    })();
+  const request=turnIceServersPromise;
+  try{const servers=await request;turnIceServersCache={servers,expiresAt:Date.now()+TURN_ICE_CACHE_TTL};return cloneIceServers(servers);}
+  catch(error){turnIceServersCache=null;throw error;}
+  finally{if(turnIceServersPromise===request)turnIceServersPromise=null;}
+}
+async function gameIceServers(){
+  const configured=(Array.isArray(window.NITA_ICE_SERVERS)?window.NITA_ICE_SERVERS:[]).map(normalizeIceServer).filter(Boolean);
+  const relayServers=hasTurnServer(configured)?configured:[...configured,...await fetchTurnIceServers()];
+  return [...BASE_ICE_SERVERS,...relayServers];
+}
+async function createGamePeer(id,attempt=network.attempt){
+  const iceServers=await gameIceServers();
+  if(attempt!==network.attempt)return null;
   return new Peer(id,{...PEER_OPTIONS,config:{...PEER_OPTIONS.config,iceServers}});
 }
 function clearConnectionTimer(){clearTimeout(network.connectionTimer);network.connectionTimer=null;}
@@ -937,7 +989,7 @@ function showJoinRetry(text){
   requestAnimationFrame(()=>roomInput.focus());
 }
 function sendPacket(packet){if(network.connection?.open)try{network.connection.send(packet);}catch(error){console.warn("Oyun paketi gönderilemedi:",error);}}
-function sendSnapshot(){sendPacket({type:"state",level:state.level,levelTime:state.levelTime,skyLightningTimer:state.skyLightningTimer,skyLightningX:state.skyLightningX,atlas:{...atlas,renderX:undefined,renderY:undefined},nita:{...nita,renderX:undefined,renderY:undefined},enemies:state.enemies.map(e=>({...e,renderX:undefined,renderY:undefined})),coins:state.coins.map(c=>c.collected),projectiles:state.projectiles.map(s=>({...s})),cameras:state.cameras.map(c=>({charge:c.charge,pulse:c.pulse})),gold:{...state.gold},gear:{...state.gear},weapons:{...state.weapons},inventory:{atlas:{...state.inventory.atlas},nita:{...state.inventory.nita}},boss:state.boss?{...state.boss}:null,healthOrbs:state.healthOrbs.map(o=>({...o})),reviveCups:state.reviveCups.map(c=>({...c}))});}
+function sendSnapshot(){if((network.connection?.dataChannel?.bufferedAmount||0)>262144)return;sendPacket({type:"state",level:state.level,levelTime:state.levelTime,skyLightningTimer:state.skyLightningTimer,skyLightningX:state.skyLightningX,atlas:{...atlas,renderX:undefined,renderY:undefined},nita:{...nita,renderX:undefined,renderY:undefined},enemies:state.enemies.map(e=>({...e,renderX:undefined,renderY:undefined})),coins:state.coins.map(c=>c.collected),projectiles:state.projectiles.map(s=>({...s})),cameras:state.cameras.map(c=>({charge:c.charge,pulse:c.pulse})),gold:{...state.gold},gear:{...state.gear},weapons:{...state.weapons},inventory:{atlas:{...state.inventory.atlas},nita:{...state.inventory.nita}},boss:state.boss?{...state.boss}:null,healthOrbs:state.healthOrbs.map(o=>({...o})),reviveCups:state.reviveCups.map(c=>({...c}))});}
 function showCharacterSelect(hostChoice=null){roomWait.hidden=true;characterSelect.hidden=false;characterSelectStatus.textContent=network.role==="host"?"İlk seçim hakkı sende.":hostChoice?"Kalan karakteri seçerek onayla.":"Oda sahibi seçim yapıyor…";document.querySelectorAll("[data-character]").forEach(button=>{button.disabled=network.role==="guest"&&(!hostChoice||button.dataset.character===hostChoice);button.classList.remove("selected");});}
 function startSelectedGame(assignments){network.character=assignments[network.role];document.body.classList.remove("character-atlas","character-nita");document.body.classList.add(`character-${network.character}`);connectionBadge.textContent=`${network.character.toUpperCase()} · BAĞLI`;connectionBadge.style.color=COLORS[network.character];characterSelect.hidden=true;resetCampaign();state.running=network.role==="host";state.paused=false;state.last=performance.now();overlay.classList.add("hidden");document.querySelector('.touch-controls .action').textContent=network.character==="atlas"?"YETENEK":"GÖRÜNMEZ";}
 function beginMultiplayer(role){clearConnectionTimer();network.role=role;network.character=null;joinForm.hidden=true;document.body.classList.remove("multiplayer-host","multiplayer-guest");document.body.classList.add(`multiplayer-${role}`);connectionBadge.textContent="KARAKTER SEÇİMİ";overlayText.textContent=role==="host"?"Bağlantı kuruldu. Karakterini seç.":"Bağlantı kuruldu. Oda sahibinin karakter seçimi bekleniyor.";if(role==="host")showCharacterSelect();else{roomWait.hidden=true;characterSelect.hidden=false;characterSelectStatus.textContent="Oda sahibi seçim yapıyor…";document.querySelectorAll("[data-character]").forEach(button=>button.disabled=true);}}
@@ -975,18 +1027,20 @@ function bindConnection(connection,role,attempt=network.attempt){
     if(network.connection.open){connection.close();showMessage("Bu odada zaten iki oyuncu var.",2.5);return;}
     try{if(network.connection.__nitaCancel)network.connection.__nitaCancel();else network.connection.close();}catch{}
   }
-  network.connection=connection;clearConnectionTimer();let opened=false,finished=false,connectionTimer=null;
-  const clearLocalTimer=()=>{clearTimeout(connectionTimer);connectionTimer=null;};
+  network.connection=connection;clearConnectionTimer();let opened=false,finished=false,connectionTimer=null,slowTimer=null;
+  const clearLocalTimer=()=>{clearTimeout(connectionTimer);clearTimeout(slowTimer);connectionTimer=null;slowTimer=null;};
   const cancel=()=>{if(finished)return;finished=true;clearLocalTimer();try{connection.close();}catch{}};
   const fail=text=>{
     if(finished||attempt!==network.attempt)return;finished=true;clearLocalTimer();
+    invalidateTurnIceServers();
     if(network.connection===connection)network.connection=null;
     try{connection.close();}catch{}
     if(role==="host"&&network.peer&&!network.peer.destroyed){restoreHostWaiting(text);return;}
     connectionProblem(role,text);
   };
   connection.__nitaCancel=cancel;connection.__nitaFail=fail;
-  connectionTimer=setTimeout(()=>fail(role==="guest"?"Odaya bağlantı zaman aşımına uğradı. Kodu kontrol edip tekrar dene.":"Oyuncuyla bağlantı kurulamadı. Oda açık kaldı; aynı kodla tekrar katıl."),12000);
+  slowTimer=setTimeout(()=>{if(finished||attempt!==network.attempt)return;if(role==="guest"){connectionBadge.textContent="BAĞLANTI TAMAMLANIYOR";overlayText.textContent="Oyun bağlantısı tamamlanıyor; mobil ağlarda biraz sürebilir…";}else{connectionBadge.textContent="OYUNCU BAĞLANIYOR";roomWaitStatus.textContent="Oyuncunun ağ bağlantısı tamamlanıyor…";}},8000);
+  connectionTimer=setTimeout(()=>fail(role==="guest"?"Odaya bağlantı zaman aşımına uğradı. Kodu kontrol edip tekrar dene.":"Oyuncuyla bağlantı kurulamadı. Oda açık kaldı; aynı kodla tekrar katıl."),30000);
   if(role==="host"){roomWaitStatus.textContent="Oyuncu bulundu · bağlantı kuruluyor…";connectionBadge.textContent="OYUNCU BAĞLANIYOR";}
   connection.on("data",data=>{if(opened&&attempt===network.attempt&&network.connection===connection)receivePacket(data);});
   const handleOpen=()=>{if(finished)return;if(attempt!==network.attempt){cancel();return;}opened=true;finished=true;clearLocalTimer();delete connection.__nitaCancel;delete connection.__nitaFail;beginMultiplayer(role);};
@@ -1011,8 +1065,8 @@ function peerError(error,role,attempt){
   }
   if(error.type==="webrtc"){
     if(role==="host"){
-      if(!network.connection&&network.peer?.open)restoreHostWaiting("Bir oyuncu bağlantısı tamamlanamadı. Oda açık; aynı kodla tekrar katıl.");
-      else showMessage("Oyuncu bağlantısı doğrulanıyor…",2);
+      if(network.connection?.__nitaFail)network.connection.__nitaFail("Oyuncunun bağlantısı tamamlanamadı. Oda açık; aynı kodla tekrar katıl.");
+      else if(network.peer?.open)restoreHostWaiting("Bir oyuncu bağlantısı tamamlanamadı. Oda açık; aynı kodla tekrar katıl.");
       return;
     }
     if(network.connection?.__nitaFail)network.connection.__nitaFail("Oda bağlantısı kurulamadı. Tekrar dene.");
@@ -1031,11 +1085,11 @@ function reconnectPeerSignal(peer,role,attempt){
     clearTimeout(reconnectTimer);reconnectTimer=setTimeout(()=>{if(attempt!==network.attempt||peer.destroyed)return;try{peer.reconnect();reconnectDelay=Math.min(reconnectDelay*2,4000);}catch{}},reconnectDelay);
   });
 }
-createRoomButton.addEventListener("click",()=>{
+createRoomButton.addEventListener("click",async()=>{
   if(typeof Peer==="undefined"){showMessage("Çevrimiçi oyun servisi yüklenemedi.",4);return;}
   cleanupNetwork();const attempt=network.attempt,code=roomCode();network.role="host";network.hostCharacter=null;
-  lobbyActions.hidden=true;joinForm.hidden=true;characterSelect.hidden=true;roomWait.hidden=false;roomCodeDisplay.textContent="------";copyCodeButton.disabled=true;copyCodeButton.textContent="KODU KOPYALA";roomWaitStatus.textContent="Oda hazırlanıyor…";connectionBadge.textContent="ODA HAZIRLANIYOR";
-  let peer;try{peer=createGamePeer(`nita-${code.toLowerCase()}`);}catch(error){console.warn("Oda başlatılamadı:",error);connectionProblem("host","Oda bağlantısı başlatılamadı. Tarayıcıyı yenileyip tekrar dene.");return;}network.peer=peer;reconnectPeerSignal(peer,"host",attempt);
+  lobbyActions.hidden=true;joinForm.hidden=true;characterSelect.hidden=true;roomWait.hidden=false;roomCodeDisplay.textContent="------";copyCodeButton.disabled=true;copyCodeButton.textContent="KODU KOPYALA";roomWaitStatus.textContent="Güvenli ağ geçidi hazırlanıyor…";connectionBadge.textContent="AĞ HAZIRLANIYOR";
+  let peer;try{peer=await createGamePeer(`nita-${code.toLowerCase()}`,attempt);}catch{if(attempt!==network.attempt)return;console.warn("Oda başlatılırken ağ geçidi hazırlanamadı.");connectionProblem("host","Oyun ağ geçidine ulaşılamadı. İnternetini kontrol edip tekrar dene.");return;}if(attempt!==network.attempt||!peer){try{peer?.destroy();}catch{}return;}network.peer=peer;reconnectPeerSignal(peer,"host",attempt);
   network.connectionTimer=setTimeout(()=>{if(attempt===network.attempt)connectionProblem("host","Oda servisine ulaşılamadı. Tekrar oda kurmayı dene.");},15000);
   peer.on("open",()=>{if(attempt!==network.attempt)return;clearConnectionTimer();roomCodeDisplay.textContent=code;copyCodeButton.disabled=false;if(network.connection?.open)return;if(network.connection){roomWaitStatus.textContent="Oyuncu bulundu · bağlantı kuruluyor…";connectionBadge.textContent="OYUNCU BAĞLANIYOR";return;}roomWaitStatus.textContent="İkinci oyuncu bekleniyor…";connectionBadge.textContent="OYUNCU BEKLENİYOR";});
   peer.on("connection",connection=>bindConnection(connection,"host",attempt));
@@ -1043,13 +1097,13 @@ createRoomButton.addEventListener("click",()=>{
 });
 showJoinButton.addEventListener("click",()=>{cleanupNetwork();network.role="solo";lobbyActions.hidden=true;roomWait.hidden=true;characterSelect.hidden=true;joinForm.hidden=false;overlayText.textContent="6 haneli oda kodunu gir.";roomInput.setCustomValidity("");requestAnimationFrame(()=>roomInput.focus());});
 roomInput.addEventListener("input",()=>{const normalized=normalizeRoomCode(roomInput.value);if(roomInput.value!==normalized)roomInput.value=normalized;roomInput.setCustomValidity("");});
-joinForm.addEventListener("submit",e=>{
+joinForm.addEventListener("submit",async e=>{
   e.preventDefault();
   if(typeof Peer==="undefined"){showMessage("Çevrimiçi oyun servisi yüklenemedi.",4);return;}
   const code=normalizeRoomCode(roomInput.value);roomInput.value=code;
   if(!ROOM_CODE_PATTERN.test(code)){roomInput.setCustomValidity("6 haneli geçerli oda kodunu eksiksiz gir.");roomInput.reportValidity();showMessage("Oda kodu 6 geçerli harften veya rakamdan oluşmalı.",3);return;}
-  roomInput.setCustomValidity("");cleanupNetwork();const attempt=network.attempt;network.role="guest";network.hostCharacter=null;joinForm.hidden=true;connectionBadge.textContent="ODA ARANIYOR";overlayText.textContent="Oda aranıyor…";
-  let peer;try{peer=createGamePeer(guestPeerId());}catch(error){console.warn("Katılma bağlantısı başlatılamadı:",error);connectionProblem("guest","Oyun bağlantısı başlatılamadı. Tarayıcıyı yenileyip tekrar dene.");return;}network.peer=peer;reconnectPeerSignal(peer,"guest",attempt);
+  roomInput.setCustomValidity("");cleanupNetwork();const attempt=network.attempt;network.role="guest";network.hostCharacter=null;joinForm.hidden=true;connectionBadge.textContent="AĞ HAZIRLANIYOR";overlayText.textContent="Güvenli oyun bağlantısı hazırlanıyor…";
+  let peer;try{peer=await createGamePeer(guestPeerId(),attempt);}catch{if(attempt!==network.attempt)return;console.warn("Katılma için ağ geçidi hazırlanamadı.");connectionProblem("guest","Oyun ağ geçidine ulaşılamadı. İnternetini kontrol edip tekrar dene.");return;}if(attempt!==network.attempt||!peer){try{peer?.destroy();}catch{}return;}network.peer=peer;reconnectPeerSignal(peer,"guest",attempt);
   network.connectionTimer=setTimeout(()=>{if(attempt===network.attempt)connectionProblem("guest","Oda servisine ulaşılamadı. Tekrar dene.");},15000);
   peer.on("open",()=>{if(attempt!==network.attempt||network.connection?.open)return;if(network.connection){const pending=network.connection;try{if(pending.__nitaCancel)pending.__nitaCancel();else pending.close();}catch{}if(network.connection===pending)network.connection=null;}connectionBadge.textContent="ODA BAĞLANTISI";overlayText.textContent="Odayla oyun bağlantısı kuruluyor…";try{const connection=peer.connect(`nita-${code.toLowerCase()}`,{reliable:true,serialization:"json",metadata:{game:"nita-yollarda",version:2}});if(!connection)throw new Error("PeerJS bağlantı nesnesi oluşturmadı.");bindConnection(connection,"guest",attempt);}catch(error){console.warn("Oda bağlantısı açılamadı:",error);connectionProblem("guest","Oyun bağlantısı başlatılamadı. Tekrar dene.");}});
   peer.on("error",error=>peerError(error,"guest",attempt));
