@@ -909,13 +909,26 @@ document.querySelectorAll(".touch-controls button").forEach(button=>{const contr
 document.querySelectorAll(".joystick").forEach(stick=>{const knob=stick.querySelector("i");function move(e){e.preventDefault();const r=stick.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2),distance=Math.hypot(dx,dy),limit=r.width*.31,factor=distance>limit?limit/distance:1;knob.style.transform=`translate(${dx*factor}px,${dy*factor}px)`;const threshold=r.width*.12;setPlayerControl("left",dx < -threshold);setPlayerControl("right",dx > threshold);}function release(e){e.preventDefault();knob.style.transform="";setPlayerControl("left",false);setPlayerControl("right",false);}stick.addEventListener("pointerdown",e=>{stick.setPointerCapture(e.pointerId);move(e);});stick.addEventListener("pointermove",e=>{if(stick.hasPointerCapture(e.pointerId))move(e);});stick.addEventListener("pointerup",release);stick.addEventListener("pointercancel",release);});
 
 const ROOM_CODE_PATTERN=/^[A-HJ-NP-Z2-9]{6}$/;
+const PEER_OPTIONS={
+  host:"0.peerjs.com",port:443,path:"/",secure:true,pingInterval:5000,debug:1,
+  config:{
+    iceServers:[{urls:["stun:stun.l.google.com:19302","stun:stun.cloudflare.com:3478","stun:stun.relay.metered.ca:80"]}],
+    iceCandidatePoolSize:4,sdpSemantics:"unified-plan"
+  }
+};
 function roomCode(){const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";return Array.from({length:6},()=>chars[Math.floor(Math.random()*chars.length)]).join("");}
 function normalizeRoomCode(value){return value.toUpperCase().replace(/[^A-HJ-NP-Z2-9]/g,"").slice(0,6);}
+function guestPeerId(){const random=crypto.randomUUID?.().replace(/[^a-z0-9]/gi,"")||`${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;return `nita-guest-${random}`;}
+function createGamePeer(id){
+  const extra=Array.isArray(window.NITA_ICE_SERVERS)?window.NITA_ICE_SERVERS:[];
+  const iceServers=[...PEER_OPTIONS.config.iceServers,...extra.filter(server=>server&&server.urls)];
+  return new Peer(id,{...PEER_OPTIONS,config:{...PEER_OPTIONS.config,iceServers}});
+}
 function clearConnectionTimer(){clearTimeout(network.connectionTimer);network.connectionTimer=null;}
 function cleanupNetwork(){
   network.attempt++;clearConnectionTimer();
   const connection=network.connection,peer=network.peer;network.connection=null;network.peer=null;
-  try{connection?.close();}catch{}
+  try{if(connection?.__nitaCancel)connection.__nitaCancel();else connection?.close();}catch{}
   try{if(peer&&!peer.destroyed)peer.destroy();}catch{}
 }
 function showJoinRetry(text){
@@ -923,11 +936,11 @@ function showJoinRetry(text){
   connectionBadge.textContent="BAĞLANTI HATASI";overlayText.textContent=text;showMessage(text,4);
   requestAnimationFrame(()=>roomInput.focus());
 }
-function sendPacket(packet){if(network.connection?.open)network.connection.send(packet);}
+function sendPacket(packet){if(network.connection?.open)try{network.connection.send(packet);}catch(error){console.warn("Oyun paketi gönderilemedi:",error);}}
 function sendSnapshot(){sendPacket({type:"state",level:state.level,levelTime:state.levelTime,skyLightningTimer:state.skyLightningTimer,skyLightningX:state.skyLightningX,atlas:{...atlas,renderX:undefined,renderY:undefined},nita:{...nita,renderX:undefined,renderY:undefined},enemies:state.enemies.map(e=>({...e,renderX:undefined,renderY:undefined})),coins:state.coins.map(c=>c.collected),projectiles:state.projectiles.map(s=>({...s})),cameras:state.cameras.map(c=>({charge:c.charge,pulse:c.pulse})),gold:{...state.gold},gear:{...state.gear},weapons:{...state.weapons},inventory:{atlas:{...state.inventory.atlas},nita:{...state.inventory.nita}},boss:state.boss?{...state.boss}:null,healthOrbs:state.healthOrbs.map(o=>({...o})),reviveCups:state.reviveCups.map(c=>({...c}))});}
 function showCharacterSelect(hostChoice=null){roomWait.hidden=true;characterSelect.hidden=false;characterSelectStatus.textContent=network.role==="host"?"İlk seçim hakkı sende.":hostChoice?"Kalan karakteri seçerek onayla.":"Oda sahibi seçim yapıyor…";document.querySelectorAll("[data-character]").forEach(button=>{button.disabled=network.role==="guest"&&(!hostChoice||button.dataset.character===hostChoice);button.classList.remove("selected");});}
 function startSelectedGame(assignments){network.character=assignments[network.role];document.body.classList.remove("character-atlas","character-nita");document.body.classList.add(`character-${network.character}`);connectionBadge.textContent=`${network.character.toUpperCase()} · BAĞLI`;connectionBadge.style.color=COLORS[network.character];characterSelect.hidden=true;resetCampaign();state.running=network.role==="host";state.paused=false;state.last=performance.now();overlay.classList.add("hidden");document.querySelector('.touch-controls .action').textContent=network.character==="atlas"?"YETENEK":"GÖRÜNMEZ";}
-function beginMultiplayer(role){clearConnectionTimer();network.role=role;network.character=null;joinForm.hidden=true;document.body.classList.remove("multiplayer-host","multiplayer-guest");document.body.classList.add(`multiplayer-${role}`);connectionBadge.textContent="KARAKTER SEÇİMİ";if(role==="host")showCharacterSelect();else{roomWait.hidden=true;characterSelect.hidden=false;characterSelectStatus.textContent="Oda sahibi seçim yapıyor…";document.querySelectorAll("[data-character]").forEach(button=>button.disabled=true);}}
+function beginMultiplayer(role){clearConnectionTimer();network.role=role;network.character=null;joinForm.hidden=true;document.body.classList.remove("multiplayer-host","multiplayer-guest");document.body.classList.add(`multiplayer-${role}`);connectionBadge.textContent="KARAKTER SEÇİMİ";overlayText.textContent=role==="host"?"Bağlantı kuruldu. Karakterini seç.":"Bağlantı kuruldu. Oda sahibinin karakter seçimi bekleniyor.";if(role==="host")showCharacterSelect();else{roomWait.hidden=true;characterSelect.hidden=false;characterSelectStatus.textContent="Oda sahibi seçim yapıyor…";document.querySelectorAll("[data-character]").forEach(button=>button.disabled=true);}}
 function receivePacket(data){
   if(data.type==="control"&&network.role==="host")applyCharacterControl(network.character==="atlas"?"nita":"atlas",data.control,data.down);
   if(data.type==="host-choice"&&network.role==="guest"){network.hostCharacter=data.character;showCharacterSelect(data.character);}
@@ -951,29 +964,80 @@ function connectionProblem(role,text){
   roomWait.hidden=true;joinForm.hidden=true;characterSelect.hidden=true;lobbyActions.hidden=false;
   connectionBadge.textContent="BAĞLANTI HATASI";overlayText.textContent=text;showMessage(text,4);
 }
+function restoreHostWaiting(text){
+  roomWait.hidden=false;joinForm.hidden=true;characterSelect.hidden=true;lobbyActions.hidden=true;
+  roomWaitStatus.textContent="İkinci oyuncu bekleniyor…";connectionBadge.textContent="OYUNCU BEKLENİYOR";
+  overlayText.textContent="Oda açık. Aynı oda koduyla tekrar katılabilirsin.";showMessage(text,4);
+}
 function bindConnection(connection,role,attempt=network.attempt){
   if(attempt!==network.attempt){connection.close();return;}
-  if(network.connection&&network.connection!==connection){connection.close();return;}
-  network.connection=connection;clearConnectionTimer();let opened=false,finished=false;
-  const fail=text=>{if(finished||attempt!==network.attempt)return;finished=true;connectionProblem(role,text);};
-  network.connectionTimer=setTimeout(()=>fail(role==="guest"?"Odaya bağlantı zaman aşımına uğradı. Kodu kontrol edip tekrar dene.":"Oyuncuyla bağlantı kurulamadı. Odayı yeniden kurup tekrar dene."),15000);
-  connection.on("data",data=>{if(attempt===network.attempt)receivePacket(data);});
-  connection.on("open",()=>{if(attempt!==network.attempt){connection.close();return;}opened=true;finished=true;clearConnectionTimer();beginMultiplayer(role);});
-  connection.on("error",()=>{if(!opened)fail("Bağlantı kurulamadı. Kodu kontrol edip tekrar dene.");else showMessage("Bağlantıda bir ağ hatası oluştu.",4);});
-  connection.on("close",()=>{if(attempt!==network.attempt)return;if(!opened){fail("Bağlantı açılmadan kapandı. Tekrar dene.");return;}cleanupNetwork();network.role="solo";state.running=false;document.body.classList.remove("multiplayer-host","multiplayer-guest");overlay.classList.remove("hidden");characterSelect.hidden=true;roomWait.hidden=true;joinForm.hidden=true;lobbyActions.hidden=false;connectionBadge.textContent="BAĞLANTI KOPTU";overlayText.textContent="Diğer oyuncuyla bağlantı kesildi. Yeni bir oda kurabilir veya tekrar katılabilirsin.";showMessage("Diğer oyuncuyla bağlantı kesildi.",4);});
+  if(network.connection&&network.connection!==connection){
+    if(network.connection.open){connection.close();showMessage("Bu odada zaten iki oyuncu var.",2.5);return;}
+    try{if(network.connection.__nitaCancel)network.connection.__nitaCancel();else network.connection.close();}catch{}
+  }
+  network.connection=connection;clearConnectionTimer();let opened=false,finished=false,connectionTimer=null;
+  const clearLocalTimer=()=>{clearTimeout(connectionTimer);connectionTimer=null;};
+  const cancel=()=>{if(finished)return;finished=true;clearLocalTimer();try{connection.close();}catch{}};
+  const fail=text=>{
+    if(finished||attempt!==network.attempt)return;finished=true;clearLocalTimer();
+    if(network.connection===connection)network.connection=null;
+    try{connection.close();}catch{}
+    if(role==="host"&&network.peer&&!network.peer.destroyed){restoreHostWaiting(text);return;}
+    connectionProblem(role,text);
+  };
+  connection.__nitaCancel=cancel;connection.__nitaFail=fail;
+  connectionTimer=setTimeout(()=>fail(role==="guest"?"Odaya bağlantı zaman aşımına uğradı. Kodu kontrol edip tekrar dene.":"Oyuncuyla bağlantı kurulamadı. Oda açık kaldı; aynı kodla tekrar katıl."),12000);
+  if(role==="host"){roomWaitStatus.textContent="Oyuncu bulundu · bağlantı kuruluyor…";connectionBadge.textContent="OYUNCU BAĞLANIYOR";}
+  connection.on("data",data=>{if(opened&&attempt===network.attempt&&network.connection===connection)receivePacket(data);});
+  const handleOpen=()=>{if(finished)return;if(attempt!==network.attempt){cancel();return;}opened=true;finished=true;clearLocalTimer();delete connection.__nitaCancel;delete connection.__nitaFail;beginMultiplayer(role);};
+  connection.on("open",handleOpen);
+  connection.on("error",error=>{console.warn("PeerJS veri bağlantısı hatası:",error);if(!opened)fail(role==="guest"?"Oda bulundu fakat oyun bağlantısı kurulamadı. Tekrar dene.":"Oyuncunun bağlantısı kurulamadı. Oda açık; tekrar katılabilir.");else showMessage("Bağlantıda bir ağ hatası oluştu.",4);});
+  connection.on("iceStateChanged",stateName=>{if(stateName==="failed")fail(role==="guest"?"Ağlar arasında doğrudan oyun bağlantısı kurulamadı. Tekrar dene.":"Oyuncunun ağ bağlantısı başarısız oldu. Oda açık kaldı.");});
+  const peerConnection=connection.peerConnection;
+  if(peerConnection){
+    const checkIce=()=>{if(peerConnection.connectionState==="failed"||peerConnection.iceConnectionState==="failed")fail(role==="guest"?"Ağlar arasında oyun bağlantısı kurulamadı. Tekrar dene.":"Oyuncunun ağ bağlantısı başarısız oldu. Oda açık kaldı.");};
+    peerConnection.addEventListener?.("connectionstatechange",checkIce);peerConnection.addEventListener?.("iceconnectionstatechange",checkIce);
+  }
+  connection.on("close",()=>{clearLocalTimer();if(attempt!==network.attempt||(!opened&&finished))return;if(!opened){fail("Bağlantı açılmadan kapandı. Tekrar dene.");return;}cleanupNetwork();network.role="solo";state.running=false;document.body.classList.remove("multiplayer-host","multiplayer-guest");overlay.classList.remove("hidden");characterSelect.hidden=true;roomWait.hidden=true;joinForm.hidden=true;lobbyActions.hidden=false;connectionBadge.textContent="BAĞLANTI KOPTU";overlayText.textContent="Diğer oyuncuyla bağlantı kesildi. Yeni bir oda kurabilir veya tekrar katılabilirsin.";showMessage("Diğer oyuncuyla bağlantı kesildi.",4);});
+  if(connection.open)queueMicrotask(handleOpen);
 }
 function peerError(error,role,attempt){
   if(attempt!==network.attempt)return;
+  console.warn("PeerJS oda hatası:",error?.type,error);
+  if(network.connection?.open){showMessage("Oda servisi yenileniyor; oyun bağlantın açık.",2.5);return;}
+  if(error.type==="network"){
+    clearConnectionTimer();network.connectionTimer=setTimeout(()=>{if(attempt===network.attempt)connectionProblem(role,"Oda servisine yeniden bağlanılamadı. Tekrar dene.");},8000);
+    return;
+  }
+  if(error.type==="webrtc"){
+    if(role==="host"){
+      if(!network.connection&&network.peer?.open)restoreHostWaiting("Bir oyuncu bağlantısı tamamlanamadı. Oda açık; aynı kodla tekrar katıl.");
+      else showMessage("Oyuncu bağlantısı doğrulanıyor…",2);
+      return;
+    }
+    if(network.connection?.__nitaFail)network.connection.__nitaFail("Oda bağlantısı kurulamadı. Tekrar dene.");
+    else connectionProblem(role,"Oyun bağlantısı kurulamadı. Tekrar dene.");
+    return;
+  }
   const text=error.type==="peer-unavailable"?"Oda bulunamadı. Kodu kontrol edip tekrar dene.":error.type==="unavailable-id"?"Bu oda kodu kullanımda. Yeniden oda kur.":"Çevrimiçi bağlantı kurulamadı. Tekrar dene.";
   connectionProblem(role,text);
+}
+function reconnectPeerSignal(peer,role,attempt){
+  let reconnectTimer=null,reconnectDelay=400;
+  peer.on("open",()=>{clearTimeout(reconnectTimer);reconnectTimer=null;reconnectDelay=400;});
+  peer.on("disconnected",()=>{
+    if(attempt!==network.attempt||peer.destroyed)return;
+    if(!network.connection?.open){connectionBadge.textContent="ODA SERVİSİNE YENİDEN BAĞLANIYOR";if(role==="host")roomWaitStatus.textContent="Oda servisine yeniden bağlanılıyor…";}
+    clearTimeout(reconnectTimer);reconnectTimer=setTimeout(()=>{if(attempt!==network.attempt||peer.destroyed)return;try{peer.reconnect();reconnectDelay=Math.min(reconnectDelay*2,4000);}catch{}},reconnectDelay);
+  });
 }
 createRoomButton.addEventListener("click",()=>{
   if(typeof Peer==="undefined"){showMessage("Çevrimiçi oyun servisi yüklenemedi.",4);return;}
   cleanupNetwork();const attempt=network.attempt,code=roomCode();network.role="host";network.hostCharacter=null;
   lobbyActions.hidden=true;joinForm.hidden=true;characterSelect.hidden=true;roomWait.hidden=false;roomCodeDisplay.textContent="------";copyCodeButton.disabled=true;copyCodeButton.textContent="KODU KOPYALA";roomWaitStatus.textContent="Oda hazırlanıyor…";connectionBadge.textContent="ODA HAZIRLANIYOR";
-  const peer=new Peer(`nita-${code.toLowerCase()}`);network.peer=peer;
+  let peer;try{peer=createGamePeer(`nita-${code.toLowerCase()}`);}catch(error){console.warn("Oda başlatılamadı:",error);connectionProblem("host","Oda bağlantısı başlatılamadı. Tarayıcıyı yenileyip tekrar dene.");return;}network.peer=peer;reconnectPeerSignal(peer,"host",attempt);
   network.connectionTimer=setTimeout(()=>{if(attempt===network.attempt)connectionProblem("host","Oda servisine ulaşılamadı. Tekrar oda kurmayı dene.");},15000);
-  peer.on("open",()=>{if(attempt!==network.attempt)return;clearConnectionTimer();roomCodeDisplay.textContent=code;copyCodeButton.disabled=false;roomWaitStatus.textContent="İkinci oyuncu bekleniyor…";connectionBadge.textContent="OYUNCU BEKLENİYOR";});
+  peer.on("open",()=>{if(attempt!==network.attempt)return;clearConnectionTimer();roomCodeDisplay.textContent=code;copyCodeButton.disabled=false;if(network.connection?.open)return;if(network.connection){roomWaitStatus.textContent="Oyuncu bulundu · bağlantı kuruluyor…";connectionBadge.textContent="OYUNCU BAĞLANIYOR";return;}roomWaitStatus.textContent="İkinci oyuncu bekleniyor…";connectionBadge.textContent="OYUNCU BEKLENİYOR";});
   peer.on("connection",connection=>bindConnection(connection,"host",attempt));
   peer.on("error",error=>peerError(error,"host",attempt));
 });
@@ -984,10 +1048,10 @@ joinForm.addEventListener("submit",e=>{
   if(typeof Peer==="undefined"){showMessage("Çevrimiçi oyun servisi yüklenemedi.",4);return;}
   const code=normalizeRoomCode(roomInput.value);roomInput.value=code;
   if(!ROOM_CODE_PATTERN.test(code)){roomInput.setCustomValidity("6 haneli geçerli oda kodunu eksiksiz gir.");roomInput.reportValidity();showMessage("Oda kodu 6 geçerli harften veya rakamdan oluşmalı.",3);return;}
-  roomInput.setCustomValidity("");cleanupNetwork();const attempt=network.attempt;network.role="guest";network.hostCharacter=null;joinForm.hidden=true;connectionBadge.textContent="BAĞLANIYOR";overlayText.textContent="Odaya bağlanılıyor…";
-  const peer=new Peer();network.peer=peer;
+  roomInput.setCustomValidity("");cleanupNetwork();const attempt=network.attempt;network.role="guest";network.hostCharacter=null;joinForm.hidden=true;connectionBadge.textContent="ODA ARANIYOR";overlayText.textContent="Oda aranıyor…";
+  let peer;try{peer=createGamePeer(guestPeerId());}catch(error){console.warn("Katılma bağlantısı başlatılamadı:",error);connectionProblem("guest","Oyun bağlantısı başlatılamadı. Tarayıcıyı yenileyip tekrar dene.");return;}network.peer=peer;reconnectPeerSignal(peer,"guest",attempt);
   network.connectionTimer=setTimeout(()=>{if(attempt===network.attempt)connectionProblem("guest","Oda servisine ulaşılamadı. Tekrar dene.");},15000);
-  peer.on("open",()=>{if(attempt!==network.attempt)return;clearConnectionTimer();bindConnection(peer.connect(`nita-${code.toLowerCase()}`,{reliable:true,serialization:"json"}),"guest",attempt);});
+  peer.on("open",()=>{if(attempt!==network.attempt||network.connection?.open)return;if(network.connection){const pending=network.connection;try{if(pending.__nitaCancel)pending.__nitaCancel();else pending.close();}catch{}if(network.connection===pending)network.connection=null;}connectionBadge.textContent="ODA BAĞLANTISI";overlayText.textContent="Odayla oyun bağlantısı kuruluyor…";try{const connection=peer.connect(`nita-${code.toLowerCase()}`,{reliable:true,serialization:"json",metadata:{game:"nita-yollarda",version:2}});if(!connection)throw new Error("PeerJS bağlantı nesnesi oluşturmadı.");bindConnection(connection,"guest",attempt);}catch(error){console.warn("Oda bağlantısı açılamadı:",error);connectionProblem("guest","Oyun bağlantısı başlatılamadı. Tekrar dene.");}});
   peer.on("error",error=>peerError(error,"guest",attempt));
 });
 copyCodeButton.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(roomCodeDisplay.textContent);copyCodeButton.textContent="KOPYALANDI";}catch{showMessage("Kodu elle paylaşabilirsin.",2);}});
