@@ -69,6 +69,9 @@ const showLevelsButton = document.getElementById("show-levels");
 const levelSelect = document.getElementById("level-select");
 const levelGrid = document.getElementById("level-grid");
 const levelSelectBack = document.getElementById("level-select-back");
+const gameHub = document.getElementById("game-hub");
+const hubStatus = document.getElementById("hub-status");
+const returnGameHubButton = document.getElementById("return-game-hub");
 
 const WORLD = { width: 1280, height: 720 };
 const COLORS = { atlas: "#ff704d", nita: "#54d8e8", cream: "#f5efe3", dark: "#10141d" };
@@ -369,6 +372,25 @@ function startLevelFromMenu(index){
 
 function openMainMenu(){
   if(state.running){state.menuWasPaused=state.paused;state.paused=true;}closeInventory(false);closeVillage(false);market.classList.remove("active");market.setAttribute("aria-hidden","true");overlay.classList.remove("hidden");showMainLobby();pauseButton.textContent="DURAKLAT";
+}
+
+function openGameHub(){
+  if(state.running){state.menuWasPaused=state.paused;state.paused=true;}
+  releaseAllInputs();
+  document.body.classList.add("hub-open");
+  gameHub.classList.remove("hidden");
+  gameHub.setAttribute("aria-hidden","false");
+  hubStatus.textContent="Bir oyun seçerek başlayabilirsin.";
+  requestAnimationFrame(()=>gameHub.querySelector('[data-game="nita-yollarda"]')?.focus());
+}
+
+function openNitaYollarda(){
+  document.body.classList.remove("hub-open");
+  gameHub.classList.add("hidden");
+  gameHub.setAttribute("aria-hidden","true");
+  overlay.classList.remove("hidden");
+  showMainLobby();
+  requestAnimationFrame(()=>createRoomButton.focus());
 }
 
 function updateHud() {
@@ -1301,6 +1323,17 @@ function syncFullscreenUi(){const active=document.fullscreenElement||document.we
 document.addEventListener("fullscreenchange",syncFullscreenUi);document.addEventListener("webkitfullscreenchange",syncFullscreenUi);
 hudMarketButton.addEventListener("click",openInGameMarket);
 mainMenuButton.addEventListener("click",openMainMenu);showLevelsButton.addEventListener("click",openLevelSelect);levelSelectBack.addEventListener("click",showMainLobby);levelGrid.addEventListener("click",event=>{const card=event.target.closest("[data-level-index]");if(card&&!card.disabled)startLevelFromMenu(Number(card.dataset.levelIndex));});
+returnGameHubButton.addEventListener("click",openGameHub);
+gameHub.addEventListener("click",event=>{
+  const tile=event.target.closest("[data-game]");
+  if(!tile)return;
+  if(tile.dataset.game==="nita-yollarda"){openNitaYollarda();return;}
+  const destination=tile.dataset.gameUrl?.trim();
+  if(destination){window.location.assign(destination);return;}
+  hubStatus.textContent="Project Gun bağlantısı hazır olduğunda bu karttan açılacak.";
+  tile.classList.remove("attention");
+  requestAnimationFrame(()=>tile.classList.add("attention"));
+});
 inventoryButton.addEventListener("click",openInventory);inventoryClose.addEventListener("click",()=>closeInventory());villageButton.addEventListener("click",toggleVillage);
 blacksmithNpc.addEventListener("click",()=>{renderForge();forgePanel.hidden=false;tone(180,.08);});forgeClose.addEventListener("click",()=>{forgePanel.hidden=true;});
 forgeOptions.addEventListener("click",event=>{const button=event.target.closest("[data-craft-owner]");if(button)craftArmor(button.dataset.craftOwner);});

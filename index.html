@@ -3,20 +3,66 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <meta name="description" content="Nita Yollarda — iki kişilik, on bir bölümlük 2D platform oyunu." />
+    <meta name="description" content="Nita Yollarda ve yeni projeler için oyun seçim merkezi." />
     <meta name="theme-color" content="#10141d" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <title>Nita Yollarda</title>
+    <title>Oyun Merkezi · Nita Yollarda</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css?v=20260817-5" />
+    <link rel="stylesheet" href="styles.css?v=20260826-1" />
     <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js" defer></script>
-    <script src="script.js?v=20260817-6" defer></script>
+    <script src="script.js?v=20260826-1" defer></script>
   </head>
-  <body>
+  <body class="hub-open">
+    <section id="game-hub" class="game-hub" aria-labelledby="game-hub-title">
+      <div class="hub-glow hub-glow-one" aria-hidden="true"></div>
+      <div class="hub-glow hub-glow-two" aria-hidden="true"></div>
+      <header class="hub-header">
+        <a class="hub-brand" href="#game-hub" aria-label="Oyun merkezine dön">
+          <span class="hub-brand-mark" aria-hidden="true"><i></i><i></i></span>
+          <span><b>NİTA</b> OYUN MERKEZİ</span>
+        </a>
+        <span class="hub-count">3 OYUN SLOTU</span>
+      </header>
+
+      <div class="hub-intro">
+        <p class="hub-kicker">MACERANI SEÇ</p>
+        <h1 id="game-hub-title">Hangi dünyaya<br /><em>girmek istersin?</em></h1>
+        <p>Oynamak istediğin projeyi seç. Yeni oyunlar hazır oldukça bu koleksiyona eklenecek.</p>
+      </div>
+
+      <div class="game-library" aria-label="Oyunlar">
+        <button class="game-tile nita-game" type="button" data-game="nita-yollarda" aria-label="Nita Yollarda oyununu aç">
+          <span class="tile-art" aria-hidden="true"></span>
+          <span class="tile-shade" aria-hidden="true"></span>
+          <span class="tile-top"><small>01 · PLATFORM MACERASI</small><b class="live-badge">OYNA</b></span>
+          <span class="tile-copy"><strong>Nita<br /><em>Yollarda</em></strong><small>Atlas ve Nita ile yolculuğa çık</small></span>
+          <span class="tile-action">OYUNU AÇ <b>→</b></span>
+        </button>
+
+        <button class="game-tile project-gun" type="button" data-game="project-gun" data-game-url="" aria-label="Project Gun yönlendirmesi henüz hazırlanıyor">
+          <span class="tile-art" aria-hidden="true"><i></i></span>
+          <span class="tile-shade" aria-hidden="true"></span>
+          <span class="tile-top"><small>02 · AKSİYON</small><b>YAKINDA</b></span>
+          <span class="tile-copy"><strong>Project<br /><em>Gun</em></strong><small>Yeni operasyon hazırlanıyor</small></span>
+          <span class="tile-action">BAĞLANTI BEKLENİYOR <b>↗</b></span>
+        </button>
+
+        <button class="game-tile empty-game" type="button" disabled aria-label="Üçüncü oyun slotu yakında">
+          <span class="tile-art" aria-hidden="true"><i>+</i></span>
+          <span class="tile-shade" aria-hidden="true"></span>
+          <span class="tile-top"><small>03 · YENİ PROJE</small><b>BOŞ SLOT</b></span>
+          <span class="tile-copy"><strong>Sıradaki<br /><em>Macera</em></strong><small>Yeni bir dünya için ayrıldı</small></span>
+          <span class="tile-action">YAKINDA</span>
+        </button>
+      </div>
+
+      <p id="hub-status" class="hub-status" aria-live="polite">Bir oyun seçerek başlayabilirsin.</p>
+    </section>
+
     <main id="game" aria-label="Nita Yollarda oyun alanı">
       <canvas id="game-canvas" aria-label="İki kişilik platform oyunu"></canvas>
 
@@ -80,6 +126,7 @@
           <button id="show-join" type="button" class="secondary">ODAYA KATIL <span>→</span></button>
           <button id="solo-game" type="button" class="text-button">TEK BİLGİSAYARDA OYNA</button>
           <button id="show-levels" type="button" class="levels-button">BÖLÜMLER <span>◇</span></button>
+          <button id="return-game-hub" type="button" class="hub-return-button">← OYUN SEÇİMİNE DÖN</button>
         </div>
         <section id="level-select" class="level-select" aria-labelledby="level-select-title" hidden>
           <header class="level-select-header">
