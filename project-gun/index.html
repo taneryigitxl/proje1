@@ -8,10 +8,14 @@
     <title>Project Gun · Operasyon Sıfır</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preload" href="assets/textures/industrial-ground.jpg" as="image" />
+    <link rel="preload" href="assets/textures/worn-gunmetal.jpg" as="image" />
+    <link rel="preload" href="assets/textures/undead-skin.jpg" as="image" />
+    <link rel="preload" href="assets/textures/tactical-fabric.jpg" as="image" />
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css?v=20260827-2" />
     <script src="https://cdn.babylonjs.com/babylon.js" defer></script>
-    <script src="game.js?v=20260827-12" defer></script>
+    <script src="game.js?v=20260827-13" defer></script>
   </head>
   <body>
     <canvas id="render-canvas" aria-label="Project Gun 3B oyun alanı"></canvas>
@@ -32,7 +36,7 @@
           <span><kbd>1 · 2 · 3</kbd><small>TÜFEK · TABANCA · BIÇAK</small></span>
         </div>
         <button id="deploy-button" type="button"><span>OPERASYONA BAŞLA</span><b>→</b></button>
-        <p id="boot-status" class="boot-status">Tam ekran ve kulaklık önerilir.</p>
+        <p id="boot-status" class="boot-status">PBR doku paketi aktif · Tam ekran ve kulaklık önerilir.</p>
       </div>
       <aside class="operation-card">
         <span>BÖLGE</span><strong>KESTREL-7</strong><small>23:40 · SİS · DÜŞMAN KONTROLÜ</small>
