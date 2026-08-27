@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="description" content="Project Gun — tarayıcıda oynanan 3B aksiyon RPG looter shooter." />
+    <meta name="theme-color" content="#07090d" />
+    <title>Project Gun · Operasyon Sıfır</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css?v=20260827-1" />
+    <script src="https://cdn.babylonjs.com/babylon.js" defer></script>
+    <script src="game.js?v=20260827-5" defer></script>
+  </head>
+  <body>
+    <canvas id="render-canvas" aria-label="Project Gun 3B oyun alanı"></canvas>
+
+    <div id="boot-screen" class="boot-screen">
+      <div class="boot-grid" aria-hidden="true"></div>
+      <a class="back-link" href="../">← OYUN MERKEZİ</a>
+      <div class="boot-copy">
+        <p class="eyebrow"><i></i> ERKEN ERİŞİM · OPERASYON 01</p>
+        <h1>PROJECT<br /><em>GUN</em></h1>
+        <p class="mission-brief">Terk edilmiş Kestrel tesisine gir. Düşman timini temizle, düşen ekipmanları topla ve tahliye noktasına ulaş.</p>
+        <div class="control-grid">
+          <span><kbd>WASD</kbd><small>HAREKET</small></span>
+          <span><kbd>FARE</kbd><small>NİŞAN / ATEŞ</small></span>
+          <span><kbd>R</kbd><small>ŞARJÖR</small></span>
+          <span><kbd>E</kbd><small>GANİMET</small></span>
+          <span><kbd>SHIFT</kbd><small>KOŞU</small></span>
+        </div>
+        <button id="deploy-button" type="button"><span>OPERASYONA BAŞLA</span><b>→</b></button>
+        <p id="boot-status" class="boot-status">Tam ekran ve kulaklık önerilir.</p>
+      </div>
+      <aside class="operation-card">
+        <span>BÖLGE</span><strong>KESTREL-7</strong><small>23:40 · SİS · DÜŞMAN KONTROLÜ</small>
+        <div><i></i><b>TEHDİT: YÜKSEK</b></div>
+      </aside>
+    </div>
+
+    <main id="hud" class="hud" aria-hidden="true">
+      <header class="top-hud">
+        <div class="squad-mark"><i>PG</i><span><b>KESTREL-7</b><small>OPERASYON SIFIR</small></span></div>
+        <div class="compass"><span>W</span><b id="heading">N · 000</b><span>E</span></div>
+        <div class="threat"><i></i><span>TEHDİT SEVİYESİ<b id="threat-level">YÜKSEK</b></span></div>
+      </header>
+
+      <section class="objective-panel">
+        <small>AKTİF GÖREV</small>
+        <strong id="objective-title">BÖLGEYİ TEMİZLE</strong>
+        <p id="objective-text"><b id="kill-count">0</b> / <span id="kill-target">8</span> düşman etkisiz</p>
+        <div><i id="objective-progress"></i></div>
+      </section>
+
+      <section class="player-panel">
+        <div class="level-medal"><small>SV.</small><b id="player-level">1</b></div>
+        <div class="vitals">
+          <span>ZIRH <b id="armor-value">50</b></span><div class="armor-bar"><i id="armor-bar"></i></div>
+          <span>CAN <b id="health-value">100</b></span><div class="health-bar"><i id="health-bar"></i></div>
+        </div>
+      </section>
+
+      <section class="weapon-panel">
+        <div><small id="weapon-rarity">STANDART</small><strong id="weapon-name">RAVEN AR-4</strong></div>
+        <div class="ammo"><b id="ammo-current">30</b><span>/ <i id="ammo-reserve">120</i></span></div>
+        <p>OTOMATİK · 5.56</p>
+      </section>
+
+      <div class="xp-track"><span id="xp-label">0 / 100 XP</span><i id="xp-bar"></i></div>
+      <div id="crosshair" class="crosshair" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div id="hit-marker" class="hit-marker" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div id="damage-vignette" class="damage-vignette" aria-hidden="true"></div>
+      <p id="interaction" class="interaction" aria-live="polite"></p>
+      <div id="feed" class="feed" aria-live="polite"></div>
+      <div id="reload-indicator" class="reload-indicator"><span>ŞARJÖR DEĞİŞTİRİLİYOR</span><i></i></div>
+      <button id="pause-button" class="pause-button" type="button" aria-label="Menüyü aç">ESC</button>
+    </main>
+
+    <section id="result-screen" class="result-screen" hidden>
+      <p class="eyebrow"><i></i> OPERASYON RAPORU</p>
+      <h2 id="result-title">TAHLİYE BAŞARILI</h2>
+      <p id="result-text"></p>
+      <div class="result-stats"><span><small>ETKİSİZ</small><b id="result-kills">0</b></span><span><small>SEVİYE</small><b id="result-level">1</b></span><span><small>EKİPMAN</small><b id="result-weapon">RAVEN</b></span></div>
+      <button id="replay-button" type="button">YENİDEN BAŞLA <b>↻</b></button>
+      <a href="../">OYUN MERKEZİNE DÖN</a>
+    </section>
+  </body>
+</html>
