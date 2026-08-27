@@ -1,334 +1,120 @@
-const canvas = document.getElementById("render-canvas");
-const bootScreen = document.getElementById("boot-screen");
-const deployButton = document.getElementById("deploy-button");
-const bootStatus = document.getElementById("boot-status");
-const hud = document.getElementById("hud");
-const resultScreen = document.getElementById("result-screen");
-const replayButton = document.getElementById("replay-button");
-const pauseButton = document.getElementById("pause-button");
-const interaction = document.getElementById("interaction");
-const feed = document.getElementById("feed");
-const hitMarker = document.getElementById("hit-marker");
-const damageVignette = document.getElementById("damage-vignette");
-const reloadIndicator = document.getElementById("reload-indicator");
+const $=id=>document.getElementById(id);
+const canvas=$("render-canvas"),bootScreen=$("boot-screen"),deployButton=$("deploy-button"),bootStatus=$("boot-status"),hud=$("hud"),resultScreen=$("result-screen"),replayButton=$("replay-button"),pauseButton=$("pause-button"),interaction=$("interaction"),feed=$("feed"),hitMarker=$("hit-marker"),damageVignette=$("damage-vignette"),reloadIndicator=$("reload-indicator"),waveBanner=$("wave-banner"),waveBannerTitle=$("wave-banner-title"),waveBannerText=$("wave-banner-text");
+const labels={heading:$("heading"),objectiveTitle:$("objective-title"),objectiveText:$("objective-text"),killCount:$("kill-count"),killTarget:$("kill-target"),objectiveProgress:$("objective-progress"),playerLevel:$("player-level"),healthValue:$("health-value"),healthBar:$("health-bar"),armorValue:$("armor-value"),armorBar:$("armor-bar"),weaponRarity:$("weapon-rarity"),weaponName:$("weapon-name"),ammoCurrent:$("ammo-current"),ammoReserve:$("ammo-reserve"),xpLabel:$("xp-label"),xpBar:$("xp-bar"),resultTitle:$("result-title"),resultText:$("result-text"),resultKills:$("result-kills"),resultLevel:$("result-level"),resultWeapon:$("result-weapon")};
 
-const labels = {
-  heading: document.getElementById("heading"),
-  objectiveTitle: document.getElementById("objective-title"),
-  objectiveText: document.getElementById("objective-text"),
-  killCount: document.getElementById("kill-count"),
-  killTarget: document.getElementById("kill-target"),
-  objectiveProgress: document.getElementById("objective-progress"),
-  playerLevel: document.getElementById("player-level"),
-  healthValue: document.getElementById("health-value"),
-  healthBar: document.getElementById("health-bar"),
-  armorValue: document.getElementById("armor-value"),
-  armorBar: document.getElementById("armor-bar"),
-  weaponRarity: document.getElementById("weapon-rarity"),
-  weaponName: document.getElementById("weapon-name"),
-  ammoCurrent: document.getElementById("ammo-current"),
-  ammoReserve: document.getElementById("ammo-reserve"),
-  xpLabel: document.getElementById("xp-label"),
-  xpBar: document.getElementById("xp-bar"),
-  resultTitle: document.getElementById("result-title"),
-  resultText: document.getElementById("result-text"),
-  resultKills: document.getElementById("result-kills"),
-  resultLevel: document.getElementById("result-level"),
-  resultWeapon: document.getElementById("result-weapon"),
-};
-
-const WEAPONS = [
-  { tier:0, name:"RAVEN AR-4", rarity:"STANDART", color:"#66e3ee", damage:24, fireRate:8.2, mag:30, spread:.008 },
-  { tier:1, name:"FALCON V-7", rarity:"NADİR", color:"#6a9dff", damage:31, fireRate:7.4, mag:32, spread:.006 },
-  { tier:2, name:"WRAITH 556", rarity:"EPİK", color:"#bd74ff", damage:39, fireRate:8.8, mag:36, spread:.0045 },
-  { tier:3, name:"SOLARIS MK-I", rarity:"EFSANEVİ", color:"#ffcb57", damage:52, fireRate:9.4, mag:40, spread:.003 },
+const LOADOUT=[
+  {slot:1,kind:"rifle",name:"RAVEN AR-4",rarity:"OPERATÖR",color:"#66e3ee",damage:34,fireRate:9.2,mag:30,ammo:30,reserve:150,spread:.0048,range:150,speed:.53,auto:true,mode:"OTOMATİK · 5.56"},
+  {slot:2,kind:"pistol",name:"KITE P-9",rarity:"TAKTİK",color:"#ffcb57",damage:52,fireRate:4.8,mag:15,ammo:15,reserve:75,spread:.0032,range:90,speed:.69,auto:false,mode:"YARI OTOMATİK · 9MM"},
+  {slot:3,kind:"knife",name:"VANTA KNIFE",rarity:"YAKIN DÖVÜŞ",color:"#ff5b35",damage:145,fireRate:1.55,mag:0,ammo:0,reserve:0,spread:0,range:2.75,speed:.79,auto:false,mode:"BIÇAK · HIZLI KOŞU"},
 ];
-
-const state = {
-  running:false, paused:true, ended:false, firing:false, reloading:false,
-  health:100, armor:50, level:1, xp:0, xpNeeded:100, kills:0, target:8,
-  ammo:30, reserve:120, weapon:{...WEAPONS[0]}, lastShot:0, elapsed:0,
-  enemies:[], loot:[], extraction:null, spawnTimer:0, damageFlashTimer:0,
+const WAVES=[
+  {count:5,weights:[1,0,0],label:"UYANIŞ"},
+  {count:7,weights:[.72,.28,0],label:"İLK HÜCUM"},
+  {count:9,weights:[.57,.35,.08],label:"KARANLIK SÜRÜ"},
+  {count:12,weights:[.43,.42,.15],label:"KIRILMA NOKTASI"},
+  {count:15,weights:[.3,.48,.22],label:"SON İSTİLA"},
+];
+const ZOMBIE_TYPES={
+  walker:{name:"YÜRÜYEN",health:95,speed:1.8,damage:13,scale:1,color:"#4f5d4c"},
+  runner:{name:"KOŞUCU",health:72,speed:3.1,damage:10,scale:.92,color:"#625346"},
+  brute:{name:"İRİ",health:250,speed:1.35,damage:25,scale:1.28,color:"#453f39"},
 };
+const state={running:false,paused:true,ended:false,firing:false,reloading:false,health:100,armor:65,level:1,xp:0,xpNeeded:100,totalKills:0,waveIndex:-1,waveKills:0,waveTarget:0,waveActive:false,spawnRemaining:0,spawnTimer:0,intermission:0,currentSlot:0,lastShot:0,elapsed:0,recoil:0,switchTimer:0,meleeTimer:0,reloadTimer:0,enemies:[],loot:[],nearestLoot:null,extraction:null,damageFlashTimer:0};
+const keys={shift:false};
 
-if (!window.BABYLON || !BABYLON.Engine.isSupported()) {
-  bootStatus.textContent = "3B motor başlatılamadı. WebGL destekli güncel bir tarayıcı kullan.";
-  deployButton.disabled = true;
-  throw new Error("Babylon.js veya WebGL kullanılamıyor.");
-}
+if(!window.BABYLON||!BABYLON.Engine.isSupported()){bootStatus.textContent="3B motor başlatılamadı. WebGL destekli güncel bir tarayıcı kullan.";deployButton.disabled=true;throw new Error("Babylon.js veya WebGL kullanılamıyor.");}
+const engine=new BABYLON.Engine(canvas,true,{preserveDrawingBuffer:true,stencil:true,adaptToDeviceRatio:true});
+if(devicePixelRatio>1.5)engine.setHardwareScalingLevel(devicePixelRatio/1.55);
+const scene=new BABYLON.Scene(engine);scene.clearColor=new BABYLON.Color4(.025,.045,.065,1);scene.ambientColor=new BABYLON.Color3(.12,.16,.18);scene.fogMode=BABYLON.Scene.FOGMODE_EXP2;scene.fogDensity=.0046;scene.fogColor=new BABYLON.Color3(.06,.085,.1);scene.collisionsEnabled=true;scene.gravity=new BABYLON.Vector3(0,-.42,0);
+const camera=new BABYLON.UniversalCamera("operator",new BABYLON.Vector3(0,2.05,-70),scene);camera.minZ=.07;camera.maxZ=360;camera.fov=1.03;camera.speed=.53;camera.inertia=.16;camera.angularSensibility=2250;camera.applyGravity=true;camera.checkCollisions=true;camera.ellipsoid=new BABYLON.Vector3(.5,.9,.5);camera.ellipsoidOffset=new BABYLON.Vector3(0,.9,0);camera.keysUp.push(87);camera.keysDown.push(83);camera.keysLeft.push(65);camera.keysRight.push(68);camera.attachControl(canvas,true);
 
-const engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer:true, stencil:true, adaptToDeviceRatio:true });
-const scene = new BABYLON.Scene(engine);
-scene.clearColor = new BABYLON.Color4(.018,.027,.04,1);
-scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
-scene.fogDensity = .0095;
-scene.fogColor = new BABYLON.Color3(.035,.052,.068);
-scene.collisionsEnabled = true;
-scene.gravity = new BABYLON.Vector3(0,-.38,0);
+function makeMat(name,color,{metal=.05,rough=.8,emissive=0,alpha=1}={}){const m=new BABYLON.PBRMaterial(name,scene);m.albedoColor=BABYLON.Color3.FromHexString(color);m.metallic=metal;m.roughness=rough;m.alpha=alpha;if(emissive)m.emissiveColor=BABYLON.Color3.FromHexString(color).scale(emissive);return m;}
+const mats={concrete:makeMat("concrete","#343e41",{rough:.94}),asphalt:makeMat("asphalt","#1b252a",{rough:.88}),wall:makeMat("wall","#3b474c",{metal:.35,rough:.7}),dark:makeMat("dark-steel","#121a1f",{metal:.85,rough:.28}),orange:makeMat("warning","#d8492e",{metal:.35,rough:.62,emissive:.1}),cyan:makeMat("signal","#55d6df",{metal:.2,rough:.3,emissive:.55}),glass:makeMat("glass","#487887",{metal:.2,rough:.12,alpha:.48}),rubber:makeMat("rubber","#080909",{rough:.98}),wood:makeMat("wood","#5a4530",{rough:.96}),skin:makeMat("dead-skin","#7c826d",{rough:.9}),blood:makeMat("blood","#681b14",{rough:.65}),cloth:makeMat("cloth","#303833",{rough:1}),glove:makeMat("operator-glove","#1a2228",{metal:.1,rough:.72}),gun:makeMat("gun-metal","#26343b",{metal:.92,rough:.22}),gun2:makeMat("gun-polymer","#354247",{metal:.2,rough:.64}),brass:makeMat("brass","#a98549",{metal:.9,rough:.26}),blade:makeMat("blade","#c3d0d5",{metal:1,rough:.1})};
 
-const camera = new BABYLON.UniversalCamera("operator-camera", new BABYLON.Vector3(0,2.1,-34), scene);
-camera.minZ = .08;
-camera.maxZ = 300;
-camera.fov = 1.05;
-camera.speed = .48;
-camera.inertia = .18;
-camera.angularSensibility = 2350;
-camera.applyGravity = true;
-camera.checkCollisions = true;
-camera.ellipsoid = new BABYLON.Vector3(.52,.92,.52);
-camera.ellipsoidOffset = new BABYLON.Vector3(0,.92,0);
-camera.keysUp.push(87); camera.keysDown.push(83); camera.keysLeft.push(65); camera.keysRight.push(68);
-camera.attachControl(canvas, true);
+const hemi=new BABYLON.HemisphericLight("overcast",new BABYLON.Vector3(0,1,0),scene);hemi.intensity=.78;hemi.diffuse=new BABYLON.Color3(.56,.7,.78);hemi.groundColor=new BABYLON.Color3(.06,.075,.085);
+const moon=new BABYLON.DirectionalLight("moon",new BABYLON.Vector3(-.4,-1,.32),scene);moon.position=new BABYLON.Vector3(55,90,-60);moon.intensity=2.15;moon.diffuse=new BABYLON.Color3(.64,.79,.94);
+const shadows=new BABYLON.ShadowGenerator(1024,moon);shadows.useBlurExponentialShadowMap=true;shadows.blurKernel=18;shadows.bias=.0003;
 
-const materials = {};
-function material(name, color, options={}) {
-  const mat = new BABYLON.StandardMaterial(name, scene);
-  mat.diffuseColor = BABYLON.Color3.FromHexString(color);
-  mat.specularColor = options.metal ? new BABYLON.Color3(.65,.68,.7) : new BABYLON.Color3(.05,.06,.07);
-  mat.emissiveColor = options.emissive ? BABYLON.Color3.FromHexString(color).scale(options.emissive) : BABYLON.Color3.Black();
-  mat.alpha = options.alpha ?? 1;
-  return mat;
-}
-materials.ground = material("wet-concrete", "#182128", {metal:true});
-materials.wall = material("facility-wall", "#242d33", {metal:true});
-materials.dark = material("black-steel", "#0a0e12", {metal:true});
-materials.orange = material("warning-orange", "#ff5b35", {emissive:.18});
-materials.cyan = material("signal-cyan", "#66e3ee", {emissive:.38});
-materials.enemy = material("hostile-armor", "#262a2c", {metal:true});
-materials.enemyAccent = material("hostile-signal", "#ff3e27", {emissive:.42});
-materials.skin = material("mask", "#8c9290", {metal:true});
+function worldBox(name,p,s,mat=mats.wall,solid=true){const mesh=BABYLON.MeshBuilder.CreateBox(name,{width:s.x,height:s.y,depth:s.z},scene);mesh.position.copyFrom(p);mesh.material=mat;mesh.checkCollisions=solid;mesh.receiveShadows=true;mesh.metadata={solid};return mesh;}
+function worldCylinder(name,p,height,diameter,mat=mats.wall,solid=true,tessellation=16){const mesh=BABYLON.MeshBuilder.CreateCylinder(name,{height,diameter,tessellation},scene);mesh.position.copyFrom(p);mesh.material=mat;mesh.checkCollisions=solid;mesh.receiveShadows=true;mesh.metadata={solid};return mesh;}
+function localBox(name,parent,p,s,mat){const mesh=BABYLON.MeshBuilder.CreateBox(name,{width:s.x,height:s.y,depth:s.z},scene);mesh.parent=parent;mesh.position.copyFrom(p);mesh.material=mat;mesh.isPickable=false;return mesh;}
+function localCylinder(name,parent,p,height,diameter,mat,rotation=new BABYLON.Vector3()){const mesh=BABYLON.MeshBuilder.CreateCylinder(name,{height,diameter,tessellation:16},scene);mesh.parent=parent;mesh.position.copyFrom(p);mesh.rotation.copyFrom(rotation);mesh.material=mat;mesh.isPickable=false;return mesh;}
 
-const hemi = new BABYLON.HemisphericLight("cold-fill", new BABYLON.Vector3(0,1,0), scene);
-hemi.intensity = .42;
-hemi.diffuse = new BABYLON.Color3(.48,.61,.68);
-hemi.groundColor = new BABYLON.Color3(.04,.045,.05);
-const moon = new BABYLON.DirectionalLight("moon", new BABYLON.Vector3(-.45,-1,.35), scene);
-moon.position = new BABYLON.Vector3(35,65,-35);
-moon.intensity = 1.35;
-moon.diffuse = new BABYLON.Color3(.54,.69,.82);
-const shadowGenerator = new BABYLON.ShadowGenerator(1024, moon);
-shadowGenerator.useBlurExponentialShadowMap = true;
-shadowGenerator.blurKernel = 20;
+function makeGroundTexture(){const texture=new BABYLON.DynamicTexture("ground-detail",{width:1024,height:1024},scene,false);const ctx=texture.getContext();ctx.fillStyle="#303a3d";ctx.fillRect(0,0,1024,1024);for(let i=0;i<1800;i++){const v=35+Math.random()*35;ctx.fillStyle=`rgba(${v},${v+5},${v+6},${.04+Math.random()*.1})`;const size=1+Math.random()*7;ctx.fillRect(Math.random()*1024,Math.random()*1024,size,size)}ctx.strokeStyle="rgba(5,7,8,.4)";ctx.lineWidth=2;for(let i=0;i<45;i++){ctx.beginPath();let x=Math.random()*1024,y=Math.random()*1024;ctx.moveTo(x,y);for(let j=0;j<4;j++){x+=Math.random()*45-22;y+=Math.random()*45-22;ctx.lineTo(x,y)}ctx.stroke()}texture.update(false);texture.wrapU=texture.wrapV=BABYLON.Texture.WRAP_ADDRESSMODE;texture.uScale=texture.vScale=6;return texture;}
+function makeSky(){const texture=new BABYLON.DynamicTexture("storm-sky",{width:1024,height:512},scene,false);const ctx=texture.getContext(),gradient=ctx.createLinearGradient(0,0,0,512);gradient.addColorStop(0,"#06101c");gradient.addColorStop(.48,"#17394c");gradient.addColorStop(1,"#875b48");ctx.fillStyle=gradient;ctx.fillRect(0,0,1024,512);for(let i=0;i<420;i++){const a=Math.random()*.78+.18;ctx.fillStyle=`rgba(215,232,238,${a})`;const r=Math.random()*1.3+.2;ctx.fillRect(Math.random()*1024,Math.random()*300,r,r)}for(let i=0;i<50;i++){ctx.fillStyle=`rgba(21,29,35,${.08+Math.random()*.18})`;ctx.beginPath();ctx.ellipse(Math.random()*1024,180+Math.random()*240,60+Math.random()*160,12+Math.random()*38,0,0,Math.PI*2);ctx.fill()}texture.update(false);const sky=BABYLON.MeshBuilder.CreateSphere("sky",{diameter:350,segments:24,sideOrientation:BABYLON.Mesh.BACKSIDE},scene),mat=new BABYLON.StandardMaterial("sky-material",scene);mat.diffuseTexture=texture;mat.emissiveTexture=texture;mat.disableLighting=true;mat.backFaceCulling=false;sky.material=mat;sky.isPickable=false;return sky;}
 
-function box(name, position, scale, mat, collision=true) {
-  const mesh = BABYLON.MeshBuilder.CreateBox(name, {width:scale.x,height:scale.y,depth:scale.z}, scene);
-  mesh.position.copyFrom(position); mesh.material = mat; mesh.checkCollisions = collision; mesh.receiveShadows = true;
-  return mesh;
-}
-
-function createWorld() {
-  const ground = box("compound-ground", new BABYLON.Vector3(0,-.3,12), new BABYLON.Vector3(112,.6,112), materials.ground);
-  ground.receiveShadows = true;
-  const perimeter = [
-    [0,3,-44,112,7,1], [0,3,68,112,7,1], [-56,3,12,1,7,112], [56,3,12,1,7,112],
-  ];
-  perimeter.forEach((v,i)=>box(`perimeter-${i}`,new BABYLON.Vector3(v[0],v[1],v[2]),new BABYLON.Vector3(v[3],v[4],v[5]),materials.wall));
-  const structures = [
-    [-31,3,-14,20,6,16], [30,4,-6,22,8,18], [-27,3,30,18,6,22], [28,3,34,25,6,16],
-    [0,2,10,12,4,10], [5,1.5,-21,9,3,7], [-5,1.5,48,12,3,7],
-  ];
-  structures.forEach((v,i)=>{
-    const building=box(`structure-${i}`,new BABYLON.Vector3(v[0],v[1],v[2]),new BABYLON.Vector3(v[3],v[4],v[5]),i%2?materials.dark:materials.wall);
-    if(i<4){
-      const stripe=box(`stripe-${i}`,new BABYLON.Vector3(v[0],v[1]+v[4]/2+.08,v[2]),new BABYLON.Vector3(v[3]*.7,.12,v[5]*.7),i%2?materials.cyan:materials.orange,false);
-      stripe.receiveShadows=false;
-    }
-  });
-  const covers = [[-13,1,-8],[13,1,18],[-42,1,8],[42,1,17],[-5,1,36],[17,1,-30],[-38,1,48],[40,1,48]];
-  covers.forEach((p,i)=>{
-    const cover=box(`cargo-${i}`,new BABYLON.Vector3(...p),new BABYLON.Vector3(i%2?5:3.5,2.2,i%2?2.6:4.5),i%3?materials.wall:materials.orange);
-    cover.rotation.y=(i%4)*Math.PI/8;
-  });
-  for(let i=0;i<34;i++){
-    const x=-50+(i*17)%100,z=-39+(i*29)%102;
-    const lamp=BABYLON.MeshBuilder.CreateCylinder(`lamp-${i}`,{height:.05,diameter:.16},scene);
-    lamp.position.set(x,.03,z);lamp.material=i%5===0?materials.orange:materials.cyan;
-  }
-  const sky = BABYLON.MeshBuilder.CreateSphere("night-sky", {diameter:280,segments:18,sideOrientation:BABYLON.Mesh.BACKSIDE}, scene);
-  sky.material = material("sky-mat", "#07121b", {emissive:.38}); sky.isPickable=false;
+function createStreetLight(x,z,rotation=0){const root=new BABYLON.TransformNode("street-light",scene);root.position.set(x,0,z);root.rotation.y=rotation;const pole=localCylinder("lamp-pole",root,new BABYLON.Vector3(0,3.4,0),6.8,.14,mats.dark),arm=localBox("lamp-arm",root,new BABYLON.Vector3(.55,6.68,0),new BABYLON.Vector3(1.15,.1,.1),mats.dark),lamp=localBox("lamp-head",root,new BABYLON.Vector3(1.08,6.55,0),new BABYLON.Vector3(.48,.18,.3),mats.cyan);[pole,arm,lamp].forEach(m=>{m.isPickable=false;m.receiveShadows=true});const light=new BABYLON.PointLight("lamp-glow",new BABYLON.Vector3(x+Math.cos(rotation)*1.08,6.25,z-Math.sin(rotation)*1.08),scene);light.diffuse=new BABYLON.Color3(.43,.83,.88);light.intensity=1.25;light.range=18;}
+function createVehicle(x,z,rotation=0,orange=false){const root=new BABYLON.TransformNode("wrecked-vehicle",scene);root.position.set(x,.75,z);root.rotation.y=rotation;const body=localBox("vehicle-body",root,new BABYLON.Vector3(0,0,0),new BABYLON.Vector3(4.8,1.1,2.15),orange?mats.orange:mats.wall),cabin=localBox("vehicle-cabin",root,new BABYLON.Vector3(.5,.85,0),new BABYLON.Vector3(2.25,.95,1.85),mats.dark),wind=localBox("broken-window",root,new BABYLON.Vector3(-.67,.93,0),new BABYLON.Vector3(.06,.62,1.55),mats.glass);[body,cabin,wind].forEach(m=>{m.checkCollisions=true;m.metadata={solid:true};m.receiveShadows=true});for(const sx of [-1.55,1.55])for(const sz of [-1,1]){const wheel=localCylinder("wheel",root,new BABYLON.Vector3(sx,-.35,sz),.35,.68,mats.rubber,new BABYLON.Vector3(Math.PI/2,0,0));wheel.receiveShadows=true}return root;}
+function createBarricade(x,z,rotation=0){const root=new BABYLON.TransformNode("barricade",scene);root.position.set(x,0,z);root.rotation.y=rotation;for(let i=-1;i<=1;i++){const block=localBox("barrier-block",root,new BABYLON.Vector3(i*1.65,.62,0),new BABYLON.Vector3(1.5,1.25,.85),i===0?mats.orange:mats.concrete);block.checkCollisions=true;block.metadata={solid:true};block.receiveShadows=true}return root;}
+function createContainer(x,z,rotation,colorMat=mats.wall){const c=worldBox("cargo-container",new BABYLON.Vector3(x,1.45,z),new BABYLON.Vector3(7.4,2.9,3),colorMat,true);c.rotation.y=rotation;for(let i=-2;i<=2;i++){const rib=worldBox("container-rib",new BABYLON.Vector3(x,1.45,z),new BABYLON.Vector3(.09,2.7,3.05),mats.dark,false);rib.rotation.y=rotation;const offset=new BABYLON.Vector3(i*1.35,0,0);offset.rotateByQuaternionToRef(BABYLON.Quaternion.FromEulerAngles(0,rotation,0),offset);rib.position.addInPlace(offset)}return c;}
+function createWorld(){
+  const ground=worldBox("kestrel-ground",new BABYLON.Vector3(0,-.32,12),new BABYLON.Vector3(190,.64,190),mats.concrete,true);mats.concrete.albedoTexture=makeGroundTexture();ground.receiveShadows=true;makeSky();
+  const road=worldBox("main-road",new BABYLON.Vector3(0,.015,12),new BABYLON.Vector3(18,.05,184),mats.asphalt,false);road.receiveShadows=true;for(let z=-75;z<90;z+=10)worldBox("road-mark",new BABYLON.Vector3(0,.052,z),new BABYLON.Vector3(.22,.025,4.8),mats.brass,false);
+  [[0,4,-83,190,8,1],[0,4,107,190,8,1],[-95,4,12,1,8,190],[95,4,12,1,8,190]].forEach((v,i)=>worldBox(`perimeter-${i}`,new BABYLON.Vector3(v[0],v[1],v[2]),new BABYLON.Vector3(v[3],v[4],v[5]),mats.wall,true));
+  const buildings=[[-57,5,-46,30,10,25],[-58,4,8,25,8,31],[-61,5,63,35,10,25],[56,5,-46,34,10,28],[61,4,8,24,8,32],[57,6,61,38,12,30],[-25,3,84,19,6,14],[27,4,86,24,8,16]];
+  buildings.forEach((v,i)=>{const b=worldBox(`hangar-${i}`,new BABYLON.Vector3(v[0],v[1],v[2]),new BABYLON.Vector3(v[3],v[4],v[5]),i%2?mats.dark:mats.wall,true);if(i<6){const sign=worldBox(`hangar-sign-${i}`,new BABYLON.Vector3(v[0],v[1]+v[4]/2+.07,v[2]-v[5]/2-.04),new BABYLON.Vector3(Math.min(10,v[3]*.5),.18,.08),i%3?mats.cyan:mats.orange,false);sign.receiveShadows=false}});
+  [[-28,-24,0],[25,-26,.12],[-29,35,-.08],[29,38,.05],[-18,66,.16],[19,63,-.12],[78,33,Math.PI/2],[-80,35,Math.PI/2]].forEach((p,i)=>createContainer(p[0],p[1],p[2],i%3===0?mats.orange:mats.wall));
+  [[-22,-7,0],[20,16,.2],[-25,52,-.12],[25,76,.1],[-78,-5,Math.PI/2],[79,0,Math.PI/2]].forEach((p,i)=>createBarricade(p[0],p[1],p[2]));
+  [[-18,-46,.12,false],[22,-4,-.08,true],[-30,77,.25,false],[31,48,-.18,false],[78,72,Math.PI/2,true]].forEach(p=>createVehicle(...p));
+  for(let z=-68;z<=92;z+=28){createStreetLight(-12,z,0);createStreetLight(12,z,Math.PI)}
+  for(let i=0;i<28;i++){const x=(i%2?-1:1)*(38+(i*13)%48),z=-68+(i*29)%160;const barrel=worldCylinder("fuel-barrel",new BABYLON.Vector3(x,.62,z),1.24,.78,i%5===0?mats.orange:mats.dark,true,20);barrel.rotation.z=(i%7===0)?Math.PI/2:0}
+  for(let i=0;i<22;i++){const x=-84+(i*31)%168,z=-73+(i*43)%170;worldBox("supply-crate",new BABYLON.Vector3(x,.55,z),new BABYLON.Vector3(1.5,1.1,1.5),i%4?mats.wood:mats.wall,true)}
+  for(let i=0;i<14;i++){const puddle=BABYLON.MeshBuilder.CreateCylinder("puddle",{height:.012,diameter:3+Math.random()*7,tessellation:28},scene);puddle.position.set(-80+Math.random()*160,.018,-70+Math.random()*170);puddle.scaling.z=.35+Math.random()*.4;puddle.material=mats.glass;puddle.isPickable=false}
+  const tower=worldCylinder("watch-tower",new BABYLON.Vector3(82,8,-66),16,2.2,mats.dark,true,10);const platform=worldBox("tower-platform",new BABYLON.Vector3(82,14.5,-66),new BABYLON.Vector3(8,.7,8),mats.wall,true);shadows.addShadowCaster(tower);shadows.addShadowCaster(platform);
 }
 createWorld();
 
-const weaponRoot = new BABYLON.TransformNode("view-weapon", scene);
-weaponRoot.parent = camera;
-weaponRoot.position = new BABYLON.Vector3(.42,-.34,.83);
-weaponRoot.rotation = new BABYLON.Vector3(.01,Math.PI,.01);
-const gunBody = box("rifle-body",new BABYLON.Vector3(0,0,0),new BABYLON.Vector3(.16,.17,.74),materials.dark,false);gunBody.parent=weaponRoot;
-const gunTop = box("rifle-rail",new BABYLON.Vector3(0,.115,.02),new BABYLON.Vector3(.09,.07,.42),materials.wall,false);gunTop.parent=weaponRoot;
-const gunBarrel = BABYLON.MeshBuilder.CreateCylinder("rifle-barrel",{height:.58,diameter:.055},scene);gunBarrel.parent=weaponRoot;gunBarrel.rotation.x=Math.PI/2;gunBarrel.position.z=-.59;gunBarrel.material=materials.dark;
-const gunAccent = box("rifle-accent",new BABYLON.Vector3(0,.02,-.12),new BABYLON.Vector3(.17,.035,.25),materials.cyan,false);gunAccent.parent=weaponRoot;
-const sight = box("rifle-sight",new BABYLON.Vector3(0,.17,-.08),new BABYLON.Vector3(.08,.08,.13),materials.dark,false);sight.parent=weaponRoot;
-const muzzle = BABYLON.MeshBuilder.CreateSphere("muzzle-flash",{diameter:.13,segments:6},scene);muzzle.parent=weaponRoot;muzzle.position.z=-.9;muzzle.material=materials.orange;muzzle.isVisible=false;
+const viewRoot=new BABYLON.TransformNode("weapon-view",scene);viewRoot.parent=camera;viewRoot.position=new BABYLON.Vector3(.4,-.38,.88);viewRoot.rotation.y=Math.PI;const weaponRigs=[];
+function addHands(root,leftPos,rightPos){const leftArm=localCylinder("left-forearm",root,leftPos,.48,.16,mats.cloth,new BABYLON.Vector3(Math.PI/2,0,0)),rightArm=localCylinder("right-forearm",root,rightPos,.5,.17,mats.cloth,new BABYLON.Vector3(Math.PI/2,0,0));const leftGlove=localBox("left-glove",root,leftPos.add(new BABYLON.Vector3(0,0,-.25)),new BABYLON.Vector3(.18,.15,.24),mats.glove),rightGlove=localBox("right-glove",root,rightPos.add(new BABYLON.Vector3(0,0,-.26)),new BABYLON.Vector3(.19,.16,.25),mats.glove);return[leftArm,rightArm,leftGlove,rightGlove]}
+function createRifle(){const root=new BABYLON.TransformNode("rifle-rig",scene);root.parent=viewRoot;localBox("receiver",root,new BABYLON.Vector3(0,0,0),new BABYLON.Vector3(.18,.19,.78),mats.gun);localBox("upper",root,new BABYLON.Vector3(0,.1,-.08),new BABYLON.Vector3(.15,.09,.58),mats.gun2);localBox("stock",root,new BABYLON.Vector3(0,-.015,.55),new BABYLON.Vector3(.16,.2,.42),mats.gun2);localBox("handguard",root,new BABYLON.Vector3(0,.015,-.55),new BABYLON.Vector3(.17,.17,.55),mats.gun2);localCylinder("barrel",root,new BABYLON.Vector3(0,.02,-1),.55,.045,mats.gun,new BABYLON.Vector3(Math.PI/2,0,0));localCylinder("suppressor",root,new BABYLON.Vector3(0,.02,-1.3),.34,.085,mats.gun,new BABYLON.Vector3(Math.PI/2,0,0));const mag=localBox("magazine",root,new BABYLON.Vector3(0,-.2,.08),new BABYLON.Vector3(.13,.34,.2),mats.gun2);mag.rotation.x=-.16;localBox("rail",root,new BABYLON.Vector3(0,.17,-.22),new BABYLON.Vector3(.12,.035,.72),mats.gun);localBox("optic",root,new BABYLON.Vector3(0,.25,-.05),new BABYLON.Vector3(.14,.14,.22),mats.gun2);const lens=localCylinder("optic-lens",root,new BABYLON.Vector3(0,.25,-.17),.02,.09,mats.cyan,new BABYLON.Vector3(Math.PI/2,0,0));localBox("charging-handle",root,new BABYLON.Vector3(.14,.08,.12),new BABYLON.Vector3(.13,.045,.07),mats.gun);addHands(root,new BABYLON.Vector3(-.18,-.16,-.42),new BABYLON.Vector3(.16,-.2,.26));const muzzle=BABYLON.MeshBuilder.CreateSphere("rifle-flash",{diameter:.14,segments:6},scene);muzzle.parent=root;muzzle.position.z=-1.5;muzzle.material=mats.orange;muzzle.isPickable=false;muzzle.isVisible=false;root.metadata={muzzle};return root}
+function createPistol(){const root=new BABYLON.TransformNode("pistol-rig",scene);root.parent=viewRoot;localBox("pistol-slide",root,new BABYLON.Vector3(0,.05,-.25),new BABYLON.Vector3(.16,.16,.66),mats.gun);const frame=localBox("pistol-frame",root,new BABYLON.Vector3(0,-.07,-.12),new BABYLON.Vector3(.14,.14,.42),mats.gun2),grip=localBox("pistol-grip",root,new BABYLON.Vector3(0,-.3,.02),new BABYLON.Vector3(.15,.45,.2),mats.gun2);grip.rotation.x=-.2;localCylinder("pistol-barrel",root,new BABYLON.Vector3(0,.055,-.64),.22,.04,mats.gun,new BABYLON.Vector3(Math.PI/2,0,0));localBox("front-sight",root,new BABYLON.Vector3(0,.15,-.48),new BABYLON.Vector3(.035,.055,.04),mats.cyan);addHands(root,new BABYLON.Vector3(-.13,-.31,.05),new BABYLON.Vector3(.12,-.27,.08));const muzzle=BABYLON.MeshBuilder.CreateSphere("pistol-flash",{diameter:.12,segments:6},scene);muzzle.parent=root;muzzle.position.set(0,.055,-.77);muzzle.material=mats.orange;muzzle.isPickable=false;muzzle.isVisible=false;root.metadata={muzzle,slide:frame};return root}
+function createKnife(){const root=new BABYLON.TransformNode("knife-rig",scene);root.parent=viewRoot;const handle=localCylinder("knife-handle",root,new BABYLON.Vector3(0,-.02,.12),.5,.12,mats.glove,new BABYLON.Vector3(Math.PI/2,0,0));localBox("knife-guard",root,new BABYLON.Vector3(0,.0,-.17),new BABYLON.Vector3(.3,.06,.08),mats.gun);const blade=localBox("knife-blade",root,new BABYLON.Vector3(0,.02,-.55),new BABYLON.Vector3(.09,.035,.75),mats.blade);blade.rotation.z=.03;const tip=BABYLON.MeshBuilder.CreateCylinder("knife-tip",{height:.22,diameterTop:0,diameterBottom:.1,tessellation:4},scene);tip.parent=root;tip.position.set(0,.02,-.99);tip.rotation.x=Math.PI/2;tip.material=mats.blade;tip.isPickable=false;addHands(root,new BABYLON.Vector3(-.3,-.29,.22),new BABYLON.Vector3(.09,-.12,.19));root.rotation.z=-.28;root.metadata={};return root}
+weaponRigs.push(createRifle(),createPistol(),createKnife());weaponRigs.forEach((rig,i)=>rig.setEnabled(i===0));
 
-function createEnemy(position) {
-  const root = new BABYLON.TransformNode(`hostile-${Date.now()}-${Math.random()}`, scene);
-  root.position.copyFrom(position);
-  const body = box("hostile-body",new BABYLON.Vector3(0,1.15,0),new BABYLON.Vector3(.72,1.05,.38),materials.enemy,false);
-  const head = BABYLON.MeshBuilder.CreateSphere("hostile-head",{diameter:.48,segments:10},scene);head.position.set(0,1.93,0);head.material=materials.skin;
-  const visor=box("hostile-visor",new BABYLON.Vector3(0,1.98,-.235),new BABYLON.Vector3(.34,.1,.035),materials.enemyAccent,false);
-  const leftLeg=box("hostile-leg",new BABYLON.Vector3(-.2,.42,0),new BABYLON.Vector3(.24,.78,.28),materials.enemy,false);
-  const rightLeg=box("hostile-leg",new BABYLON.Vector3(.2,.42,0),new BABYLON.Vector3(.24,.78,.28),materials.enemy,false);
-  const rifle=box("hostile-rifle",new BABYLON.Vector3(.45,1.2,-.27),new BABYLON.Vector3(.12,.12,.7),materials.dark,false);rifle.rotation.z=-.25;
-  const enemy={root,health:85+state.kills*4,maxHealth:85+state.kills*4,speed:1.55+Math.random()*.55,attackTimer:.7+Math.random(),stagger:0,dead:false,meshes:[body,head,visor,leftLeg,rightLeg,rifle]};
-  enemy.meshes.forEach(mesh=>{mesh.parent=root;mesh.metadata={enemy,headshot:mesh===head||mesh===visor};mesh.isPickable=true;shadowGenerator.addShadowCaster(mesh)});
-  state.enemies.push(enemy);
-  return enemy;
-}
+function selectWeapon(index){if(index<0||index>=LOADOUT.length||index===state.currentSlot||state.reloading)return;state.currentSlot=index;state.firing=false;state.switchTimer=.38;weaponRigs.forEach((rig,i)=>rig.setEnabled(i===index));document.querySelectorAll(".loadout-strip span").forEach((slot,i)=>slot.classList.toggle("active",i===index));updateHud();tone(170+index*80,.05,"square",.018)}
+function currentWeapon(){return LOADOUT[state.currentSlot]}
 
-const spawnPoints=[[-43,0,-26],[42,0,-25],[-45,0,44],[45,0,52],[-13,0,58],[14,0,4],[2,0,42],[46,0,2]];
-function spawnEnemy() {
-  const options=spawnPoints.map(p=>new BABYLON.Vector3(...p)).filter(p=>BABYLON.Vector3.DistanceSquared(p,camera.position)>225);
-  createEnemy(options[Math.floor(Math.random()*options.length)]||new BABYLON.Vector3(40,0,40));
-}
+const spawnPoints=[[-87,0,-73],[87,0,-68],[-88,0,-15],[88,0,-10],[-88,0,47],[88,0,50],[-70,0,98],[70,0,98],[0,0,102]];
+function chooseZombieType(){const weights=WAVES[Math.max(0,state.waveIndex)].weights,r=Math.random();return r<weights[0]?"walker":r<weights[0]+weights[1]?"runner":"brute"}
+function createZombie(typeName,position){const type=ZOMBIE_TYPES[typeName],root=new BABYLON.TransformNode(`zombie-${typeName}`,scene);root.position.copyFrom(position);root.scaling.setAll(type.scale);const bodyMat=makeMat(`zombie-cloth-${Math.random()}`,type.color,{rough:1}),skinMat=typeName==="brute"?makeMat(`brute-skin-${Math.random()}`,"#514d3f",{rough:.92}):mats.skin;const body=localBox("zombie-torso",root,new BABYLON.Vector3(0,1.25,0),new BABYLON.Vector3(.72,1.05,.4),bodyMat),head=BABYLON.MeshBuilder.CreateSphere("zombie-head",{diameter:.48,segments:10},scene);head.parent=root;head.position.set(0,2.03,-.03);head.material=skinMat;const jaw=localBox("zombie-jaw",root,new BABYLON.Vector3(0,1.89,-.22),new BABYLON.Vector3(.3,.16,.16),skinMat),eyeL=BABYLON.MeshBuilder.CreateSphere("zombie-eye",{diameter:.065,segments:6},scene),eyeR=eyeL.clone("zombie-eye");eyeL.parent=root;eyeR.parent=root;eyeL.position.set(-.11,2.08,-.23);eyeR.position.set(.11,2.08,-.23);eyeL.material=eyeR.material=mats.orange;const armL=localCylinder("zombie-arm",root,new BABYLON.Vector3(-.48,1.25,-.18),.95,.2,skinMat,new BABYLON.Vector3(Math.PI/2.3,0,.15)),armR=localCylinder("zombie-arm",root,new BABYLON.Vector3(.48,1.25,-.18),.95,.2,skinMat,new BABYLON.Vector3(Math.PI/2.3,0,-.15)),legL=localCylinder("zombie-leg",root,new BABYLON.Vector3(-.2,.47,0),.9,.23,bodyMat),legR=localCylinder("zombie-leg",root,new BABYLON.Vector3(.2,.47,0),.9,.23,bodyMat);const wound=localBox("zombie-wound",root,new BABYLON.Vector3(.18,1.35,-.22),new BABYLON.Vector3(.22,.28,.025),mats.blood);const meshes=[body,head,jaw,eyeL,eyeR,armL,armR,legL,legR,wound],zombie={type:typeName,root,meshes,armL,armR,legL,legR,health:type.health*(1+state.waveIndex*.08),speed:type.speed*(1+state.waveIndex*.035),damage:type.damage,attackTimer:.4+Math.random(),phase:Math.random()*6,stagger:0,dead:false};meshes.forEach(mesh=>{mesh.metadata={zombie,headshot:mesh===head||mesh===jaw};mesh.isPickable=true;shadows.addShadowCaster(mesh)});state.enemies.push(zombie);return zombie}
+function spawnZombie(){const choices=spawnPoints.map(p=>new BABYLON.Vector3(...p)).filter(p=>BABYLON.Vector3.DistanceSquared(p,camera.position)>625),position=choices[Math.floor(Math.random()*choices.length)]||new BABYLON.Vector3(80,0,80);createZombie(chooseZombieType(),position)}
 
-function spawnInitialEnemies(){for(let i=0;i<5;i++)spawnEnemy();}
+function addFeed(text,color="#edf0e8"){const row=document.createElement("p");row.textContent=text;row.style.borderColor=color;feed.prepend(row);setTimeout(()=>row.remove(),3100)}
+function showWaveBanner(title,text,color="#ff5b35"){waveBannerTitle.textContent=title;waveBannerText.textContent=text;waveBannerTitle.style.color=color;waveBanner.classList.add("show");setTimeout(()=>waveBanner.classList.remove("show"),2600)}
+function tone(freq,duration,type="triangle",volume=.025){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;state.ac||=new AC();const osc=state.ac.createOscillator(),gain=state.ac.createGain();osc.type=type;osc.frequency.setValueAtTime(freq,state.ac.currentTime);gain.gain.setValueAtTime(volume,state.ac.currentTime);gain.gain.exponentialRampToValueAtTime(.0001,state.ac.currentTime+duration);osc.connect(gain);gain.connect(state.ac.destination);osc.start();osc.stop(state.ac.currentTime+duration)}
+function showHit(headshot=false){hitMarker.classList.add("show");hitMarker.style.filter=headshot?"drop-shadow(0 0 5px #ff5b35)":"";setTimeout(()=>hitMarker.classList.remove("show"),90)}
 
-function addFeed(text,color="#edf0e8"){
-  const row=document.createElement("p");row.textContent=text;row.style.borderColor=color;feed.prepend(row);setTimeout(()=>row.remove(),3100);
-}
+function updateHud(){const weapon=currentWeapon();labels.healthValue.textContent=Math.ceil(state.health);labels.healthBar.style.width=`${state.health}%`;labels.armorValue.textContent=Math.ceil(state.armor);labels.armorBar.style.width=`${state.armor}%`;labels.playerLevel.textContent=state.level;labels.ammoCurrent.textContent=weapon.kind==="knife"?"—":weapon.ammo;labels.ammoReserve.textContent=weapon.kind==="knife"?"∞":weapon.reserve;labels.weaponName.textContent=weapon.name;labels.weaponRarity.textContent=weapon.rarity;labels.weaponRarity.style.color=weapon.color;document.querySelector(".weapon-panel>p").textContent=weapon.mode;labels.killCount.textContent=state.waveKills;labels.killTarget.textContent=state.waveTarget;labels.objectiveProgress.style.width=`${state.waveTarget?Math.min(100,state.waveKills/state.waveTarget*100):0}%`;labels.xpLabel.textContent=`${state.xp} / ${state.xpNeeded} XP`;labels.xpBar.style.width=`${state.xp/state.xpNeeded*100}%`}
+function gainXp(amount){state.xp+=amount;while(state.xp>=state.xpNeeded){state.xp-=state.xpNeeded;state.level++;state.xpNeeded=Math.round(state.xpNeeded*1.3);state.health=Math.min(100,state.health+28);state.armor=Math.min(100,state.armor+22);addFeed(`SEVİYE ${state.level} · CAN VE ZIRH YENİLENDİ`,"#66e3ee")}updateHud()}
 
-function showHit(headshot=false){
-  hitMarker.classList.add("show");hitMarker.style.filter=headshot?"drop-shadow(0 0 5px #ff5b35)":"";
-  setTimeout(()=>hitMarker.classList.remove("show"),90);
-}
+function beginWave(index){const wave=WAVES[index];state.waveIndex=index;state.waveKills=0;state.waveTarget=wave.count;state.spawnRemaining=wave.count;state.spawnTimer=.45;state.waveActive=true;state.intermission=0;labels.objectiveTitle.textContent=`DALGA ${index+1} / ${WAVES.length} · ${wave.label}`;labels.objectiveText.innerHTML=`<b id="kill-count">0</b> / <span id="kill-target">${wave.count}</span> zombi etkisiz`;labels.killCount=$("kill-count");labels.killTarget=$("kill-target");showWaveBanner(`DALGA ${index+1}`,wave.label);addFeed(`DALGA ${index+1} BAŞLADI`,"#ff5b35");updateHud()}
+function finishWave(){state.waveActive=false;if(state.waveIndex>=WAVES.length-1){activateExtraction();return}state.intermission=7;labels.objectiveTitle.textContent=`DALGA ${state.waveIndex+1} TAMAMLANDI`;showWaveBanner("BÖLGE TEMİZ",`DALGA ${state.waveIndex+2} HAZIRLANIYOR`,"#66e3ee");state.health=Math.min(100,state.health+18);state.armor=Math.min(100,state.armor+15);LOADOUT.forEach(w=>{if(w.kind!=="knife")w.reserve=Math.min(w.kind==="rifle"?210:105,w.reserve+Math.ceil(w.mag*.7))});updateHud()}
 
-function updateHud(){
-  labels.healthValue.textContent=Math.ceil(state.health);labels.healthBar.style.width=`${state.health}%`;
-  labels.armorValue.textContent=Math.ceil(state.armor);labels.armorBar.style.width=`${state.armor}%`;
-  labels.playerLevel.textContent=state.level;labels.ammoCurrent.textContent=state.ammo;labels.ammoReserve.textContent=state.reserve;
-  labels.killCount.textContent=state.kills;labels.killTarget.textContent=state.target;labels.objectiveProgress.style.width=`${Math.min(100,state.kills/state.target*100)}%`;
-  labels.weaponName.textContent=state.weapon.name;labels.weaponRarity.textContent=state.weapon.rarity;labels.weaponRarity.style.color=state.weapon.color;
-  gunAccent.material.emissiveColor=BABYLON.Color3.FromHexString(state.weapon.color).scale(.4);
-  gunAccent.material.diffuseColor=BABYLON.Color3.FromHexString(state.weapon.color);
-  labels.xpLabel.textContent=`${state.xp} / ${state.xpNeeded} XP`;labels.xpBar.style.width=`${state.xp/state.xpNeeded*100}%`;
-}
+function spawnLoot(position){const roll=Math.random(),type=roll>.68?"armor":roll>.28?"ammo":"supply",color=type==="armor"?"#6a9dff":type==="supply"?"#ffcb57":"#edf0e8",mesh=BABYLON.MeshBuilder.CreateBox("loot",{size:.5},scene);mesh.position.copyFrom(position);mesh.position.y=.48;mesh.rotation.z=Math.PI/4;mesh.material=makeMat(`loot-${Math.random()}`,color,{metal:.35,rough:.3,emissive:.55});mesh.isPickable=false;const light=new BABYLON.PointLight("loot-glow",mesh.position.clone(),scene);light.diffuse=BABYLON.Color3.FromHexString(color);light.intensity=.7;light.range=4;state.loot.push({mesh,light,type,color,baseY:.48,phase:Math.random()*6})}
+function pickupLoot(loot){if(loot.type==="armor"){state.armor=Math.min(100,state.armor+35);addFeed("ZIRH PLAKASI +35",loot.color)}else if(loot.type==="supply"){state.health=Math.min(100,state.health+30);LOADOUT[0].reserve=Math.min(210,LOADOUT[0].reserve+45);LOADOUT[1].reserve=Math.min(105,LOADOUT[1].reserve+24);addFeed("SAHA ÇANTASI · CAN + MÜHİMMAT",loot.color)}else{LOADOUT[0].reserve=Math.min(210,LOADOUT[0].reserve+42);LOADOUT[1].reserve=Math.min(105,LOADOUT[1].reserve+21);addFeed("MÜHİMMAT ALINDI",loot.color)}gainXp(8);loot.mesh.dispose();loot.light.dispose();state.loot=state.loot.filter(item=>item!==loot);updateHud()}
 
-function gainXp(amount){
-  state.xp+=amount;
-  while(state.xp>=state.xpNeeded){state.xp-=state.xpNeeded;state.level++;state.xpNeeded=Math.round(state.xpNeeded*1.32);state.health=Math.min(100,state.health+30);state.armor=Math.min(100,state.armor+20);addFeed(`SEVİYE ${state.level} · SAĞLIK YENİLENDİ`,"#66e3ee");}
-  updateHud();
-}
+function killZombie(zombie,headshot){if(zombie.dead)return;zombie.dead=true;state.totalKills++;state.waveKills++;gainXp(headshot?40:zombie.type==="brute"?55:25);addFeed(headshot?"KAFA ATIŞI · +40 XP":zombie.type==="brute"?"İRİ ZOMBİ DÜŞTÜ · +55 XP":"ZOMBİ ETKİSİZ · +25 XP",headshot?"#ff5b35":"#edf0e8");if(Math.random()<.56)spawnLoot(zombie.root.position.clone());zombie.meshes.forEach(mesh=>mesh.dispose());zombie.root.dispose();state.enemies=state.enemies.filter(item=>item!==zombie);updateHud();if(state.waveActive&&state.spawnRemaining===0&&state.enemies.length===0)finishWave()}
 
-function spawnLoot(position){
-  const roll=Math.random(),tier=roll>.92?3:roll>.68?2:roll>.3?1:0;
-  const types=tier===0&&Math.random()>.45?["ammo","armor"]:["weapon","ammo","armor"];
-  const type=types[Math.floor(Math.random()*types.length)];
-  const color=type==="weapon"?WEAPONS[tier].color:type==="armor"?"#6a9dff":"#edf0e8";
-  const mesh=BABYLON.MeshBuilder.CreateBox("loot",{size:.48},scene);mesh.position.copyFrom(position);mesh.position.y=.45;mesh.rotation.z=Math.PI/4;
-  mesh.material=material(`loot-${Date.now()}`,color,{emissive:.5});mesh.isPickable=false;
-  const light=new BABYLON.PointLight(`loot-light-${Date.now()}`,mesh.position.clone(),scene);light.diffuse=BABYLON.Color3.FromHexString(color);light.intensity=.65;light.range=4;
-  const loot={mesh,light,type,tier,color,baseY:mesh.position.y,phase:Math.random()*6};state.loot.push(loot);
-}
+function shoot(){const weapon=currentWeapon();if(!state.running||state.paused||state.ended||state.reloading||state.switchTimer>0)return;const now=performance.now()/1000;if(now-state.lastShot<1/weapon.fireRate)return;state.lastShot=now;if(weapon.kind==="knife"){state.meleeTimer=.46;state.recoil=.25;tone(150,.09,"sawtooth",.018);const ray=camera.getForwardRay(weapon.range),pick=scene.pickWithRay(ray,m=>Boolean(m.metadata?.zombie&&!m.metadata.zombie.dead));if(pick?.hit){const zombie=pick.pickedMesh.metadata.zombie;zombie.health-=weapon.damage;zombie.stagger=.35;showHit(false);tone(70,.12,"square",.025);if(zombie.health<=0)killZombie(zombie,false)}return}if(weapon.ammo<=0){reload();return}weapon.ammo--;state.recoil=weapon.kind==="pistol"?.2:.12;camera.rotation.x-=weapon.kind==="pistol"?.014:.007+Math.random()*.005;const muzzle=weaponRigs[state.currentSlot].metadata.muzzle;muzzle.isVisible=true;setTimeout(()=>muzzle.isVisible=false,38);tone(weapon.kind==="pistol"?105:82,.055,"square",.032);const ray=camera.getForwardRay(weapon.range);ray.direction.x+=(Math.random()-.5)*weapon.spread;ray.direction.y+=(Math.random()-.5)*weapon.spread;const pick=scene.pickWithRay(ray,m=>Boolean(m.metadata?.zombie&&!m.metadata.zombie.dead));if(pick?.hit){const zombie=pick.pickedMesh.metadata.zombie,headshot=pick.pickedMesh.metadata.headshot;zombie.health-=weapon.damage*(headshot?1.72:1);zombie.stagger=.12;showHit(headshot);if(zombie.health<=0)killZombie(zombie,headshot)}updateHud()}
+function reload(){const weapon=currentWeapon();if(weapon.kind==="knife"||state.reloading||weapon.ammo>=weapon.mag||weapon.reserve<=0||state.ended)return;state.reloading=true;state.reloadTimer=weapon.kind==="pistol"?1.15:1.65;reloadIndicator.classList.remove("show");void reloadIndicator.offsetWidth;reloadIndicator.classList.add("show");tone(210,.05,"square",.012)}
+function finishReload(){const weapon=currentWeapon(),needed=weapon.mag-weapon.ammo,taken=Math.min(needed,weapon.reserve);weapon.ammo+=taken;weapon.reserve-=taken;state.reloading=false;reloadIndicator.classList.remove("show");tone(330,.045,"square",.015);updateHud()}
+function damagePlayer(amount){if(state.ended)return;let remaining=amount;if(state.armor>0){const absorbed=Math.min(state.armor,remaining);state.armor-=absorbed;remaining-=absorbed}state.health=Math.max(0,state.health-remaining);damageVignette.classList.add("show");state.damageFlashTimer=.24;tone(55,.16,"sawtooth",.025);updateHud();if(state.health<=0)endGame(false)}
 
-function killEnemy(enemy,headshot){
-  if(enemy.dead)return;enemy.dead=true;state.kills++;gainXp(headshot?45:30);addFeed(headshot?"KAFA ATIŞI · +45 XP":"DÜŞMAN ETKİSİZ · +30 XP",headshot?"#ff5b35":"#edf0e8");
-  spawnLoot(enemy.root.position.clone());enemy.meshes.forEach(mesh=>mesh.dispose());enemy.root.dispose();state.enemies=state.enemies.filter(item=>item!==enemy);
-  if(state.kills>=state.target)activateExtraction();else state.spawnTimer=.9;
-  updateHud();
-}
+function activateExtraction(){if(state.extraction)return;labels.objectiveTitle.textContent="BEŞ DALGA TAMAMLANDI";labels.objectiveText.innerHTML="Kuzey kapısındaki <b>tahliye işaretine</b> ulaş";labels.objectiveProgress.style.width="100%";const zone=BABYLON.MeshBuilder.CreateCylinder("extraction",{height:.08,diameter:9,tessellation:36},scene);zone.position.set(0,.05,100);zone.material=makeMat("extraction-signal","#66e3ee",{metal:.1,rough:.25,emissive:.7,alpha:.34});zone.isPickable=false;const beacon=new BABYLON.PointLight("extraction-beacon",new BABYLON.Vector3(0,2,100),scene);beacon.diffuse=BABYLON.Color3.FromHexString("#66e3ee");beacon.intensity=2.3;beacon.range=20;state.extraction={zone,beacon};showWaveBanner("TAHLİYE AÇIK","KUZEY KAPISINA ULAŞ","#66e3ee");addFeed("TAHLİYE İŞARETİ AKTİF","#66e3ee")}
 
-function fireShot(){
-  if(!state.running||state.paused||state.ended||state.reloading)return;
-  const now=performance.now()/1000;if(now-state.lastShot<1/state.weapon.fireRate)return;state.lastShot=now;
-  if(state.ammo<=0){reload();return;}state.ammo--;updateHud();
-  weaponRoot.position.z=.88;weaponRoot.rotation.x=-.055;camera.rotation.x-=.006+Math.random()*.006;
-  muzzle.isVisible=true;setTimeout(()=>muzzle.isVisible=false,36);
-  const forward=camera.getForwardRay(150);forward.direction.x+=(Math.random()-.5)*state.weapon.spread;forward.direction.y+=(Math.random()-.5)*state.weapon.spread;
-  const pick=scene.pickWithRay(forward,mesh=>Boolean(mesh.metadata?.enemy&&!mesh.metadata.enemy.dead));
-  if(pick?.hit&&pick.pickedMesh){const enemy=pick.pickedMesh.metadata.enemy,headshot=pick.pickedMesh.metadata.headshot;enemy.health-=state.weapon.damage*(headshot?1.75:1);enemy.stagger=.12;showHit(headshot);if(enemy.health<=0)killEnemy(enemy,headshot);}
-}
+function updateZombies(dt){for(const z of state.enemies){if(z.dead)continue;z.attackTimer-=dt;z.stagger=Math.max(0,z.stagger-dt);z.phase+=dt*(4+z.speed);let dir=camera.position.subtract(z.root.position);dir.y=0;const distance=dir.length();if(distance>1.55&&z.stagger<=0){dir.normalize();const obstacle=scene.pickWithRay(new BABYLON.Ray(z.root.position.add(new BABYLON.Vector3(0,.8,0)),dir,1.3),m=>Boolean(m.metadata?.solid));if(obstacle?.hit)dir=new BABYLON.Vector3(-dir.z,0,dir.x*(Math.random()>.5?1:-1)).normalize();z.root.position.addInPlace(dir.scale(z.speed*dt))}z.root.rotation.y=Math.atan2(-dir.x,-dir.z);const swing=Math.sin(z.phase)*.48;z.armL.rotation.x=1.25+swing*.35;z.armR.rotation.x=1.25-swing*.35;z.legL.rotation.x=swing*.32;z.legR.rotation.x=-swing*.32;z.root.position.y=Math.abs(Math.sin(z.phase))*0.025;if(distance<1.9&&z.attackTimer<=0){z.attackTimer=.82+Math.random()*.45;damagePlayer(z.damage)}}}
+function updateLoot(dt){let nearest=null,nearestDistance=Infinity;for(const loot of state.loot){loot.phase+=dt*2.2;loot.mesh.rotation.y+=dt*1.5;loot.mesh.position.y=loot.baseY+Math.sin(loot.phase)*.12;loot.light.position.copyFrom(loot.mesh.position);const d=BABYLON.Vector3.Distance(camera.position,loot.mesh.position);if(d<nearestDistance){nearest=loot;nearestDistance=d}}if(nearest&&nearestDistance<3.2){const name=nearest.type==="armor"?"ZIRH PLAKASI":nearest.type==="supply"?"SAHA ÇANTASI":"MÜHİMMAT";interaction.innerHTML=`<b>[E]</b> ${name} AL`;interaction.classList.add("show");state.nearestLoot=nearest}else{interaction.classList.remove("show");state.nearestLoot=null}}
+function updateViewModel(dt){const rig=weaponRigs[state.currentSlot],weapon=currentWeapon(),moving=camera.cameraDirection.length()>.004,bob=moving?Math.sin(state.elapsed*(keys.shift?14:10))*.014:0,sway=moving?Math.cos(state.elapsed*(keys.shift?7:5))*.012:0,sprint=keys.shift&&moving?1:0;state.recoil=Math.max(0,state.recoil-dt*4.8);state.switchTimer=Math.max(0,state.switchTimer-dt);const base=weapon.kind==="rifle"?new BABYLON.Vector3(.41,-.37,.91):weapon.kind==="pistol"?new BABYLON.Vector3(.48,-.39,.78):new BABYLON.Vector3(.51,-.36,.67);let reloadArc=0;if(state.reloading){state.reloadTimer-=dt;const duration=weapon.kind==="pistol"?1.15:1.65,phase=1-state.reloadTimer/duration;reloadArc=Math.sin(phase*Math.PI);if(state.reloadTimer<=0)finishReload()}if(state.meleeTimer>0)state.meleeTimer=Math.max(0,state.meleeTimer-dt);const meleePhase=state.meleeTimer>0?Math.sin((1-state.meleeTimer/.46)*Math.PI):0;viewRoot.position.x+=(base.x+sway-viewRoot.position.x)*Math.min(1,dt*14);viewRoot.position.y+=(base.y+Math.abs(bob)-reloadArc*.22-sprint*.13-viewRoot.position.y)*Math.min(1,dt*14);viewRoot.position.z+=(base.z+bob+state.recoil*.22+sprint*.08-viewRoot.position.z)*Math.min(1,dt*18);viewRoot.rotation.z+=(sway*.8+reloadArc*.55+(weapon.kind==="knife"?-meleePhase*1.15:0)-viewRoot.rotation.z)*Math.min(1,dt*16);viewRoot.rotation.x+=(sprint*.28+(weapon.kind==="knife"?meleePhase*.8:0)-viewRoot.rotation.x)*Math.min(1,dt*16);rig.rotation.y=weapon.kind==="knife"?meleePhase*.7:0}
+function updateCompass(){const deg=(camera.rotation.y*180/Math.PI%360+360)%360,points=["N","NE","E","SE","S","SW","W","NW"];labels.heading.textContent=`${points[Math.round(deg/45)%8]} · ${String(Math.round(deg)).padStart(3,"0")}`}
 
-function reload(){
-  if(state.reloading||state.ammo>=state.weapon.mag||state.reserve<=0||state.ended)return;
-  state.reloading=true;reloadIndicator.classList.remove("show");void reloadIndicator.offsetWidth;reloadIndicator.classList.add("show");
-  setTimeout(()=>{if(state.ended)return;const needed=state.weapon.mag-state.ammo,taken=Math.min(needed,state.reserve);state.ammo+=taken;state.reserve-=taken;state.reloading=false;reloadIndicator.classList.remove("show");updateHud();},1550);
-}
+function updateGame(dt){if(!state.running||state.paused||state.ended)return;state.elapsed+=dt;const weapon=currentWeapon();camera.speed=weapon.speed*(keys.shift?1.42:1);if(state.firing&&weapon.auto)shoot();updateViewModel(dt);updateZombies(dt);updateLoot(dt);updateCompass();if(state.waveActive&&state.spawnRemaining>0){state.spawnTimer-=dt;if(state.spawnTimer<=0&&state.enemies.length<10){spawnZombie();state.spawnRemaining--;state.spawnTimer=Math.max(.3,.82-state.waveIndex*.1)}}if(!state.waveActive&&state.intermission>0){state.intermission-=dt;labels.objectiveText.innerHTML=`Sonraki dalga <b>${Math.max(0,Math.ceil(state.intermission))}</b> saniye`;if(state.intermission<=0)beginWave(state.waveIndex+1)}if(state.extraction){state.extraction.zone.rotation.y+=dt*.25;state.extraction.beacon.intensity=1.8+Math.sin(state.elapsed*4)*.65;if(BABYLON.Vector3.Distance(camera.position,state.extraction.zone.position)<4.2)endGame(true)}if(state.damageFlashTimer>0){state.damageFlashTimer-=dt;if(state.damageFlashTimer<=0)damageVignette.classList.remove("show")}}
+function endGame(success){if(state.ended)return;state.ended=true;state.running=false;state.firing=false;document.exitPointerLock?.();hud.classList.remove("active");hud.setAttribute("aria-hidden","true");resultScreen.hidden=false;labels.resultTitle.textContent=success?"TAHLİYE BAŞARILI":"OPERATÖR DÜŞTÜ";labels.resultTitle.style.color=success?"#66e3ee":"#ff5b35";labels.resultText.textContent=success?`Beş dalga ve ${state.totalKills} zombi ${Math.floor(state.elapsed/60)}:${String(Math.floor(state.elapsed%60)).padStart(2,"0")} sürede temizlendi. Kestrel-7 yeniden kontrol altında.`:`Dalga ${state.waveIndex+1} sırasında operatör düştü. Silah hızlarını kullan, mesafeyi koru ve yeniden dene.`;labels.resultKills.textContent=state.totalKills;labels.resultLevel.textContent=state.level;labels.resultWeapon.textContent=currentWeapon().name}
+async function enterFullscreen(){const target=document.documentElement,request=target.requestFullscreen||target.webkitRequestFullscreen;if(request&&!document.fullscreenElement){try{await request.call(target);await screen.orientation?.lock?.("landscape")}catch{}}}
+async function startGame(){await enterFullscreen();bootScreen.classList.add("hidden");resultScreen.hidden=true;hud.classList.add("active");hud.setAttribute("aria-hidden","false");state.running=true;state.paused=false;state.ended=false;canvas.focus();canvas.requestPointerLock?.();if(state.waveIndex<0)beginWave(0);updateHud();addFeed("KESTREL SAVUNMASI BAŞLADI","#66e3ee")}
 
-function damagePlayer(amount){
-  if(state.ended)return;let remaining=amount;if(state.armor>0){const absorbed=Math.min(state.armor,remaining);state.armor-=absorbed;remaining-=absorbed;}state.health=Math.max(0,state.health-remaining);
-  damageVignette.classList.add("show");state.damageFlashTimer=.22;updateHud();if(state.health<=0)endGame(false);
-}
-
-function pickupLoot(loot){
-  if(loot.type==="weapon"){
-    const candidate=WEAPONS[loot.tier];
-    if(state.weapon.tier>=loot.tier){state.reserve=Math.min(240,state.reserve+45);addFeed("MÜHİMMAT +45",loot.color);}
-    else{state.weapon={...candidate};state.ammo=candidate.mag;state.reserve=Math.max(state.reserve,90);addFeed(`${candidate.rarity} · ${candidate.name}`,loot.color);}
-  }else if(loot.type==="armor"){state.armor=Math.min(100,state.armor+35);addFeed("ZIRH PLAKASI +35",loot.color);}else{state.reserve=Math.min(240,state.reserve+50);addFeed("MÜHİMMAT +50",loot.color);}
-  gainXp(10);loot.mesh.dispose();loot.light.dispose();state.loot=state.loot.filter(item=>item!==loot);updateHud();
-}
-
-function activateExtraction(){
-  if(state.extraction)return;labels.objectiveTitle.textContent="TAHLİYE NOKTASINA ULAŞ";labels.objectiveText.innerHTML="Güney kapısındaki <b>işaretli alana</b> gir";labels.objectiveProgress.style.width="100%";
-  const zone=BABYLON.MeshBuilder.CreateCylinder("extraction-zone",{height:.08,diameter:8,tessellation:32},scene);zone.position.set(0,.05,61);zone.material=material("extraction-signal","#66e3ee",{emissive:.6,alpha:.34});zone.isPickable=false;
-  const beacon=new BABYLON.PointLight("extraction-beacon",new BABYLON.Vector3(0,2,61),scene);beacon.diffuse=BABYLON.Color3.FromHexString("#66e3ee");beacon.intensity=2;beacon.range=16;
-  state.extraction={zone,beacon};addFeed("TAHLİYE NOKTASI AKTİF","#66e3ee");
-}
-
-function updateEnemies(dt){
-  for(const enemy of state.enemies){
-    if(enemy.dead)continue;enemy.attackTimer-=dt;enemy.stagger=Math.max(0,enemy.stagger-dt);
-    const delta=camera.position.subtract(enemy.root.position);delta.y=0;const distance=delta.length();
-    if(distance>7&&enemy.stagger<=0){delta.normalize();enemy.root.position.addInPlace(delta.scale(enemy.speed*dt));}
-    enemy.root.rotation.y=Math.atan2(-delta.x,-delta.z);
-    if(distance<27&&enemy.attackTimer<=0){enemy.attackTimer=1.05+Math.random()*.7;damagePlayer(7+state.level*1.2);}
-  }
-}
-
-function updateLoot(dt){
-  let nearest=null,nearestDistance=Infinity;
-  state.loot.forEach(loot=>{loot.phase+=dt*2.2;loot.mesh.rotation.y+=dt*1.4;loot.mesh.position.y=loot.baseY+Math.sin(loot.phase)*.12;loot.light.position.copyFrom(loot.mesh.position);const distance=BABYLON.Vector3.Distance(camera.position,loot.mesh.position);if(distance<nearestDistance){nearest=loot;nearestDistance=distance;}});
-  if(nearest&&nearestDistance<3.2){const name=nearest.type==="weapon"?WEAPONS[nearest.tier].name:nearest.type==="armor"?"ZIRH PLAKASI":"MÜHİMMAT";interaction.innerHTML=`<b>[E]</b> ${name} AL`;interaction.classList.add("show");state.nearestLoot=nearest;}else{interaction.classList.remove("show");state.nearestLoot=null;}
-}
-
-function updateCompass(){const degrees=(camera.rotation.y*180/Math.PI%360+360)%360;const points=["N","NE","E","SE","S","SW","W","NW"];labels.heading.textContent=`${points[Math.round(degrees/45)%8]} · ${String(Math.round(degrees)).padStart(3,"0")}`;}
-
-function updateGame(dt){
-  if(!state.running||state.paused||state.ended)return;state.elapsed+=dt;camera.speed=keys.shift?0.83:.48;
-  if(state.firing)fireShot();weaponRoot.position.z+=( .83-weaponRoot.position.z)*Math.min(1,dt*16);weaponRoot.rotation.x+=(.01-weaponRoot.rotation.x)*Math.min(1,dt*16);
-  updateEnemies(dt);updateLoot(dt);updateCompass();
-  if(state.spawnTimer>0){state.spawnTimer-=dt;if(state.spawnTimer<=0&&state.kills+state.enemies.length<state.target)spawnEnemy();}
-  if(state.enemies.length<4&&state.kills+state.enemies.length<state.target&&state.spawnTimer<=0)state.spawnTimer=1.2;
-  if(state.extraction){state.extraction.zone.rotation.y+=dt*.2;state.extraction.beacon.intensity=1.5+Math.sin(state.elapsed*4)*.55;if(BABYLON.Vector3.Distance(camera.position,state.extraction.zone.position)<3.8)endGame(true);}
-  if(state.damageFlashTimer>0){state.damageFlashTimer-=dt;if(state.damageFlashTimer<=0)damageVignette.classList.remove("show");}
-}
-
-function endGame(success){
-  if(state.ended)return;state.ended=true;state.running=false;state.firing=false;document.exitPointerLock?.();hud.classList.remove("active");hud.setAttribute("aria-hidden","true");resultScreen.hidden=false;
-  labels.resultTitle.textContent=success?"TAHLİYE BAŞARILI":"OPERATÖR DÜŞTÜ";labels.resultTitle.style.color=success?"#66e3ee":"#ff5b35";
-  labels.resultText.textContent=success?`Kestrel-7 operasyonu ${Math.floor(state.elapsed/60)}:${String(Math.floor(state.elapsed%60)).padStart(2,"0")} sürede tamamlandı. Toplanan ekipman bir sonraki operasyona hazır.`:"Kestrel tesisi düşman kontrolünde kaldı. Ekipmanını geliştirip yeniden dene.";
-  labels.resultKills.textContent=state.kills;labels.resultLevel.textContent=state.level;labels.resultWeapon.textContent=state.weapon.name;
-}
-
-async function enterFullscreen(){
-  const target=document.documentElement,request=target.requestFullscreen||target.webkitRequestFullscreen;
-  if(request&&!document.fullscreenElement){try{await request.call(target);await screen.orientation?.lock?.("landscape");}catch{}}
-}
-
-async function startGame(){
-  await enterFullscreen();bootScreen.classList.add("hidden");resultScreen.hidden=true;hud.classList.add("active");hud.setAttribute("aria-hidden","false");state.running=true;state.paused=false;state.ended=false;canvas.focus();canvas.requestPointerLock?.();
-  if(!state.enemies.length)spawnInitialEnemies();updateHud();addFeed("OPERASYON BAŞLADI","#66e3ee");
-}
-
-const keys={shift:false};
-window.addEventListener("keydown",event=>{
-  if(event.code==="ShiftLeft"||event.code==="ShiftRight")keys.shift=true;
-  if(event.code==="KeyR"){event.preventDefault();reload();}
-  if(event.code==="KeyE"&&state.nearestLoot){event.preventDefault();pickupLoot(state.nearestLoot);}
-});
-window.addEventListener("keyup",event=>{if(event.code==="ShiftLeft"||event.code==="ShiftRight")keys.shift=false;});
-window.addEventListener("mousedown",event=>{if(event.button===0&&document.pointerLockElement===canvas){state.firing=true;fireShot();}});
-window.addEventListener("mouseup",event=>{if(event.button===0)state.firing=false;});
-window.addEventListener("blur",()=>{state.firing=false;keys.shift=false;});
-canvas.addEventListener("click",()=>{if(state.running&&!state.ended&&document.pointerLockElement!==canvas)canvas.requestPointerLock?.();});
-document.addEventListener("pointerlockchange",()=>{
-  if(!state.running||state.ended)return;state.paused=document.pointerLockElement!==canvas;
-  if(state.paused){interaction.textContent="DEVAM ETMEK İÇİN EKRANA TIKLA";interaction.classList.add("show");}else interaction.classList.remove("show");
-});
-pauseButton.addEventListener("click",()=>document.exitPointerLock?.());
-deployButton.addEventListener("click",startGame);
-replayButton.addEventListener("click",()=>window.location.reload());
-window.addEventListener("resize",()=>engine.resize());
-
-engine.runRenderLoop(()=>{const dt=Math.min(engine.getDeltaTime()/1000,.034);updateGame(dt);scene.render();});
-updateHud();
+window.addEventListener("keydown",e=>{if(e.code==="ShiftLeft"||e.code==="ShiftRight")keys.shift=true;if(e.code==="Digit1")selectWeapon(0);if(e.code==="Digit2")selectWeapon(1);if(e.code==="Digit3")selectWeapon(2);if(e.code==="KeyR"){e.preventDefault();reload()}if(e.code==="KeyE"&&state.nearestLoot){e.preventDefault();pickupLoot(state.nearestLoot)}});
+window.addEventListener("keyup",e=>{if(e.code==="ShiftLeft"||e.code==="ShiftRight")keys.shift=false});
+window.addEventListener("wheel",e=>{if(!state.running)return;selectWeapon((state.currentSlot+(e.deltaY>0?1:-1)+LOADOUT.length)%LOADOUT.length)},{passive:true});
+window.addEventListener("mousedown",e=>{if(e.button===0&&document.pointerLockElement===canvas){state.firing=true;shoot()}});window.addEventListener("mouseup",e=>{if(e.button===0)state.firing=false});window.addEventListener("blur",()=>{state.firing=false;keys.shift=false});
+canvas.addEventListener("click",()=>{if(state.running&&!state.ended&&document.pointerLockElement!==canvas)canvas.requestPointerLock?.()});document.addEventListener("pointerlockchange",()=>{if(!state.running||state.ended)return;state.paused=document.pointerLockElement!==canvas;if(state.paused){interaction.textContent="DEVAM ETMEK İÇİN EKRANA TIKLA";interaction.classList.add("show")}else interaction.classList.remove("show")});pauseButton.addEventListener("click",()=>document.exitPointerLock?.());deployButton.addEventListener("click",startGame);replayButton.addEventListener("click",()=>location.reload());window.addEventListener("resize",()=>engine.resize());
+engine.runRenderLoop(()=>{const dt=Math.min(engine.getDeltaTime()/1000,.034);updateGame(dt);scene.render()});updateHud();

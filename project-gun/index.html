@@ -9,9 +9,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css?v=20260827-1" />
+    <link rel="stylesheet" href="styles.css?v=20260827-2" />
     <script src="https://cdn.babylonjs.com/babylon.js" defer></script>
-    <script src="game.js?v=20260827-5" defer></script>
+    <script src="game.js?v=20260827-12" defer></script>
   </head>
   <body>
     <canvas id="render-canvas" aria-label="Project Gun 3B oyun alanı"></canvas>
@@ -22,20 +22,21 @@
       <div class="boot-copy">
         <p class="eyebrow"><i></i> ERKEN ERİŞİM · OPERASYON 01</p>
         <h1>PROJECT<br /><em>GUN</em></h1>
-        <p class="mission-brief">Terk edilmiş Kestrel tesisine gir. Düşman timini temizle, düşen ekipmanları topla ve tahliye noktasına ulaş.</p>
+        <p class="mission-brief">Terk edilmiş Kestrel tesisinde beş zombi dalgasına dayan. Silahlarını değiştir, düşen ekipmanları topla ve son dalgadan sonra tahliye noktasına ulaş.</p>
         <div class="control-grid">
           <span><kbd>WASD</kbd><small>HAREKET</small></span>
           <span><kbd>FARE</kbd><small>NİŞAN / ATEŞ</small></span>
           <span><kbd>R</kbd><small>ŞARJÖR</small></span>
           <span><kbd>E</kbd><small>GANİMET</small></span>
           <span><kbd>SHIFT</kbd><small>KOŞU</small></span>
+          <span><kbd>1 · 2 · 3</kbd><small>TÜFEK · TABANCA · BIÇAK</small></span>
         </div>
         <button id="deploy-button" type="button"><span>OPERASYONA BAŞLA</span><b>→</b></button>
         <p id="boot-status" class="boot-status">Tam ekran ve kulaklık önerilir.</p>
       </div>
       <aside class="operation-card">
         <span>BÖLGE</span><strong>KESTREL-7</strong><small>23:40 · SİS · DÜŞMAN KONTROLÜ</small>
-        <div><i></i><b>TEHDİT: YÜKSEK</b></div>
+        <div><i></i><b>TEHDİT: ÖLÜLER</b></div>
       </aside>
     </div>
 
@@ -48,8 +49,8 @@
 
       <section class="objective-panel">
         <small>AKTİF GÖREV</small>
-        <strong id="objective-title">BÖLGEYİ TEMİZLE</strong>
-        <p id="objective-text"><b id="kill-count">0</b> / <span id="kill-target">8</span> düşman etkisiz</p>
+        <strong id="objective-title">DALGA 1 / 5</strong>
+        <p id="objective-text"><b id="kill-count">0</b> / <span id="kill-target">5</span> zombi etkisiz</p>
         <div><i id="objective-progress"></i></div>
       </section>
 
@@ -65,6 +66,7 @@
         <div><small id="weapon-rarity">STANDART</small><strong id="weapon-name">RAVEN AR-4</strong></div>
         <div class="ammo"><b id="ammo-current">30</b><span>/ <i id="ammo-reserve">120</i></span></div>
         <p>OTOMATİK · 5.56</p>
+        <div class="loadout-strip" aria-label="Silah yuvaları"><span id="slot-1" class="active">1 <b>TÜFEK</b></span><span id="slot-2">2 <b>TABANCA</b></span><span id="slot-3">3 <b>BIÇAK</b></span></div>
       </section>
 
       <div class="xp-track"><span id="xp-label">0 / 100 XP</span><i id="xp-bar"></i></div>
@@ -74,6 +76,7 @@
       <p id="interaction" class="interaction" aria-live="polite"></p>
       <div id="feed" class="feed" aria-live="polite"></div>
       <div id="reload-indicator" class="reload-indicator"><span>ŞARJÖR DEĞİŞTİRİLİYOR</span><i></i></div>
+      <div id="wave-banner" class="wave-banner"><small>KESTREL SAVUNMASI</small><strong id="wave-banner-title">DALGA 1</strong><span id="wave-banner-text">YAKLAŞIYOR</span></div>
       <button id="pause-button" class="pause-button" type="button" aria-label="Menüyü aç">ESC</button>
     </main>
 

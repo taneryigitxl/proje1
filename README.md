@@ -51,8 +51,8 @@ Ana dosyalar:
 
 ## Project Gun
 
-Ana oyun merkezindeki ikinci kart `project-gun/` klasörüne yönlendirir. Project Gun, Babylon.js ile çalışan tam ekran bir 3B FPS looter-shooter prototipidir. İlk operasyonda oyuncu Kestrel-7 tesisindeki düşmanları temizler, farklı nadirliklerde silah/mühimmat/zırh ganimetleri toplar, seviye atlar ve açılan tahliye bölgesine ulaşır.
+Ana oyun merkezindeki ikinci kart `project-gun/` klasörüne yönlendirir. Project Gun, Babylon.js ile çalışan tam ekran bir 3B FPS looter-shooter prototipidir. Oyuncu büyütülmüş Kestrel-7 tesisinde yürüyen, koşucu ve iri zombilerden oluşan beş dalgaya karşı savaşır; `1` ile tüfek, `2` ile daha hızlı tabanca ve `3` ile en hızlı bıçak sınıfına geçer. Düşen mühimmat/zırh/sağlık ganimetlerini toplar, seviye atlar ve son dalgadan sonra açılan tahliye bölgesine ulaşır.
 
 - `project-gun/index.html`: başlangıç ekranı ve oyun HUD'u
 - `project-gun/styles.css`: tam ekran FPS arayüzü
-- `project-gun/game.js`: 3B dünya, FPS kontrolleri, düşman yapay zekâsı, silahlar, ganimet ve tahliye döngüsü
+- `project-gun/game.js`: prosedürel 3B dünya ve proplar, FPS el/silah modelleri, animasyonlar, beş zombi dalgası, ganimet ve tahliye döngüsü
