@@ -1571,4 +1571,7 @@ copyCodeButton.addEventListener("click",async()=>{try{await navigator.clipboard.
 document.querySelectorAll("[data-character]").forEach(button=>button.addEventListener("click",()=>{const character=button.dataset.character;if(network.role==="host"){network.hostCharacter=character;document.querySelectorAll("[data-character]").forEach(b=>{b.disabled=true;b.classList.toggle("selected",b===button);});characterSelectStatus.textContent="Diğer oyuncu karakterini seçiyor…";sendPacket({type:"host-choice",character});}else if(network.role==="guest"&&network.hostCharacter&&character!==network.hostCharacter){button.classList.add("selected");document.querySelectorAll("[data-character]").forEach(b=>b.disabled=true);characterSelectStatus.textContent="Oyun başlatılıyor…";sendPacket({type:"guest-choice",character});}}));
 soloButton.addEventListener("click",()=>{cleanupNetwork();network.role="solo";document.body.classList.remove("multiplayer-host","multiplayer-guest");connectionBadge.textContent="AYNI CİHAZ";startButton.hidden=true;levelSelect.hidden=true;overlayTitle.hidden=false;overlayText.hidden=false;resetCampaign();state.running=true;state.paused=false;state.last=performance.now();overlay.classList.add("hidden");});
 
-setupIosInstallTip();loadLevel(0);renderLevelSelect();resize();requestAnimationFrame(t=>{state.last=t;requestAnimationFrame(loop);});
+setupIosInstallTip();loadLevel(0);renderLevelSelect();resize();
+const requestedGame = new URLSearchParams(window.location.search).get("game");
+if(requestedGame === "nita-yollarda")openNitaYollarda();
+requestAnimationFrame(t=>{state.last=t;requestAnimationFrame(loop);});
