@@ -13,9 +13,9 @@
     <link rel="preload" href="assets/textures/undead-skin.jpg" as="image" />
     <link rel="preload" href="assets/textures/tactical-fabric.jpg" as="image" />
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css?v=20260918-2" />
+    <link rel="stylesheet" href="styles.css?v=20260919-3" />
     <script src="https://cdn.babylonjs.com/babylon.js" defer></script>
-    <script src="game.js?v=20260919" defer></script>
+    <script src="game.js?v=20260919-3" defer></script>
   </head>
   <body>
     <canvas id="render-canvas" aria-label="Project Gun 3B oyun alanı"></canvas>
@@ -33,8 +33,18 @@
           <span><kbd>R</kbd><small>ŞARJÖR</small></span>
           <span><kbd>E</kbd><small>GANİMET</small></span>
           <span><kbd>SHIFT</kbd><small>KOŞU</small></span>
+          <span><kbd>SPACE</kbd><small>ZIPLAMA</small></span>
+          <span><kbd>CTRL</kbd><small>EĞİLME</small></span>
           <span><kbd>1-5</kbd><small>SİLAH SEÇİMİ</small></span>
         </div>
+        <label class="quality-setting" for="quality-select">
+          <span>GRAFİK KALİTESİ</span>
+          <select id="quality-select" aria-label="Grafik kalitesi">
+            <option value="low">LOW</option>
+            <option value="medium">MEDIUM</option>
+            <option value="high" selected>HIGH</option>
+          </select>
+        </label>
         <button id="deploy-button" type="button"><span>OPERASYONA BAŞLA</span><b>→</b></button>
         <p id="boot-status" class="boot-status">PBR doku paketi aktif · Tam ekran ve kulaklık önerilir.</p>
       </div>
@@ -77,6 +87,7 @@
       <div id="crosshair" class="crosshair" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
       <div id="hit-marker" class="hit-marker" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
       <div id="damage-vignette" class="damage-vignette" aria-hidden="true"></div>
+      <div id="damage-direction" class="damage-direction" aria-hidden="true"><i></i></div>
       <div class="dark-vignette" aria-hidden="true"></div>
       <p id="interaction" class="interaction" aria-live="polite"></p>
       <div id="feed" class="feed" aria-live="polite"></div>
