@@ -16,10 +16,12 @@
     <script>
       const frame=document.getElementById("game"),status=document.getElementById("status");
       frame.addEventListener("load",()=>setTimeout(()=>{
-        const body=frame.contentDocument?.body,error=body?.dataset.gameError,runtime=frame.contentWindow?.__PROJECT_GUN__,assetsReady=runtime?.state?.assetsReady;
-        status.textContent=error?`HATA · ${error}`:body?.dataset.gameReady&&assetsReady?"RUNTIME + GLB HAZIR · MANUEL INPUT TESTİ AÇIK":body?.dataset.gameReady?"RUNTIME HAZIR · GLB FALLBACK KONTROL EDİLMELİ":"BOOT ZAMAN AŞIMI";
-        status.className=error||!body?.dataset.gameReady?"error":"ok";
-      },5000));
+        const body=frame.contentDocument?.body,error=body?.dataset.gameError,runtime=frame.contentWindow?.__PROJECT_GUN__,assetsReady=runtime?.state?.assetsReady,rigs=runtime?.getViewModelDiagnostics?.()||[];
+        const slotsReady=rigs.length===5&&rigs.every(rig=>rig.kind==="knife"?rig.fallbackWeaponVisible:rig.weaponVerified||rig.fallbackWeaponVisible);
+        window.projectGunTestReport={gameReady:body?.dataset.gameReady==="true",assetsReady:Boolean(assetsReady),slotsReady,quality:runtime?.state?.quality,rigs,error:error||null};
+        status.textContent=error?`HATA · ${error}`:body?.dataset.gameReady&&assetsReady&&slotsReady?`RUNTIME + 5 SLOT HAZIR · ${runtime.state.quality.toUpperCase()} · MANUEL INPUT TESTİ AÇIK`:body?.dataset.gameReady?"RUNTIME HAZIR · MODEL/FALLBACK KONTROLÜ BAŞARISIZ":"BOOT ZAMAN AŞIMI";
+        status.className=error||!body?.dataset.gameReady||!slotsReady?"error":"ok";
+      },6000));
     </script>
   </body>
 </html>

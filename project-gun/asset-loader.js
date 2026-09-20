@@ -22,6 +22,14 @@
     key(category,name){return `${category}:${name}`}
 
     async preload(){
+      if(!window.BABYLON?.SceneLoader){
+        const error=new Error("Babylon SceneLoader bulunamadı.");
+        console.error("[EngineLoader] GLB yükleyici kullanılamıyor; model paketi fallback ile çalışacak.",error);
+        for(const [category,group] of Object.entries(this.manifest))for(const name of Object.keys(group))this.failures.set(this.key(category,name),error);
+        this.loaded=this.total;
+        this.onProgress({loaded:this.loaded,total:this.total,failed:this.failures.size});
+        return{loaded:0,failed:this.failures.size,total:this.total};
+      }
       const jobs=[];
       for(const [category,group] of Object.entries(this.manifest)){
         for(const [name,definition] of Object.entries(group))jobs.push(this.load(category,name,definition));
@@ -37,6 +45,7 @@
         const container=await BABYLON.SceneLoader.LoadAssetContainerAsync(rootUrl,fileName,this.scene,undefined,".glb");
         container.removeAllFromScene();
         this.containers.set(assetKey,{container,definition});
+        console.info(`${prefix} ${definition.url} hazır.`);
       }catch(error){
         this.failures.set(assetKey,error);
         console.error(`${prefix} ${definition.url} yüklenemedi; güvenli fallback kullanılacak.`,error);
@@ -54,7 +63,10 @@
       try{
         const instance=record.container.instantiateModelsToScene(sourceName=>`${instanceName}-${sourceName}`,Boolean(options.cloneMaterials),{doNotInstantiate:false});
         if(parent)instance.rootNodes.forEach(node=>{node.parent=parent});
-        const meshes=instance.rootNodes.flatMap(node=>node.getChildMeshes?.(false)||[]);
+        const meshes=[...new Set(instance.rootNodes.flatMap(node=>[
+          ...(typeof node.getTotalVertices==="function"?[node]:[]),
+          ...(node.getChildMeshes?.(false)||[]),
+        ]))];
         return{...instance,meshes,definition:record.definition};
       }catch(error){
         const prefix=PREFIXES[category]||"[AssetLoader]";
