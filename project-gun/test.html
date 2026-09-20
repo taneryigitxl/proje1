@@ -16,10 +16,10 @@
     <script>
       const frame=document.getElementById("game"),status=document.getElementById("status");
       frame.addEventListener("load",()=>setTimeout(()=>{
-        const body=frame.contentDocument?.body,error=body?.dataset.gameError;
-        status.textContent=error?`HATA · ${error}`:body?.dataset.gameReady?"RUNTIME HAZIR · MANUEL INPUT TESTİ AÇIK":"BOOT ZAMAN AŞIMI";
+        const body=frame.contentDocument?.body,error=body?.dataset.gameError,runtime=frame.contentWindow?.__PROJECT_GUN__,assetsReady=runtime?.state?.assetsReady;
+        status.textContent=error?`HATA · ${error}`:body?.dataset.gameReady&&assetsReady?"RUNTIME + GLB HAZIR · MANUEL INPUT TESTİ AÇIK":body?.dataset.gameReady?"RUNTIME HAZIR · GLB FALLBACK KONTROL EDİLMELİ":"BOOT ZAMAN AŞIMI";
         status.className=error||!body?.dataset.gameReady?"error":"ok";
-      },1800));
+      },5000));
     </script>
   </body>
 </html>

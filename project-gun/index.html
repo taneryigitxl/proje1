@@ -13,9 +13,11 @@
     <link rel="preload" href="assets/textures/undead-skin.jpg" as="image" />
     <link rel="preload" href="assets/textures/tactical-fabric.jpg" as="image" />
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css?v=20260919-3" />
+    <link rel="stylesheet" href="styles.css?v=20260920-1" />
     <script src="https://cdn.babylonjs.com/babylon.js" defer></script>
-    <script src="game.js?v=20260919-3" defer></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js" defer></script>
+    <script src="asset-loader.js?v=20260920-1" defer></script>
+    <script src="game.js?v=20260920-1" defer></script>
   </head>
   <body>
     <canvas id="render-canvas" aria-label="Project Gun 3B oyun alanı"></canvas>
@@ -85,6 +87,7 @@
 
       <div class="xp-track"><span id="xp-label">0 / 100 XP</span><i id="xp-bar"></i></div>
       <div id="crosshair" class="crosshair" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+      <div id="scope-overlay" class="scope-overlay" aria-hidden="true"><div class="scope-lens"><i></i><b></b><span></span></div></div>
       <div id="hit-marker" class="hit-marker" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
       <div id="damage-vignette" class="damage-vignette" aria-hidden="true"></div>
       <div id="damage-direction" class="damage-direction" aria-hidden="true"><i></i></div>

@@ -51,9 +51,8 @@ Ana dosyalar:
 
 ## Project Gun
 
-Ana oyun merkezindeki ikinci kart `project-gun/` klasörüne yönlendirir. Project Gun, Babylon.js ile çalışan tam ekran bir 3B FPS looter-shooter prototipidir. Oyuncu büyütülmüş Kestrel-7 tesisinde yürüyen, koşucu ve iri zombilerden oluşan beş dalgaya karşı savaşır; `1` ile tüfek, `2` ile daha hızlı tabanca ve `3` ile en hızlı bıçak sınıfına geçer. Düşen mühimmat/zırh/sağlık ganimetlerini toplar, seviye atlar ve son dalgadan sonra açılan tahliye bölgesine ulaşır. Endüstriyel zemin, silah metali, taktik kumaş ve zombi derisi için optimize edilmiş özgün doku paketi; ACES ton eşleme, bloom, gelişmiş gölgeler ve konumsal Web Audio ses tasarımı kullanılır.
+`project-gun/` altında Babylon.js tabanlı, web için optimize edilmiş 3B FPS zombi survival modu bulunur. Oyun; yerel GLB silahlar, rigged FPS kolları, animasyonlu enfekte modeli, hitscan/tracer ateş sistemi, ADS/scope görünümü, beş dalgalı zorluk eğrisi ve LOW/MEDIUM/HIGH grafik profilleri kullanır.
 
-- `project-gun/index.html`: başlangıç ekranı ve oyun HUD'u
-- `project-gun/styles.css`: tam ekran FPS arayüzü
-- `project-gun/game.js`: dokulu 3B dünya ve proplar, FPS el/silah modelleri, animasyonlar, post-process, konumsal ses, beş zombi dalgası, ganimet ve tahliye döngüsü
-- `project-gun/assets/textures/`: tarayıcı için sıkıştırılmış özgün yüzey dokuları
+Kontroller: `WASD` hareket, `Shift` tactical sprint, `Space` zıplama, `Ctrl` eğilme, sağ tık ADS, sol tık ateş, `R` şarjör ve `1–5` silah seçimi.
+
+GLB dosyaları tarayıcı güvenlik kuralları nedeniyle bir statik sunucu üzerinden açılmalıdır. Depo kökünü VS Code Live Server gibi bir sunucuyla yayınlayıp `/project-gun/` yoluna gidin. Model lisansları ve kaynakları `project-gun/THIRD_PARTY_ASSETS.md` içinde belgelenmiştir; yükleme başarısız olursa oyun çökmek yerine procedural fallback kullanır.
