@@ -17,6 +17,7 @@
       this.failures=new Map();
       this.loaded=0;
       this.total=Object.values(manifest).reduce((sum,group)=>sum+Object.keys(group).length,0);
+      this.timeoutMs=4500;
     }
 
     key(category,name){return `${category}:${name}`}
@@ -40,13 +41,19 @@
 
     async load(category,name,definition){
       const assetKey=this.key(category,name),prefix=PREFIXES[category]||"[AssetLoader]";
+      let timedOut=false,timeoutId=0;
       try{
         const slash=definition.url.lastIndexOf("/"),rootUrl=definition.url.slice(0,slash+1),fileName=definition.url.slice(slash+1);
-        const container=await BABYLON.SceneLoader.LoadAssetContainerAsync(rootUrl,fileName,this.scene,undefined,".glb");
+        const request=BABYLON.SceneLoader.LoadAssetContainerAsync(rootUrl,fileName,this.scene,undefined,".glb");
+        request.then(container=>{if(timedOut)container.dispose?.()}).catch(()=>{});
+        const timeout=new Promise((_,reject)=>{timeoutId=setTimeout(()=>{timedOut=true;reject(new Error(`${definition.url} ${this.timeoutMs} ms içinde yüklenemedi.`))},this.timeoutMs)});
+        const container=await Promise.race([request,timeout]);
+        clearTimeout(timeoutId);
         container.removeAllFromScene();
         this.containers.set(assetKey,{container,definition});
         console.info(`${prefix} ${definition.url} hazır.`);
       }catch(error){
+        clearTimeout(timeoutId);
         this.failures.set(assetKey,error);
         console.error(`${prefix} ${definition.url} yüklenemedi; güvenli fallback kullanılacak.`,error);
       }finally{
