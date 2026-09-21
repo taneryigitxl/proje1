@@ -3,51 +3,45 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="description" content="Project Gun — tarayıcıda oynanan 3B aksiyon RPG looter shooter." />
+    <meta name="description" content="Yeni bir projeye dönüştürülmeye hazır premium giriş ekranı." />
     <meta name="theme-color" content="#090415" />
-    <title>Project Gun · Operasyon Sıfır</title>
-    <link rel="icon" type="image/png" href="assets/project-gun-logo.png" />
+    <title>Yeni Proje</title>
+    <link rel="icon" type="image/png" href="assets/logo.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="preload" href="assets/textures/industrial-ground.jpg" as="image" />
-    <link rel="preload" href="assets/textures/worn-gunmetal.jpg" as="image" />
-    <link rel="preload" href="assets/textures/undead-skin.jpg" as="image" />
-    <link rel="preload" href="assets/textures/tactical-fabric.jpg" as="image" />
-    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <link rel="preload" href="assets/project-gun-logo.png" as="image" />
-    <link rel="stylesheet" href="styles.css?v=20260921-4" />
-    <script id="babylon-engine" src="https://cdn.babylonjs.com/babylon.js" defer onerror="document.documentElement.dataset.engineLoadError='true';console.error('[EngineLoader] Babylon.js CDN üzerinden yüklenemedi.')"></script>
-    <script id="babylon-loaders" src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js" defer onerror="document.documentElement.dataset.loaderLoadError='true';console.error('[EngineLoader] Babylon GLB loader CDN üzerinden yüklenemedi.')"></script>
-    <script src="asset-loader.js?v=20260921-4" defer></script>
-    <script src="game.js?v=20260921-4" defer></script>
+    <link rel="preload" href="assets/logo.png" as="image" />
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css?v=20260921-5" />
+    <script src="menu.js?v=20260921-5" defer></script>
   </head>
-  <body>
-    <canvas id="render-canvas" tabindex="0" aria-label="Project Gun 3B oyun alanı"></canvas>
+  <body data-menu-quality="medium">
+    <main id="menu-screen" class="menu-screen">
+      <div class="menu-aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="menu-grid" aria-hidden="true"></div>
+      <div class="menu-particles" aria-hidden="true"></div>
 
-    <div id="boot-screen" class="boot-screen">
-      <div class="boot-aurora" aria-hidden="true"><i></i><i></i><i></i></div>
-      <div class="boot-grid" aria-hidden="true"></div>
-      <div class="boot-noise" aria-hidden="true"></div>
-
-      <section class="main-menu" aria-labelledby="game-title">
-        <div class="logo-stage" aria-hidden="true">
-          <span class="logo-ring ring-one"></span>
-          <span class="logo-ring ring-two"></span>
-          <span class="logo-ring ring-three"></span>
-          <img src="assets/project-gun-logo.png" alt="" />
+      <section class="main-menu" aria-labelledby="project-title">
+        <div class="logo-stage">
+          <span class="logo-ring ring-one" aria-hidden="true"></span>
+          <span class="logo-ring ring-two" aria-hidden="true"></span>
+          <span class="logo-ring ring-three" aria-hidden="true"></span>
+          <img src="assets/logo.png" alt="Proje logosu" />
         </div>
 
-        <p class="eyebrow"><i></i> KESTREL PROTOKOLÜ <i></i></p>
-        <h1 id="game-title">PROJECT <em>GUN</em></h1>
-        <p class="mission-brief">Karanlığın içinden ilerle. Beş dalgayı temizle, cephaneliğini koru ve Kestrel-7’den canlı çık.</p>
+        <p class="eyebrow"><i></i> YENİ PROJE <i></i></p>
+        <h1 id="project-title">PROJE <em>ADI</em></h1>
+        <p class="project-description">Yeni projenin açıklaması buraya gelecek.</p>
 
         <div class="menu-card">
-          <button id="deploy-button" type="button"><span><small>TEK OYUNCULU</small>OPERASYONA BAŞLA</span><b>→</b></button>
+          <button id="start-button" type="button">
+            <span><small>YENİ DENEYİM</small>PROJEYİ BAŞLAT</span>
+            <b aria-hidden="true">→</b>
+          </button>
 
           <div class="menu-options">
             <label class="quality-setting" for="quality-select">
               <span><small>GÖRÜNTÜ</small>GRAFİK KALİTESİ</span>
-              <select id="quality-select" aria-label="Grafik kalitesi">
+              <select id="quality-select" aria-label="Menü grafik kalitesi">
                 <option value="low">LOW</option>
                 <option value="medium" selected>MEDIUM</option>
                 <option value="high">HIGH</option>
@@ -55,83 +49,27 @@
             </label>
 
             <details class="controls-menu">
-              <summary><span><small>NASIL OYNANIR</small>KONTROLLER</span><b>+</b></summary>
-              <div class="control-grid">
-                <span><kbd>WASD</kbd><small>HAREKET</small></span>
-                <span><kbd>FARE</kbd><small>NİŞAN / ATEŞ</small></span>
-                <span><kbd>R</kbd><small>ŞARJÖR</small></span>
-                <span><kbd>E</kbd><small>GANİMET</small></span>
-                <span><kbd>SHIFT</kbd><small>KOŞU</small></span>
-                <span><kbd>SPACE</kbd><small>ZIPLAMA</small></span>
-                <span><kbd>CTRL</kbd><small>EĞİLME</small></span>
-                <span><kbd>1–5</kbd><small>SİLAH SEÇİMİ</small></span>
-              </div>
+              <summary><span><small>BİLGİ</small>KONTROLLER</span><b aria-hidden="true">+</b></summary>
+              <p>Yeni projenin kontrolleri daha sonra eklenecek.</p>
             </details>
 
-            <a class="menu-link" href="../"><span><small>GERİ DÖN</small>OYUN MERKEZİ</span><b>↗</b></a>
+            <a class="menu-link" href="../">
+              <span><small>GERİ DÖN</small>OYUN MERKEZİ</span>
+              <b aria-hidden="true">↗</b>
+            </a>
           </div>
 
-          <p id="boot-status" class="boot-status"><i></i><span>PBR doku paketi aktif · Kulaklık önerilir.</span></p>
+          <p id="menu-status" class="menu-status" role="status" aria-live="polite">
+            <i aria-hidden="true"></i><span>Yeni arayüz hazır.</span>
+          </p>
         </div>
 
-        <div class="menu-meta" aria-label="Operasyon bilgisi">
-          <span><small>BÖLGE</small><b>KESTREL-7</b></span>
-          <span><small>OPERASYON</small><b>SIFIR</b></span>
-          <span class="threat-state"><small>TEHDİT</small><b><i></i> KRİTİK</b></span>
+        <div class="menu-meta" aria-label="Proje bilgisi">
+          <span><small>KATEGORİ</small><b>YAKINDA</b></span>
+          <span><small>SÜRÜM</small><b>TASLAK</b></span>
+          <span class="ready-state"><small>DURUM</small><b><i></i> HAZIR</b></span>
         </div>
       </section>
-    </div>
-
-    <main id="hud" class="hud" aria-hidden="true">
-      <header class="top-hud">
-        <div class="squad-mark"><i><img src="assets/project-gun-logo.png" alt="" /></i><span><b>KESTREL-7</b><small>OPERASYON SIFIR</small></span></div>
-        <div class="compass"><span>W</span><b id="heading">N · 000</b><span>E</span></div>
-        <div class="threat"><i></i><span>TEHDİT SEVİYESİ<b id="threat-level">YÜKSEK</b></span></div>
-      </header>
-
-      <section class="objective-panel">
-        <small>AKTİF GÖREV</small>
-        <strong id="objective-title">DALGA 1 / 5</strong>
-        <p id="objective-text"><b id="kill-count">0</b> / <span id="kill-target">5</span> zombi etkisiz</p>
-        <div><i id="objective-progress"></i></div>
-      </section>
-
-      <section class="player-panel">
-        <div class="level-medal"><small>SV.</small><b id="player-level">1</b></div>
-        <div class="vitals">
-          <span>ZIRH <b id="armor-value">50</b></span><div class="armor-bar"><i id="armor-bar"></i></div>
-          <span>CAN <b id="health-value">100</b></span><div class="health-bar"><i id="health-bar"></i></div>
-        </div>
-      </section>
-
-      <section class="weapon-panel">
-        <div><small id="weapon-rarity">STANDART</small><strong id="weapon-name">RAVEN AR-4</strong></div>
-        <div class="ammo"><b id="ammo-current">30</b><span>/ <i id="ammo-reserve">120</i></span></div>
-        <p>OTOMATİK · 5.56</p>
-        <div class="loadout-strip" aria-label="Silah yuvaları"><span id="slot-1" class="active">1 <b>TÜFEK</b></span><span id="slot-2">2 <b>SMG</b></span><span id="slot-3">3 <b>POMPALI</b></span><span id="slot-4">4 <b>TABANCA</b></span><span id="slot-5">5 <b>BIÇAK</b></span></div>
-      </section>
-
-      <div class="xp-track"><span id="xp-label">0 / 100 XP</span><i id="xp-bar"></i></div>
-      <div id="crosshair" class="crosshair" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-      <div id="scope-overlay" class="scope-overlay" aria-hidden="true"><div class="scope-lens"><i></i><b></b><span></span></div></div>
-      <div id="hit-marker" class="hit-marker" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-      <div id="damage-vignette" class="damage-vignette" aria-hidden="true"></div>
-      <div id="damage-direction" class="damage-direction" aria-hidden="true"><i></i></div>
-      <div class="dark-vignette" aria-hidden="true"></div>
-      <p id="interaction" class="interaction" aria-live="polite"></p>
-      <div id="feed" class="feed" aria-live="polite"></div>
-      <div id="reload-indicator" class="reload-indicator"><span>ŞARJÖR DEĞİŞTİRİLİYOR</span><i></i></div>
-      <div id="wave-banner" class="wave-banner"><small>KESTREL SAVUNMASI</small><strong id="wave-banner-title">DALGA 1</strong><span id="wave-banner-text">YAKLAŞIYOR</span></div>
-      <button id="pause-button" class="pause-button" type="button" aria-label="Menüyü aç">ESC</button>
     </main>
-
-    <section id="result-screen" class="result-screen" hidden>
-      <p class="eyebrow"><i></i> OPERASYON RAPORU</p>
-      <h2 id="result-title">TAHLİYE BAŞARILI</h2>
-      <p id="result-text"></p>
-      <div class="result-stats"><span><small>ETKİSİZ</small><b id="result-kills">0</b></span><span><small>SEVİYE</small><b id="result-level">1</b></span><span><small>EKİPMAN</small><b id="result-weapon">RAVEN</b></span></div>
-      <button id="replay-button" type="button">YENİDEN BAŞLA <b>↻</b></button>
-      <a href="../">OYUN MERKEZİNE DÖN</a>
-    </section>
   </body>
 </html>
