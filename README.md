@@ -51,8 +51,10 @@ Ana dosyalar:
 
 ## Project Gun
 
-`project-gun/` altında Babylon.js tabanlı, web için optimize edilmiş 3B FPS zombi survival modu bulunur. Oyun; yerel GLB silahlar, rigged FPS kolları, animasyonlu enfekte modeli, hitscan/tracer ateş sistemi, ADS/scope görünümü, beş dalgalı zorluk eğrisi ve LOW/MEDIUM/HIGH grafik profilleri kullanır.
+`project-gun/` altında Babylon.js tabanlı, web için optimize edilmiş 3B FPS zombi survival modu bulunur. Oyun; çalışma sırasında model değiştirmeyen ayrıntılı yerel silahlar, silaha temas eden eklemli taktik eller, animasyonlu enfekte modeli, hitscan/tracer ateş sistemi, ADS/scope görünümü, beş dalgalı zorluk eğrisi ve LOW/MEDIUM/HIGH grafik profilleri kullanır.
+
+Ana menü, `project-gun/assets/project-gun-logo.png` logosunu kullanan mor temalı ve animasyonlu merkez arayüzdür. Grafik kalitesi ile açılır kontrol özeti oyuna başlamadan bu ekrandan yönetilebilir.
 
 Kontroller: `WASD` hareket, `Shift` tactical sprint, `Space` zıplama, `Ctrl` eğilme, sağ tık ADS, sol tık ateş, `R` şarjör ve `1–5` silah seçimi.
 
-GLB dosyaları tarayıcı güvenlik kuralları nedeniyle bir statik sunucu üzerinden açılmalıdır. Depo kökünü VS Code Live Server gibi bir sunucuyla yayınlayıp `/project-gun/` yoluna gidin. Model lisansları ve kaynakları `project-gun/THIRD_PARTY_ASSETS.md` içinde belgelenmiştir; yükleme başarısız olursa oyun çökmek yerine procedural fallback kullanır.
+GLB düşman dosyası tarayıcı güvenlik kuralları nedeniyle bir statik sunucu üzerinden açılmalıdır. Depo kökünü VS Code Live Server gibi bir sunucuyla yayınlayıp `/project-gun/` yoluna gidin. Silahlar ve eller harici model yüklemesini beklemeden anında hazır olur; enfekte modeli yüklenemezse oyun procedural fallback ile devam eder. Fare kilidinin engellendiği gömülü tarayıcılarda nişan almak için görüntüyü sürükleyebilirsiniz.

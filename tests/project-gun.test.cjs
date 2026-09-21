@@ -26,6 +26,7 @@ const waves = evaluateDeclaration("WAVES", "const ZOMBIE_TYPES=");
 const zombieTypes = evaluateDeclaration("ZOMBIE_TYPES", "const state=");
 const graphics = evaluateDeclaration("GRAPHICS_CONFIG", "const AUDIO_CONFIG=", { innerWidth: 1920 });
 const viewmodels = evaluateDeclaration("VIEWMODEL_ASSETS", "function stopBoot");
+const assetManifest = evaluateDeclaration("ASSET_MANIFEST", "const VIEWMODEL_ASSETS=");
 
 assert.deepEqual(loadout.map(weapon => weapon.kind), ["rifle", "smg", "shotgun", "pistol", "knife"]);
 assert(loadout.every(weapon => weapon.speed >= 0.61), "all weapons must retain the faster movement pass");
@@ -48,6 +49,7 @@ assert.equal(graphics.presets.high.fxaa, false);
 assert.equal(graphics.presets.high.shadowMap, 1536);
 assert.deepEqual(Object.keys(viewmodels), ["rifle", "smg", "shotgun", "pistol"]);
 assert(Object.values(viewmodels).every(config => config.targetLength > 0.7 && config.targetLength < 2));
+assert.deepEqual(Object.keys(assetManifest), ["zombies"], "runtime asset streaming must not hot-swap first-person weapons");
 
 assert.match(source, /motion\.jumpQueued=true/);
 assert.match(source, /camera\.ellipsoidOffset\.y=smooth/);
@@ -77,12 +79,21 @@ assert.match(source, /normalizeWeaponAsset/);
 assert.match(source, /importedModelOnScreen/);
 assert.match(source, /verifyImportedViewModel/);
 assert.match(source, /getViewModelDiagnostics/);
-assert.match(source, /Promise\.race\(\[assetReady/);
+assert.match(source, /function startGame\(\).*state\.running=true.*requestPointerControl\(\)/s, "gameplay must start before pointer control is requested");
 assert.match(source, /function monitorPerformance/);
 assert.match(source, /navProbeTimer/);
-assert.match(source, /requestPointerControl\(\);bootStatus/);
+assert.match(source, /requestPointerControl\(\);addFeed/);
 assert.match(source, /function enablePointerFallback/);
 assert.match(source, /pointerlockerror/);
+assert.match(source, /pointermove/);
+assert.match(source, /fallbackLook\.active/);
+assert.match(source, /function guardedStep/);
+assert.match(source, /runtimeFaults/);
+assert.match(source, /CreateCapsule/);
+assert.match(source, /CreateTube/);
+assert.match(source, /backhand-armor/);
+assert.match(source, /finger-joint/);
+assert.match(source, /gun-accent/);
 assert.doesNotMatch(source, /doNotSyncBoundingInfo=true/);
 assert.match(source, /playZombieAnimation\(zombie,"Death"/);
 assert.match(source, /playZombieAnimation\(z,"HitReact"|playZombieAnimation\(zombie,"HitReact"/);
@@ -98,6 +109,12 @@ assert.doesNotMatch(source, /camera\.position\.y<=1\.1/, "legacy broken jump gat
 for (const id of ["quality-select", "damage-direction", "render-canvas", "crosshair", "scope-overlay"]) {
   assert(html.includes(`id="${id}"`), `missing UI element: ${id}`);
 }
+assert.match(html, /id="render-canvas" tabindex="0"/);
+assert.match(html, /assets\/project-gun-logo\.png/);
+assert.match(html, /rel="icon" type="image\/png" href="assets\/project-gun-logo\.png"/);
+assert.match(html, /class="main-menu"/);
+assert.match(html, /class="logo-stage"/);
+assert.match(html, /class="controls-menu"/);
 assert.match(html, /babylonjs\.loaders\.min\.js/);
 assert.match(html, /asset-loader\.js/);
 assert.match(html, /<kbd>SPACE<\/kbd>/);
@@ -107,6 +124,13 @@ assert.match(css, /\.damage-direction\.show/);
 assert.match(css, /\.scope-overlay\.active/);
 assert.match(css, /body\.scope-active \.dark-vignette/);
 assert.doesNotMatch(css, /rgba\(1,3,5,\.78\)/, "scope exterior mask should not compound into an opaque lens");
+assert.match(css, /@keyframes logoFloat/);
+assert.match(css, /@keyframes menuRise/);
+assert.match(css, /\.menu-card>button/);
+
+const logoFile = path.join(root, "assets", "project-gun-logo.png");
+assert(fs.existsSync(logoFile), "missing Project Gun logo");
+assert(fs.statSync(logoFile).size > 100 * 1024, "Project Gun logo is unexpectedly small");
 
 assert.match(assetLoaderSource, /LoadAssetContainerAsync/);
 assert.match(assetLoaderSource, /instantiateModelsToScene/);

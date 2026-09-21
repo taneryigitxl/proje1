@@ -4,8 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="description" content="Project Gun — tarayıcıda oynanan 3B aksiyon RPG looter shooter." />
-    <meta name="theme-color" content="#07090d" />
+    <meta name="theme-color" content="#090415" />
     <title>Project Gun · Operasyon Sıfır</title>
+    <link rel="icon" type="image/png" href="assets/project-gun-logo.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preload" href="assets/textures/industrial-ground.jpg" as="image" />
@@ -13,52 +14,77 @@
     <link rel="preload" href="assets/textures/undead-skin.jpg" as="image" />
     <link rel="preload" href="assets/textures/tactical-fabric.jpg" as="image" />
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css?v=20260921-2" />
+    <link rel="preload" href="assets/project-gun-logo.png" as="image" />
+    <link rel="stylesheet" href="styles.css?v=20260921-4" />
     <script id="babylon-engine" src="https://cdn.babylonjs.com/babylon.js" defer onerror="document.documentElement.dataset.engineLoadError='true';console.error('[EngineLoader] Babylon.js CDN üzerinden yüklenemedi.')"></script>
     <script id="babylon-loaders" src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js" defer onerror="document.documentElement.dataset.loaderLoadError='true';console.error('[EngineLoader] Babylon GLB loader CDN üzerinden yüklenemedi.')"></script>
-    <script src="asset-loader.js?v=20260921-2" defer></script>
-    <script src="game.js?v=20260921-2" defer></script>
+    <script src="asset-loader.js?v=20260921-4" defer></script>
+    <script src="game.js?v=20260921-4" defer></script>
   </head>
   <body>
-    <canvas id="render-canvas" aria-label="Project Gun 3B oyun alanı"></canvas>
+    <canvas id="render-canvas" tabindex="0" aria-label="Project Gun 3B oyun alanı"></canvas>
 
     <div id="boot-screen" class="boot-screen">
+      <div class="boot-aurora" aria-hidden="true"><i></i><i></i><i></i></div>
       <div class="boot-grid" aria-hidden="true"></div>
-      <a class="back-link" href="../">← OYUN MERKEZİ</a>
-      <div class="boot-copy">
-        <p class="eyebrow"><i></i> ERKEN ERİŞİM · OPERASYON 01</p>
-        <h1>PROJECT<br /><em>GUN</em></h1>
-        <p class="mission-brief">Terk edilmiş Kestrel tesisinde beş zombi dalgasına dayan. Silahlarını değiştir, düşen ekipmanları topla ve son dalgadan sonra tahliye noktasına ulaş.</p>
-        <div class="control-grid">
-          <span><kbd>WASD</kbd><small>HAREKET</small></span>
-          <span><kbd>FARE</kbd><small>NİŞAN / ATEŞ</small></span>
-          <span><kbd>R</kbd><small>ŞARJÖR</small></span>
-          <span><kbd>E</kbd><small>GANİMET</small></span>
-          <span><kbd>SHIFT</kbd><small>KOŞU</small></span>
-          <span><kbd>SPACE</kbd><small>ZIPLAMA</small></span>
-          <span><kbd>CTRL</kbd><small>EĞİLME</small></span>
-          <span><kbd>1-5</kbd><small>SİLAH SEÇİMİ</small></span>
+      <div class="boot-noise" aria-hidden="true"></div>
+
+      <section class="main-menu" aria-labelledby="game-title">
+        <div class="logo-stage" aria-hidden="true">
+          <span class="logo-ring ring-one"></span>
+          <span class="logo-ring ring-two"></span>
+          <span class="logo-ring ring-three"></span>
+          <img src="assets/project-gun-logo.png" alt="" />
         </div>
-        <label class="quality-setting" for="quality-select">
-          <span>GRAFİK KALİTESİ</span>
-          <select id="quality-select" aria-label="Grafik kalitesi">
-            <option value="low">LOW</option>
-            <option value="medium" selected>MEDIUM</option>
-            <option value="high">HIGH</option>
-          </select>
-        </label>
-        <button id="deploy-button" type="button"><span>OPERASYONA BAŞLA</span><b>→</b></button>
-        <p id="boot-status" class="boot-status">PBR doku paketi aktif · Tam ekran ve kulaklık önerilir.</p>
-      </div>
-      <aside class="operation-card">
-        <span>BÖLGE</span><strong>KESTREL-7</strong><small>23:40 · SİS · DÜŞMAN KONTROLÜ</small>
-        <div><i></i><b>TEHDİT: ÖLÜLER</b></div>
-      </aside>
+
+        <p class="eyebrow"><i></i> KESTREL PROTOKOLÜ <i></i></p>
+        <h1 id="game-title">PROJECT <em>GUN</em></h1>
+        <p class="mission-brief">Karanlığın içinden ilerle. Beş dalgayı temizle, cephaneliğini koru ve Kestrel-7’den canlı çık.</p>
+
+        <div class="menu-card">
+          <button id="deploy-button" type="button"><span><small>TEK OYUNCULU</small>OPERASYONA BAŞLA</span><b>→</b></button>
+
+          <div class="menu-options">
+            <label class="quality-setting" for="quality-select">
+              <span><small>GÖRÜNTÜ</small>GRAFİK KALİTESİ</span>
+              <select id="quality-select" aria-label="Grafik kalitesi">
+                <option value="low">LOW</option>
+                <option value="medium" selected>MEDIUM</option>
+                <option value="high">HIGH</option>
+              </select>
+            </label>
+
+            <details class="controls-menu">
+              <summary><span><small>NASIL OYNANIR</small>KONTROLLER</span><b>+</b></summary>
+              <div class="control-grid">
+                <span><kbd>WASD</kbd><small>HAREKET</small></span>
+                <span><kbd>FARE</kbd><small>NİŞAN / ATEŞ</small></span>
+                <span><kbd>R</kbd><small>ŞARJÖR</small></span>
+                <span><kbd>E</kbd><small>GANİMET</small></span>
+                <span><kbd>SHIFT</kbd><small>KOŞU</small></span>
+                <span><kbd>SPACE</kbd><small>ZIPLAMA</small></span>
+                <span><kbd>CTRL</kbd><small>EĞİLME</small></span>
+                <span><kbd>1–5</kbd><small>SİLAH SEÇİMİ</small></span>
+              </div>
+            </details>
+
+            <a class="menu-link" href="../"><span><small>GERİ DÖN</small>OYUN MERKEZİ</span><b>↗</b></a>
+          </div>
+
+          <p id="boot-status" class="boot-status"><i></i><span>PBR doku paketi aktif · Kulaklık önerilir.</span></p>
+        </div>
+
+        <div class="menu-meta" aria-label="Operasyon bilgisi">
+          <span><small>BÖLGE</small><b>KESTREL-7</b></span>
+          <span><small>OPERASYON</small><b>SIFIR</b></span>
+          <span class="threat-state"><small>TEHDİT</small><b><i></i> KRİTİK</b></span>
+        </div>
+      </section>
     </div>
 
     <main id="hud" class="hud" aria-hidden="true">
       <header class="top-hud">
-        <div class="squad-mark"><i>PG</i><span><b>KESTREL-7</b><small>OPERASYON SIFIR</small></span></div>
+        <div class="squad-mark"><i><img src="assets/project-gun-logo.png" alt="" /></i><span><b>KESTREL-7</b><small>OPERASYON SIFIR</small></span></div>
         <div class="compass"><span>W</span><b id="heading">N · 000</b><span>E</span></div>
         <div class="threat"><i></i><span>TEHDİT SEVİYESİ<b id="threat-level">YÜKSEK</b></span></div>
       </header>

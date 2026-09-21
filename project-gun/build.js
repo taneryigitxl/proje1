@@ -8,6 +8,7 @@ const requiredFiles = [
   "styles.css",
   "asset-loader.js",
   "game.js",
+  "assets/project-gun-logo.png",
   "assets/models/player/fps-arms.glb",
   "assets/models/weapons/raven-rifle.glb",
   "assets/models/weapons/viper-smg.glb",
