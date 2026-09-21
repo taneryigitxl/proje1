@@ -2,6 +2,8 @@
 
 Browser-first, offline third-person action MMORPG vertical slice. Babylon.js and its GLTF loader are vendored locally for static-host reliability. The runtime attempts WebGPU first and falls back to WebGL2.
 
+The playable loop includes the five-kill **First Trial** quest, per-kill XP, a live XP bar, level-up stat growth, and full health/mana restoration on level-up.
+
 ## Run
 
 Serve the repository root with any static server and open `/tora-online/`. A Vite scaffold is included:

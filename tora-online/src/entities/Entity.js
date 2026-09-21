@@ -10,6 +10,8 @@ export class Entity {
     this.health = health;
     this.maxMana = mana;
     this.mana = mana;
+    this.xp = 0;
+    this.nextLevelXp = 0;
     this.position = { x: 0, y: 0, z: 0 };
     this.rotation = 0;
     this.velocity = { x: 0, y: 0, z: 0 };
@@ -20,7 +22,9 @@ export class Entity {
 
   serialize() {
     return { id: this.id, type: this.type, position: { ...this.position }, rotation: this.rotation,
-      velocity: { ...this.velocity }, health: this.health, mana: this.mana, level: this.level,
+      velocity: { ...this.velocity }, health: this.health, maxHealth: this.maxHealth,
+      mana: this.mana, maxMana: this.maxMana, level: this.level, xp: this.xp,
+      nextLevelXp: this.nextLevelXp,
       state: this.state, targetId: this.targetId };
   }
 }

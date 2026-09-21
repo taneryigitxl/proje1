@@ -12,3 +12,15 @@
 body[data-quality="low"] .menu-grid,body[data-quality="low"] .rune-field{display:none}body[data-quality="low"] .menu-aurora{filter:blur(45px);opacity:.45}body[data-quality="low"] *{backdrop-filter:none!important}
 @keyframes halo{to{transform:rotate(360deg)}}@keyframes drift{0%,100%{transform:translate3d(0,0,0) scale(.8)}50%{transform:translate3d(22%,12%,0) scale(1.15)}}@keyframes float{50%{transform:translateY(-16px);opacity:.18}}@keyframes logoPulse{50%{transform:scale(1.04);filter:drop-shadow(0 0 38px rgba(190,75,255,.9))}}@keyframes damageFly{to{transform:translate(-50%,-120px);opacity:0}}@media(max-width:760px){.main-menu{transform:scale(.9)}.menu-options{grid-template-columns:1fr}.quality-setting,.controls-menu summary,.menu-link{border-right:0;border-bottom:1px solid rgba(255,255,255,.07)}.control-grid{right:0;grid-template-columns:1fr}.menu-meta{gap:12px}.quest-panel{display:none}.skill-slot{width:42px;height:48px}.skill-slot .icon{font-size:.9rem}.hud-hint{display:none}.target-frame{top:122px}.player-frame{left:10px;top:10px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+/* Progression loop */
+.player-frame{height:100px}
+.xp{position:relative;height:10px;overflow:hidden}
+.xp i{width:0;background:linear-gradient(90deg,#7833ff,#d65cff);transition:width .3s}
+.xp span{position:absolute;inset:0;display:grid;place-items:center;color:#ead7ff;font-size:.44rem;font-weight:800;text-shadow:0 1px 2px #000}
+.quest-panel.is-complete{border-color:rgba(117,255,176,.38);box-shadow:0 0 28px rgba(69,217,132,.1)}
+.quest-panel.is-complete small,.quest-panel.is-complete span{color:#8fffc0}
+.progress-toast{position:absolute;left:50%;top:124px;transform:translate(-50%,-10px);padding:10px 18px;color:#f4e6ff;background:linear-gradient(105deg,rgba(58,18,98,.94),rgba(22,10,38,.94));border:1px solid rgba(216,125,255,.48);box-shadow:0 12px 34px rgba(0,0,0,.45),0 0 24px rgba(176,73,255,.18);font-size:.68rem;font-weight:900;letter-spacing:.08em;opacity:0}
+.progress-toast.is-visible{animation:progressReveal 2.6s ease both}
+@keyframes progressReveal{0%{opacity:0;transform:translate(-50%,-10px)}12%,78%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,-8px)}}
+@media(max-width:760px){.progress-toast{top:224px;max-width:86vw;text-align:center}}

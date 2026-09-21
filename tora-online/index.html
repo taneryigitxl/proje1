@@ -39,9 +39,10 @@
     </main>
     <section id="loading-screen" class="loading-screen" hidden aria-live="polite"><img src="assets/tora-symbol.svg" alt="" /><strong>TORA DİYARI HAZIRLANIYOR</strong><span id="loading-label">Motor başlatılıyor…</span><div class="loading-track"><i id="loading-bar"></i></div><b id="loading-percent">0%</b></section>
     <section id="hud" class="hud" hidden>
-      <div class="player-frame panel"><div class="portrait"><span>TS</span></div><div class="player-data"><div><strong>Tora Savaşçısı</strong><small>SEVİYE <b id="player-level">1</b></small></div><div class="meter hp"><i id="player-hp-bar"></i><span id="player-hp-text">100 / 100</span></div><div class="meter mana"><i id="player-mana-bar"></i><span id="player-mana-text">100 / 100</span></div><div class="xp"><i id="player-xp-bar"></i></div></div></div>
+      <div class="player-frame panel"><div class="portrait"><span>TS</span></div><div class="player-data"><div><strong>Tora Savaşçısı</strong><small>SEVİYE <b id="player-level">1</b></small></div><div class="meter hp"><i id="player-hp-bar"></i><span id="player-hp-text">140 / 140</span></div><div class="meter mana"><i id="player-mana-bar"></i><span id="player-mana-text">100 / 100</span></div><div class="xp"><i id="player-xp-bar"></i><span id="player-xp-text">0 / 150 XP</span></div></div></div>
       <div id="target-frame" class="target-frame panel" hidden><div><strong id="target-name">—</strong><small>SEVİYE <b id="target-level">1</b></small></div><div class="meter hp"><i id="target-hp-bar"></i><span id="target-hp-text">0 / 0</span></div></div>
-      <div class="quest-panel panel"><small>İLK SINAV</small><strong>Bozkır Yaratıkları</strong><span>Hareket et, bir hedef seç ve yeteneklerini dene.</span></div>
+      <div class="quest-panel panel"><small>İLK SINAV</small><strong>Bozkır Yaratıkları</strong><span id="quest-status">Yaratıkları yen: 0 / 5</span></div>
+      <output id="progress-toast" class="progress-toast" role="status" aria-live="polite" hidden></output>
       <div id="world-labels" class="world-labels" aria-hidden="true"></div><div id="damage-layer" class="damage-layer" aria-hidden="true"></div><div id="skill-bar" class="skill-bar"></div>
       <div class="hud-hint"><span>Sağ fare: Kamera</span><span>Fare tekeri: Yakınlaştır</span><span>ESC: Menü</span></div><output id="debug-fps" class="debug-fps" hidden>0 FPS</output>
     </section>
