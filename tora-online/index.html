@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <meta name="description" content="Tora Online — tarayıcıda çalışan karanlık fantastik üçüncü şahıs aksiyon MMORPG prototipi." />
+    <meta name="theme-color" content="#07030d" />
+    <title>Tora Online</title>
+    <link rel="icon" type="image/svg+xml" href="assets/tora-symbol.svg" />
+    <link rel="preload" href="assets/tora-symbol.svg" as="image" />
+    <link rel="stylesheet" href="styles.css?v=1" />
+    <script src="vendor/babylon.js" defer></script>
+    <script src="vendor/babylonjs.loaders.min.js" defer></script>
+    <script src="menu.js?v=1" defer></script>
+    <script type="module" src="src/main.js?v=1"></script>
+  </head>
+  <body data-quality="medium">
+    <canvas id="game-canvas" aria-label="Tora Online oyun alanı"></canvas>
+    <main id="menu-screen" class="menu-screen" aria-labelledby="game-title">
+      <div class="menu-aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="menu-grid" aria-hidden="true"></div>
+      <div class="rune-field" aria-hidden="true"><span>ᛏ</span><span>ᚱ</span><span>ᚨ</span><span>ᛟ</span></div>
+      <section class="main-menu">
+        <div class="logo-stage"><span class="logo-ring ring-one" aria-hidden="true"></span><span class="logo-ring ring-two" aria-hidden="true"></span><img src="assets/tora-symbol.svg" alt="Tora Online sembolü" /></div>
+        <p class="eyebrow"><i></i> KADİM DİYAR UYANIYOR <i></i></p>
+        <h1 id="game-title">TORA <em>ONLINE</em></h1>
+        <p class="game-description">Kadim Tora diyarına adım at. Kılıcını kuşan, yaratıklarla savaş ve kendi efsaneni yaz.</p>
+        <div class="menu-card">
+          <button id="start-button" type="button"><span><small>YOLCULUK BAŞLIYOR</small>DÜNYAYA GİR</span><b aria-hidden="true">→</b></button>
+          <div class="menu-options">
+            <label class="quality-setting" for="quality-select"><span><small>GÖRÜNTÜ</small>GRAFİK KALİTESİ</span><select id="quality-select" aria-label="Grafik kalitesi"><option value="low">LOW</option><option value="medium" selected>MEDIUM</option><option value="high">HIGH</option></select></label>
+            <details class="controls-menu"><summary><span><small>KLAVYE &amp; FARE</small>KONTROLLER</span><b aria-hidden="true">+</b></summary><div class="control-grid"><span><kbd>WASD</kbd> Hareket</span><span><kbd>SHIFT</kbd> Koş</span><span><kbd>SPACE</kbd> Zıpla</span><span><kbd>1–9</kbd> Yetenek</span><span><kbd>SOL TIK</kbd> Yürü / hedefle</span><span><kbd>SAĞ SÜRÜKLE</kbd> Kamera</span><span><kbd>TAB</kbd> Hedef değiştir</span><span><kbd>ESC</kbd> Menü</span></div></details>
+            <a class="menu-link" href="../"><span><small>GERİ DÖN</small>OYUN MERKEZİ</span><b aria-hidden="true">↗</b></a>
+          </div>
+          <p id="menu-status" class="menu-status" role="status" aria-live="polite"><i></i><span>Diyar bağlantıya hazır.</span></p>
+        </div>
+        <div class="menu-meta"><span><small>TÜR</small><b>ACTION MMORPG</b></span><span><small>MOD</small><b>OFFLINE PROTOTİP</b></span><span><small>MOTOR</small><b>BABYLON.JS</b></span></div>
+      </section>
+    </main>
+    <section id="loading-screen" class="loading-screen" hidden aria-live="polite"><img src="assets/tora-symbol.svg" alt="" /><strong>TORA DİYARI HAZIRLANIYOR</strong><span id="loading-label">Motor başlatılıyor…</span><div class="loading-track"><i id="loading-bar"></i></div><b id="loading-percent">0%</b></section>
+    <section id="hud" class="hud" hidden>
+      <div class="player-frame panel"><div class="portrait"><span>TS</span></div><div class="player-data"><div><strong>Tora Savaşçısı</strong><small>SEVİYE <b id="player-level">1</b></small></div><div class="meter hp"><i id="player-hp-bar"></i><span id="player-hp-text">100 / 100</span></div><div class="meter mana"><i id="player-mana-bar"></i><span id="player-mana-text">100 / 100</span></div><div class="xp"><i id="player-xp-bar"></i></div></div></div>
+      <div id="target-frame" class="target-frame panel" hidden><div><strong id="target-name">—</strong><small>SEVİYE <b id="target-level">1</b></small></div><div class="meter hp"><i id="target-hp-bar"></i><span id="target-hp-text">0 / 0</span></div></div>
+      <div class="quest-panel panel"><small>İLK SINAV</small><strong>Bozkır Yaratıkları</strong><span>Hareket et, bir hedef seç ve yeteneklerini dene.</span></div>
+      <div id="world-labels" class="world-labels" aria-hidden="true"></div><div id="damage-layer" class="damage-layer" aria-hidden="true"></div><div id="skill-bar" class="skill-bar"></div>
+      <div class="hud-hint"><span>Sağ fare: Kamera</span><span>Fare tekeri: Yakınlaştır</span><span>ESC: Menü</span></div><output id="debug-fps" class="debug-fps" hidden>0 FPS</output>
+    </section>
+    <section id="pause-menu" class="pause-menu" hidden><div class="pause-card panel"><img src="assets/tora-symbol.svg" alt="" /><small>OYUN DURAKLATILDI</small><h2>TORA ONLINE</h2><button id="resume-button" type="button">DEVAM ET</button><label>Grafik Kalitesi<select id="pause-quality"><option value="low">LOW</option><option value="medium">MEDIUM</option><option value="high">HIGH</option></select></label><button id="exit-button" class="secondary" type="button">ANA MENÜYE DÖN</button></div></section>
+    <div id="fatal-error" class="fatal-error" hidden><strong>OYUN BAŞLATILAMADI</strong><span></span><button type="button" onclick="location.reload()">YENİDEN DENE</button></div>
+  </body>
+</html>

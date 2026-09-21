@@ -49,12 +49,12 @@ Ana dosyalar:
 - `script.js`: fizik, on bölüm, iki boss, düşmanlar, kameralar, lazerler, altınlar, yetenekler ve çok oyunculu senkronizasyon
 - `assets/`: karakter ve düşman görselleri
 
-## Project Gun
+## Tora Online
 
-`project-gun/` altında Babylon.js tabanlı, web için optimize edilmiş 3B FPS zombi survival modu bulunur. Oyun; çalışma sırasında model değiştirmeyen ayrıntılı yerel silahlar, silaha temas eden eklemli taktik eller, animasyonlu enfekte modeli, hitscan/tracer ateş sistemi, ADS/scope görünümü, beş dalgalı zorluk eğrisi ve LOW/MEDIUM/HIGH grafik profilleri kullanır.
+`tora-online/` altında Babylon.js tabanlı, tarayıcıda çalışan tek oyunculu üçüncü şahıs action MMORPG prototipi bulunur. Mor/siyah premium giriş ekranı; kadın savaşçı placeholder karakteri, iki elli greatsword, küçük dark-fantasy test alanı, mob yapay zekâsı, hedefli savaş ve 1–9 yetenek çubuğuna açılır.
 
-Ana menü, `project-gun/assets/project-gun-logo.png` logosunu kullanan mor temalı ve animasyonlu merkez arayüzdür. Grafik kalitesi ile açılır kontrol özeti oyuna başlamadan bu ekrandan yönetilebilir.
+Kontroller: `WASD` hareket, `Shift` koşma, `Space` zıplama, zemine sol tıkla yürüme, mob üzerine sol tıkla hedef/saldırı, sağ fare sürükleyerek kamera, tekerlekle zoom, `1–9` yetenek, `Tab` hedef değiştirme ve `Esc` menü.
 
-Kontroller: `WASD` hareket, `Shift` tactical sprint, `Space` zıplama, `Ctrl` eğilme, sağ tık ADS, sol tık ateş, `R` şarjör ve `1–5` silah seçimi.
+Çalışma zamanı Babylon dosyaları yerel olarak `tora-online/vendor/` altında tutulur; CDN bağlantısı gerekmez. Vite ile `cd tora-online && npm install && npm run dev` kullanılabilir veya depo herhangi bir statik sunucuyla yayınlanıp `/tora-online/` açılabilir. Eski `/project-gun/` yolu yeni oyuna yönlendirilir.
 
-GLB düşman dosyası tarayıcı güvenlik kuralları nedeniyle bir statik sunucu üzerinden açılmalıdır. Depo kökünü VS Code Live Server gibi bir sunucuyla yayınlayıp `/project-gun/` yoluna gidin. Silahlar ve eller harici model yüklemesini beklemeden anında hazır olur; enfekte modeli yüklenemezse oyun procedural fallback ile devam eder. Fare kilidinin engellendiği gömülü tarayıcılarda nişan almak için görüntüyü sürükleyebilirsiniz.
+İlk sürümde gerçek çok oyunculu sunucu ve rigged karakter paketi yoktur. `NetworkAdapter` çevrimdışı simülasyon arayüzü sağlar; `AssetManager` içindeki GLB/GLTF hattına bir model adresi verildiğinde prosedürel karakter fallback'i kod değiştirmeden devreden çıkarılabilir.
