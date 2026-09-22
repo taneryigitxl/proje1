@@ -95,25 +95,20 @@ export class GrassSystem {
     const material = new BABYLON.StandardMaterial(`${name}-mat`, this.scene);
     material.disableLighting = false;
     material.diffuseColor = color;
-    material.emissiveColor = color.scale(0.35);
-    material.ambientColor = color.scale(0.5);
+    material.emissiveColor = color.scale(0.22);
+    material.ambientColor = color.scale(0.55);
     material.specularColor = BABYLON.Color3.Black();
     material.backFaceCulling = false;
     for (let i = 0; i < blades; i++) {
-      const blade = BABYLON.MeshBuilder.CreateTube(`blade-${i}`, {
-        path: [
-          new BABYLON.Vector3(0, 0, 0),
-          new BABYLON.Vector3((Math.random() - 0.5) * 0.02, 0.12, 0),
-          new BABYLON.Vector3((Math.random() - 0.5) * 0.04, 0.28 + Math.random() * 0.08, (Math.random() - 0.5) * 0.02),
-        ],
-        radius: 0.012,
-        tessellation: 4,
-        cap: BABYLON.Mesh.NO_CAP,
+      const blade = BABYLON.MeshBuilder.CreatePlane(`blade-${i}`, {
+        width: 0.1 + (i % 3) * 0.02,
+        height: 0.28 + (i % 4) * 0.05,
       }, this.scene);
       blade.material = material;
       blade.parent = root;
       blade.rotation.y = (i / blades) * Math.PI * 2;
-      blade.position.set(Math.sin(i * 1.7) * 0.05, 0, Math.cos(i * 1.7) * 0.05);
+      blade.rotation.z = ((i % 3) - 1) * 0.14;
+      blade.position.set(Math.sin(i * 1.7) * 0.05, 0.14, Math.cos(i * 1.7) * 0.05);
       blade.scaling.y = 0.85 + (i % 3) * 0.15;
       blade.isPickable = false;
     }

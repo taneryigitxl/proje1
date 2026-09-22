@@ -135,16 +135,16 @@ export class TestMap {
     this.scene.fogColor = new BABYLON.Color3(0.32, 0.36, 0.3);
 
     const hemi = new BABYLON.HemisphericLight("valley-fill", new BABYLON.Vector3(-0.2, 1, 0.2), this.scene);
-    hemi.intensity = 0.85;
-    hemi.diffuse = new BABYLON.Color3(0.92, 0.9, 0.82);
-    hemi.groundColor = new BABYLON.Color3(0.22, 0.28, 0.18);
+    hemi.intensity = 1.05;
+    hemi.diffuse = new BABYLON.Color3(0.95, 0.93, 0.86);
+    hemi.groundColor = new BABYLON.Color3(0.28, 0.34, 0.22);
     hemi.specular = BABYLON.Color3.Black();
 
     const sun = new BABYLON.DirectionalLight("late-sun", new BABYLON.Vector3(-0.62, -1.05, 0.28), this.scene);
     sun.position.set(28, 48, -22);
-    sun.intensity = 1.55;
-    sun.diffuse = new BABYLON.Color3(1, 0.92, 0.78);
-    sun.specular = new BABYLON.Color3(0.35, 0.32, 0.28);
+    sun.intensity = 1.75;
+    sun.diffuse = new BABYLON.Color3(1, 0.94, 0.8);
+    sun.specular = new BABYLON.Color3(0.28, 0.26, 0.22);
     this.sun = sun;
 
     this.shadowGenerator = new BABYLON.ShadowGenerator(this.profile.shadows, sun);
@@ -152,7 +152,7 @@ export class TestMap {
     this.shadowGenerator.filteringQuality = this.profile.shadows > 1024
       ? BABYLON.ShadowGenerator.QUALITY_HIGH
       : BABYLON.ShadowGenerator.QUALITY_MEDIUM;
-    this.shadowGenerator.darkness = 0.52;
+    this.shadowGenerator.darkness = 0.48;
     this.shadowGenerator.bias = 0.0003;
     this.shadowGenerator.normalBias = 0.03;
     sun.shadowMaxZ = 95;
@@ -162,8 +162,8 @@ export class TestMap {
 
     this.scene.imageProcessingConfiguration.toneMappingEnabled = true;
     this.scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
-    this.scene.imageProcessingConfiguration.exposure = 1.18;
-    this.scene.imageProcessingConfiguration.contrast = 1.12;
+    this.scene.imageProcessingConfiguration.exposure = 1.28;
+    this.scene.imageProcessingConfiguration.contrast = 1.1;
     this.scene.imageProcessingConfiguration.vignetteEnabled = true;
     this.scene.imageProcessingConfiguration.vignetteWeight = 1.4;
     this.scene.imageProcessingConfiguration.vignetteColor = new BABYLON.Color4(0.05, 0.06, 0.04, 1);
@@ -280,18 +280,24 @@ export class TestMap {
     if (pack?.albedo) {
       const material = new BABYLON.StandardMaterial(name, this.scene);
       material.disableLighting = false;
-      material.diffuseColor = new BABYLON.Color3(0.72, 0.7, 0.62);
-      material.ambientColor = new BABYLON.Color3(0.35, 0.38, 0.32);
+      // Lift dark albedo packs into readable dusk greens/browns
+      material.diffuseColor = kind === "mud"
+        ? new BABYLON.Color3(1.05, 0.95, 0.82)
+        : new BABYLON.Color3(0.95, 1.05, 0.78);
+      material.ambientColor = new BABYLON.Color3(0.45, 0.48, 0.4);
       material.specularColor = BABYLON.Color3.Black();
-      material.emissiveColor = new BABYLON.Color3(0.04, 0.05, 0.03);
+      material.emissiveColor = kind === "mud"
+        ? new BABYLON.Color3(0.08, 0.06, 0.04)
+        : new BABYLON.Color3(0.07, 0.1, 0.04);
       try {
         const albedo = new BABYLON.Texture(pack.albedo, this.scene, false, true);
-        albedo.uScale = kind === "mud" ? 5.5 : 6.5;
+        albedo.uScale = kind === "mud" ? 4.2 : 4.8;
         albedo.vScale = albedo.uScale;
+        albedo.level = 1.15;
         material.diffuseTexture = albedo;
         if (pack.normal) {
           material.bumpTexture = new BABYLON.Texture(pack.normal, this.scene, false, true);
-          material.bumpTexture.level = 0.45;
+          material.bumpTexture.level = 0.35;
           material.bumpTexture.uScale = albedo.uScale;
           material.bumpTexture.vScale = albedo.vScale;
         }

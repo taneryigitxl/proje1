@@ -5,8 +5,8 @@
   "weapon": { "url": "assets/models/weapons/greatsword.glb", "bone": "hand_r", "scale": 1.32, "position": [0.035, 0.055, -0.015], "rotation": [1.48, 0.12, 1.52] },
   "animationLibraries": ["assets/animations/ual1-standard.glb", "assets/animations/ual2-standard.glb"],
   "mobs": [
-    { "id": "ashen-demon", "name": "Kül İblisi", "url": "assets/models/mobs/ashen-demon.glb", "scale": 0.72, "clips": { "idle": "Idle", "walk": "Walk", "run": "Run", "attack": "Punch", "hit": "HitReact", "death": "Death" } },
-    { "id": "skull-orc", "name": "Kafatası Orku", "url": "assets/models/mobs/skull-orc.glb", "scale": 0.78, "clips": { "idle": "Idle", "walk": "Walk", "run": "Run", "attack": "Weapon", "hit": "HitReact", "death": "Death" } }
+    { "id": "ashen-demon", "name": "Kül İblisi", "url": "assets/models/mobs/ashen-demon.glb", "scale": 0.58, "clips": { "idle": "Idle", "walk": "Walk", "run": "Run", "attack": "Punch", "hit": "HitReact", "death": "Death" } },
+    { "id": "skull-orc", "name": "Kafatası Orku", "url": "assets/models/mobs/skull-orc.glb", "scale": 0.62, "clips": { "idle": "Idle", "walk": "Walk", "run": "Run", "attack": "Weapon", "hit": "HitReact", "death": "Death" } }
   ],
   "environment": {
     "common-tree": "assets/models/nature/common-tree.glb", "pine": "assets/models/nature/pine.glb", "bush": "assets/models/nature/bush.glb", "grass": "assets/models/nature/grass.glb", "fern": "assets/models/nature/fern.glb", "rock-a": "assets/models/nature/rock-a.glb", "rock-b": "assets/models/nature/rock-b.glb",
