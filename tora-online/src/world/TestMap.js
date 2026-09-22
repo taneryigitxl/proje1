@@ -1,4 +1,4 @@
-import { GrassSystem } from "./GrassSystem.js?v=18";
+import { GrassSystem } from "./GrassSystem.js?v=19";
 
 /**
  * Dark medieval MMORPG test valley — Metin2-inspired atmosphere without rewriting gameplay systems.
@@ -136,21 +136,21 @@ export class TestMap {
 
   #atmosphere() {
     // Dark classical MMORPG dusk — muted greens, warm sun, soft fog depth
-    this.scene.clearColor = new BABYLON.Color4(0.18, 0.2, 0.17, 1);
-    this.scene.ambientColor = new BABYLON.Color3(0.42, 0.44, 0.38);
+    this.scene.clearColor = new BABYLON.Color4(0.2, 0.22, 0.18, 1);
+    this.scene.ambientColor = new BABYLON.Color3(0.46, 0.48, 0.42);
     this.scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
-    this.scene.fogDensity = 0.0038;
-    this.scene.fogColor = new BABYLON.Color3(0.36, 0.4, 0.33);
+    this.scene.fogDensity = 0.0034;
+    this.scene.fogColor = new BABYLON.Color3(0.38, 0.42, 0.34);
 
     const hemi = new BABYLON.HemisphericLight("valley-fill", new BABYLON.Vector3(-0.2, 1, 0.2), this.scene);
-    hemi.intensity = 1.12;
-    hemi.diffuse = new BABYLON.Color3(0.96, 0.94, 0.88);
-    hemi.groundColor = new BABYLON.Color3(0.3, 0.36, 0.24);
+    hemi.intensity = 1.2;
+    hemi.diffuse = new BABYLON.Color3(0.97, 0.95, 0.88);
+    hemi.groundColor = new BABYLON.Color3(0.32, 0.38, 0.26);
     hemi.specular = BABYLON.Color3.Black();
 
     const sun = new BABYLON.DirectionalLight("late-sun", new BABYLON.Vector3(-0.62, -1.05, 0.28), this.scene);
     sun.position.set(28, 48, -22);
-    sun.intensity = 1.85;
+    sun.intensity = 1.95;
     sun.diffuse = new BABYLON.Color3(1, 0.95, 0.82);
     sun.specular = new BABYLON.Color3(0.28, 0.26, 0.22);
     this.sun = sun;
@@ -216,19 +216,37 @@ export class TestMap {
     ground.isPickable = true;
     ground.metadata = { ground: true, cursor: "move" };
 
-    // Soft rock / mud blend patches so the valley isn't a flat single color
+    // Cover the valley — no bare gray plane. Soft dirt/grass/rock/mud blends.
+    this.#blendPatch("field-grass-w", [
+      new BABYLON.Vector3(-22, 0, -8), new BABYLON.Vector3(-14, 0, 0), new BABYLON.Vector3(-10, 0, 10), new BABYLON.Vector3(-16, 0, 18),
+    ], 14, "forest", new BABYLON.Color3(0.32, 0.42, 0.22));
+    this.#blendPatch("field-grass-e", [
+      new BABYLON.Vector3(10, 0, -12), new BABYLON.Vector3(16, 0, -2), new BABYLON.Vector3(18, 0, 10), new BABYLON.Vector3(12, 0, 18),
+    ], 13, "forest", new BABYLON.Color3(0.3, 0.4, 0.2));
+    this.#blendPatch("village-dirt", [
+      new BABYLON.Vector3(-22, 0, -20), new BABYLON.Vector3(-14, 0, -16), new BABYLON.Vector3(-8, 0, -12), new BABYLON.Vector3(-6, 0, -8),
+    ], 10, "mud", new BABYLON.Color3(0.46, 0.34, 0.2));
+    this.#blendPatch("south-dirt", [
+      new BABYLON.Vector3(-8, 0, -28), new BABYLON.Vector3(0, 0, -26), new BABYLON.Vector3(6, 0, -22), new BABYLON.Vector3(4, 0, -16),
+    ], 9, "mud", new BABYLON.Color3(0.44, 0.33, 0.2));
     this.#blendPatch("edge-rock-n", [
       new BABYLON.Vector3(-18, 0, 28), new BABYLON.Vector3(-6, 0, 30), new BABYLON.Vector3(8, 0, 29), new BABYLON.Vector3(18, 0, 27),
-    ], 11, "rock", new BABYLON.Color3(0.4, 0.38, 0.32));
+    ], 12, "rock", new BABYLON.Color3(0.4, 0.38, 0.32));
     this.#blendPatch("edge-rock-e", [
       new BABYLON.Vector3(26, 0, -12), new BABYLON.Vector3(28, 0, 0), new BABYLON.Vector3(27, 0, 12), new BABYLON.Vector3(24, 0, 20),
-    ], 9, "rock", new BABYLON.Color3(0.38, 0.36, 0.3));
+    ], 10, "rock", new BABYLON.Color3(0.38, 0.36, 0.3));
+    this.#blendPatch("edge-rock-w", [
+      new BABYLON.Vector3(-26, 0, -10), new BABYLON.Vector3(-28, 0, 2), new BABYLON.Vector3(-27, 0, 14), new BABYLON.Vector3(-22, 0, 22),
+    ], 9, "rock", new BABYLON.Color3(0.36, 0.34, 0.28));
     this.#blendPatch("stream-mud", [
-      new BABYLON.Vector3(-22, 0, 4), new BABYLON.Vector3(-14, 0, 6), new BABYLON.Vector3(-6, 0, 7), new BABYLON.Vector3(2, 0, 5),
-    ], 5.5, "mud", new BABYLON.Color3(0.42, 0.32, 0.2));
+      new BABYLON.Vector3(-22, 0, 4), new BABYLON.Vector3(-14, 0, 6), new BABYLON.Vector3(-6, 0, 7), new BABYLON.Vector3(2, 0, 5), new BABYLON.Vector3(10, 0, 4),
+    ], 6.5, "mud", new BABYLON.Color3(0.42, 0.32, 0.2));
     this.#blendPatch("camp-approach-dirt", [
-      new BABYLON.Vector3(-3, 0, 5), new BABYLON.Vector3(0, 0, 7.5), new BABYLON.Vector3(2, 0, 9.5),
-    ], 4.8, "mud", new BABYLON.Color3(0.45, 0.34, 0.22));
+      new BABYLON.Vector3(-4, 0, 4), new BABYLON.Vector3(0, 0, 7.5), new BABYLON.Vector3(3, 0, 10.5),
+    ], 6, "mud", new BABYLON.Color3(0.45, 0.34, 0.22));
+    this.#blendPatch("mid-valley-grass", [
+      new BABYLON.Vector3(-6, 0, -4), new BABYLON.Vector3(2, 0, 0), new BABYLON.Vector3(8, 0, 4), new BABYLON.Vector3(4, 0, 8),
+    ], 11, "forest", new BABYLON.Color3(0.33, 0.42, 0.22));
   }
 
   #blendPatch(name, points, width, kind, fallback) {
@@ -242,6 +260,12 @@ export class TestMap {
 
   #path() {
     const points = Array.from({ length: 28 }, (_, i) => new BABYLON.Vector3(Math.sin(i * 0.4) * 2.35, 0, -35 + i * 2.65));
+    // Soft dirt shoulder under the road so edges never hard-cut into gray
+    const shoulder = this.#ribbon("village-road-shoulder", points, 11.5, 9, [0, 0.2, 0.45, 0.65, 0.75, 0.65, 0.45, 0.2, 0], 0.02);
+    shoulder.material = this.#terrainMaterial("terrain-shoulder", "mud", new BABYLON.Color3(0.42, 0.32, 0.2), true);
+    shoulder.metadata = { ground: true, cursor: "move" };
+    shoulder.isPickable = true;
+    shoulder.receiveShadows = true;
     // Wider soft alpha edges — road fades into grass instead of hard cut
     const path = this.#ribbon("village-road", points, 8.4, 9, [0, 0.18, 0.42, 0.72, 1, 0.72, 0.42, 0.18, 0], 0.045);
     path.material = this.#terrainMaterial("terrain-mud", "mud", new BABYLON.Color3(0.48, 0.36, 0.22), true);
@@ -252,7 +276,13 @@ export class TestMap {
 
   #stream() {
     const points = Array.from({ length: 26 }, (_, i) => new BABYLON.Vector3(-28 + i * 2.4, 0, 6 + Math.sin(i * 0.46) * 3.4));
-    const water = this.#ribbon("silver-stream", points, 4.0, 5, [0.05, 0.55, 0.85, 0.55, 0.05], 0.02);
+    // Muddy bank blend under water
+    const bank = this.#ribbon("stream-bank", points, 6.2, 7, [0, 0.3, 0.55, 0.7, 0.55, 0.3, 0], 0.015);
+    bank.material = this.#terrainMaterial("terrain-stream-bank", "mud", new BABYLON.Color3(0.4, 0.3, 0.18), true);
+    bank.receiveShadows = true;
+    bank.isPickable = true;
+    bank.metadata = { ground: true, cursor: "move" };
+    const water = this.#ribbon("silver-stream", points, 4.0, 5, [0.05, 0.55, 0.85, 0.55, 0.05], 0.03);
     const material = new BABYLON.PBRMaterial("stream-water", this.scene);
     material.albedoColor = new BABYLON.Color3(0.05, 0.16, 0.18);
     material.metallic = 0.1;
@@ -305,40 +335,44 @@ export class TestMap {
     return mesh;
   }
 
-  /** Prefer real terrain JPGs with dark grade; fall back to painted procedural. */
+  /** Prefer real terrain JPGs with readable grade; fall back to painted procedural. */
   #terrainMaterial(name, kind, fallbackColor, alphaBlend = false) {
     const packKey = kind === "mud" ? "mud" : kind === "rock" ? "rock" : "forest";
     const pack = this.assets?.manifest?.terrain?.[packKey];
     if (pack?.albedo) {
       const material = new BABYLON.StandardMaterial(name, this.scene);
       material.disableLighting = false;
-      // Lift dark albedo packs into readable dusk greens/browns/rocks
+      // Lift dark Polyhaven packs into readable dusk greens/browns/rocks
       material.diffuseColor = kind === "mud"
-        ? new BABYLON.Color3(1.05, 0.95, 0.82)
+        ? new BABYLON.Color3(1.2, 1.05, 0.88)
         : kind === "rock"
-          ? new BABYLON.Color3(0.92, 0.9, 0.86)
-          : new BABYLON.Color3(0.95, 1.05, 0.78);
-      material.ambientColor = new BABYLON.Color3(0.45, 0.48, 0.4);
+          ? new BABYLON.Color3(1.05, 1.02, 0.95)
+          : new BABYLON.Color3(1.15, 1.28, 0.92);
+      material.ambientColor = new BABYLON.Color3(0.5, 0.52, 0.44);
       material.specularColor = BABYLON.Color3.Black();
       material.emissiveColor = kind === "mud"
-        ? new BABYLON.Color3(0.08, 0.06, 0.04)
+        ? new BABYLON.Color3(0.1, 0.07, 0.04)
         : kind === "rock"
-          ? new BABYLON.Color3(0.06, 0.06, 0.05)
-          : new BABYLON.Color3(0.07, 0.1, 0.04);
-      try {
-        const albedo = new BABYLON.Texture(pack.albedo, this.scene, false, true);
-        albedo.uScale = kind === "mud" ? 4.2 : kind === "rock" ? 3.6 : 4.8;
-        albedo.vScale = albedo.uScale;
-        albedo.level = 1.15;
-        material.diffuseTexture = albedo;
-        if (pack.normal) {
-          material.bumpTexture = new BABYLON.Texture(pack.normal, this.scene, false, true);
-          material.bumpTexture.level = kind === "rock" ? 0.45 : 0.35;
-          material.bumpTexture.uScale = albedo.uScale;
-          material.bumpTexture.vScale = albedo.vScale;
-        }
-      } catch (_) {
-        return this.#paintedGround(name, kind === "mud" ? "mud" : kind === "rock" ? "rock" : "grass", fallbackColor, alphaBlend);
+          ? new BABYLON.Color3(0.07, 0.07, 0.06)
+          : new BABYLON.Color3(0.09, 0.13, 0.05);
+      const paintedKind = kind === "mud" ? "mud" : kind === "rock" ? "rock" : "grass";
+      const albedo = new BABYLON.Texture(pack.albedo, this.scene, false, true, undefined, undefined, () => {
+        console.warn(`[Tora Terrain] ${pack.albedo} yüklenemedi; boyalı zemin kullanılıyor.`);
+        material.diffuseTexture = this.#paintTerrainTexture(name, paintedKind, fallbackColor);
+      });
+      // Irregular UV scale reduces tiling / "kare" appearance
+      const uv = kind === "mud" ? 3.6 : kind === "rock" ? 3.1 : 4.2;
+      albedo.uScale = uv + (name.length % 5) * 0.17;
+      albedo.vScale = uv + (name.length % 3) * 0.23;
+      albedo.uOffset = (name.length % 7) * 0.11;
+      albedo.vOffset = (name.length % 5) * 0.09;
+      albedo.level = 1.35;
+      material.diffuseTexture = albedo;
+      if (pack.normal) {
+        material.bumpTexture = new BABYLON.Texture(pack.normal, this.scene, false, true);
+        material.bumpTexture.level = kind === "rock" ? 0.5 : 0.4;
+        material.bumpTexture.uScale = albedo.uScale;
+        material.bumpTexture.vScale = albedo.vScale;
       }
       if (alphaBlend) {
         material.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
@@ -487,14 +521,13 @@ export class TestMap {
       }));
     }
 
-    const foliage = Math.round(12 * this.profile.particles * mul);
+    const foliage = Math.round(22 * this.profile.particles * mul);
     for (let i = 0; i < foliage; i++) {
       const angle = random() * Math.PI * 2;
-      const radius = 14 + random() * 20;
+      const radius = 10 + random() * 22;
       const x = Math.cos(angle) * radius;
       const z = Math.sin(angle) * radius;
       if (!this.#detailAllowed(x, z)) continue;
-      // Only ferns far from roads — no cardboard bush blobs near player paths
       jobs.push(this.#place("fern", `foliage-${i}`, x, z, random() * Math.PI * 2, 0.45 + random() * 0.35, {
         shadow: false,
         sink: 0.08,
@@ -502,18 +535,18 @@ export class TestMap {
       }));
     }
 
-    const rocks = Math.round(18 * this.profile.lod * mul);
+    const rocks = Math.round(28 * this.profile.lod * mul);
     for (let i = 0; i < rocks; i++) {
       const angle = random() * Math.PI * 2;
-      const radius = 10 + random() * 24;
+      const radius = 8 + random() * 26;
       const x = Math.cos(angle) * radius;
       const z = Math.sin(angle) * radius;
       if (!this.#detailAllowed(x, z)) continue;
       const key = random() > 0.5 ? "rock-a" : "rock-b";
-      const scale = 0.22 + random() * 0.38;
+      const scale = 0.18 + random() * 0.4;
       jobs.push(this.#place(key, `rock-${i}`, x, z, random() * Math.PI * 2, scale, {
-        obstacle: 0.25 + scale * 0.4,
-        shadow: scale > 0.4,
+        obstacle: 0.22 + scale * 0.4,
+        shadow: scale > 0.38,
         sink: 0.22 + scale * 0.35,
       }));
     }
@@ -683,8 +716,6 @@ export class TestMap {
       }));
     });
     // Wood piles / abandoned camp clutter along the east trail
-    jobs.push(this.#place("crate", "woodpile-a", 10.5, -14, 0.2, 0.48, { obstacle: 0.3, sink: 0.04 }));
-    jobs.push(this.#place("crate", "woodpile-b", 11.1, -14.4, -0.5, 0.42, { obstacle: 0.28, sink: 0.04 }));
     jobs.push(this.#place("barrel", "trail-barrel", 10.2, -15.2, 0.4, 0.5, { obstacle: 0.3, sink: 0.04 }));
     jobs.push(this.#place("wagon", "broken-wagon", -6.5, 1.5, -0.9, 0.65, { collision: true, obstacle: 0.85, sink: 0.1 }));
     jobs.push(this.#place("wood-fence", "broken-fence-a", 7.2, 7.5, 0.8, 0.55, { obstacle: 0.3, sink: 0.08 }));

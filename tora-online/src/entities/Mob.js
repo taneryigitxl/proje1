@@ -1,5 +1,5 @@
-import { Entity } from "./Entity.js?v=18";
-import { DamageSystem } from "../combat/DamageSystem.js?v=18";
+import { Entity } from "./Entity.js?v=19";
+import { DamageSystem } from "../combat/DamageSystem.js?v=19";
 
 export class Mob extends Entity {
   constructor(scene, spawn, index, navigation, onDamage, visual) {
@@ -15,12 +15,16 @@ export class Mob extends Entity {
     this.animationState = "";
     this.patrol = Boolean(spawn.patrol);
     this.footOffset = Number.isFinite(visual.footOffset) ? visual.footOffset : 0;
-    const y = navigation.heightAt(spawn.x, spawn.z) + this.footOffset;
-    this.spawn = new BABYLON.Vector3(spawn.x, y, spawn.z);
+    const free = this.#snapToGround(spawn.x, spawn.z, 0.55);
+    const y = navigation.heightAt(free.x, free.z) + this.footOffset;
+    this.spawn = new BABYLON.Vector3(free.x, y, free.z);
     this.root.position.copyFrom(this.spawn);
     this.position = this.root.position;
     this.velocity = new BABYLON.Vector3();
     this.home = this.spawn.clone();
+    if (free.x !== spawn.x || free.z !== spawn.z) {
+      console.info(`[Tora Mob] ${definition.name} spawn engelden kaydırıldı (${spawn.x.toFixed(1)},${spawn.z.toFixed(1)}) → (${free.x.toFixed(1)},${free.z.toFixed(1)}).`);
+    }
     this.wanderTarget = null;
     this.lookYaw = this.root.rotation.y;
     this.targetYaw = this.root.rotation.y;
@@ -173,6 +177,23 @@ export class Mob extends Entity {
     this.lookYaw += delta * turn;
     this.root.rotation.y = this.lookYaw;
     this.rotation = this.lookYaw;
+  }
+
+  /** Spiral-search nearest free ground if spawn lands inside an obstacle. */
+  #snapToGround(x, z, radius) {
+    const origin = new BABYLON.Vector3(x, 0, z);
+    if (this.navigation.canOccupy(origin, radius)) return { x, z };
+    for (let ring = 1; ring <= 10; ring++) {
+      const steps = 8 + ring * 4;
+      const dist = ring * 0.85;
+      for (let i = 0; i < steps; i++) {
+        const a = (i / steps) * Math.PI * 2;
+        const nx = x + Math.cos(a) * dist;
+        const nz = z + Math.sin(a) * dist;
+        if (this.navigation.canOccupy(new BABYLON.Vector3(nx, 0, nz), radius)) return { x: nx, z: nz };
+      }
+    }
+    return { x, z };
   }
 
   #play(state, loop, force = false) {

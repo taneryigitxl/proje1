@@ -25,9 +25,9 @@ export const GAME_CONFIG = Object.freeze({
 });
 
 export const QUALITY_PROFILES = Object.freeze({
-  low: { dpr: 1, antialias: false, shadows: 1024, particles: 0.3, lod: 0.65, bloom: false, grass: 90, grassDistance: 18, natureMul: 0.7 },
-  medium: { dpr: 1.15, antialias: true, shadows: 1536, particles: 0.55, lod: 0.95, bloom: false, grass: 160, grassDistance: 26, natureMul: 1 },
-  high: { dpr: 1.4, antialias: true, shadows: 2048, particles: 0.9, lod: 1.2, bloom: true, grass: 220, grassDistance: 34, natureMul: 1.25 },
+  low: { dpr: 1, antialias: false, shadows: 1024, particles: 0.3, lod: 0.65, bloom: false, grass: 110, grassDistance: 18, natureMul: 0.75 },
+  medium: { dpr: 1.15, antialias: true, shadows: 1536, particles: 0.55, lod: 0.95, bloom: false, grass: 220, grassDistance: 26, natureMul: 1.1 },
+  high: { dpr: 1.4, antialias: true, shadows: 2048, particles: 0.9, lod: 1.2, bloom: true, grass: 300, grassDistance: 34, natureMul: 1.3 },
 });
 
 export const SKILLS = Object.freeze([
@@ -42,14 +42,14 @@ export const SKILLS = Object.freeze([
   { slot: 9, name: "Nihai Darbe", icon: "ultimate", description: "Uzun bekleme süreli ezici saldırı.", mana: 45, cooldown: 30, range: 3.5, damage: 78, impact: [0.82], duration: 1.35, target: "enemy", animation: "skill9", trail: true, color: "#d4ad5e" },
 ]);
 
-/** Patrol posts around the orc camp ring — spaced so they don't stack or sink. */
+/** Outer ring around orc camp — clear of wall/tent obstacles. */
 export const MOB_SPAWNS = Object.freeze([
-  { x: -10.5, z: 11.8, patrol: true },
-  { x: -5.2, z: 22.2, patrol: true },
-  { x: 4.5, z: 22.4, patrol: true },
-  { x: 10.8, z: 13.2, patrol: true },
-  { x: 8.5, z: 8.8, patrol: true },
-  { x: -8.8, z: 8.4, patrol: true },
-  { x: 0.2, z: 14.0, patrol: true },
-  { x: -12.2, z: 18.2, patrol: true },
+  { x: 11.3, z: 19.1, patrol: true },
+  { x: 6.4, z: 25.8, patrol: true },
+  { x: -2.3, z: 27.4, patrol: true },
+  { x: -9.6, z: 22.8, patrol: true },
+  { x: -11.3, z: 14.9, patrol: true },
+  { x: -6.4, z: 8.2, patrol: true },
+  { x: 2.4, z: 6.0, patrol: true },
+  { x: 9.6, z: 11.2, patrol: true },
 ]);

@@ -29,10 +29,10 @@ export class WeaponSheath {
   sheath() {
     if (this.sheathed || !this.backBone) return;
     this.weaponRoot.attachToBone(this.backBone, this.skinnedMesh);
-    // Seat flush on upper back — blade along spine, slight left-shoulder tilt
-    this.weaponRoot.position.set(0.05, 0.14, -0.2);
-    this.weaponRoot.rotation.set(1.42, 0.08, 1.95);
-    this.weaponRoot.scaling.setAll((this.handPose.scale || 1.32) * 0.98);
+    // Diagonal on upper back (spine_03): hilt near left shoulder, tip toward right hip
+    this.weaponRoot.position.set(0.04, 0.02, -0.08);
+    this.weaponRoot.rotation.set(0.15, 1.38, -0.92);
+    this.weaponRoot.scaling.setAll((this.handPose.scale || 1.32) * 0.9);
     this.sheathed = true;
   }
 
@@ -46,17 +46,26 @@ export class WeaponSheath {
   }
 
   #findBackBone() {
-    const names = ["Spine2", "spine2", "Chest", "chest", "Spine1", "spine1", "Spine", "spine", "UpperChest", "upperchest"];
-    for (const name of names) {
+    // Prefer upper spine for female-ranger (spine_03 / spine_02 UE naming)
+    const preferred = [
+      "spine_03", "Spine3", "spine_02", "Spine2", "spine2",
+      "Chest", "chest", "UpperChest", "upperchest",
+      "spine_01", "Spine1", "spine1", "Spine", "spine",
+    ];
+    for (const name of preferred) {
       const bone = this.skeleton.bones.find((b) => b.name === name || b.name.toLowerCase() === name.toLowerCase());
       if (bone) {
         console.info(`[Tora Weapon] Kılıf kemiği: ${bone.name}`);
         return bone;
       }
     }
-    const fallback = this.skeleton.bones.find((b) => /spine|chest|torso|back/i.test(b.name));
-    if (fallback) console.info(`[Tora Weapon] Kılıf fallback: ${fallback.name}`);
-    else console.warn("[Tora Weapon] Sırt kemiği bulunamadı; kılıç elde kalacak.");
-    return fallback || null;
+    const spines = this.skeleton.bones.filter((b) => /spine|chest|torso/i.test(b.name));
+    if (spines.length) {
+      spines.sort((a, b) => b.name.localeCompare(a.name, undefined, { numeric: true }));
+      console.info(`[Tora Weapon] Kılıf fallback: ${spines[0].name}`);
+      return spines[0];
+    }
+    console.warn("[Tora Weapon] Sırt kemiği bulunamadı; kılıç elde kalacak.");
+    return null;
   }
 }
