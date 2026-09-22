@@ -1,5 +1,5 @@
 // GrassSystem disabled — square blade patches removed
-// import { GrassSystem } from "./GrassSystem.js?v=26";
+// import { GrassSystem } from "./GrassSystem.js?v=27";
 
 /**
  * Dark medieval MMORPG test valley — Metin2-inspired atmosphere without rewriting gameplay systems.
@@ -206,17 +206,19 @@ export class TestMap {
     data.normals = normals;
     data.uvs = uvs;
     data.applyToMesh(ground);
-    // Real forest albedo across the whole playable map — no gray slabs, no ribbon squares
-    ground.material = this.#terrainMaterial("terrain-world", "forest", new BABYLON.Color3(0.42, 0.68, 0.28), false);
+    // Bright painted grass base (forest JPG is brown dirt — green-tinting it reads as flat olive)
+    ground.material = this.#paintedGround("terrain-world", "grass", new BABYLON.Color3(0.45, 0.72, 0.3), false);
     if (ground.material?.diffuseTexture) {
-      ground.material.diffuseTexture.uScale = 14;
-      ground.material.diffuseTexture.vScale = 14;
-      ground.material.diffuseTexture.level = 1.6;
+      ground.material.diffuseTexture.uScale = 8;
+      ground.material.diffuseTexture.vScale = 8;
+      ground.material.diffuseTexture.level = 1.45;
+      ground.material.diffuseTexture.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE;
+      ground.material.diffuseTexture.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
     }
     if (ground.material) {
-      ground.material.diffuseColor = new BABYLON.Color3(1.15, 1.35, 0.95);
-      ground.material.emissiveColor = new BABYLON.Color3(0.08, 0.12, 0.05);
-      ground.material.ambientColor = new BABYLON.Color3(0.55, 0.6, 0.48);
+      ground.material.diffuseColor = BABYLON.Color3.White();
+      ground.material.emissiveColor = new BABYLON.Color3(0.05, 0.09, 0.03);
+      ground.material.ambientColor = new BABYLON.Color3(0.5, 0.55, 0.4);
     }
     ground.receiveShadows = true;
     ground.checkCollisions = true;

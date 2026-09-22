@@ -67,6 +67,14 @@ export class CharacterFace {
 
     for (const side of [-1, 1]) CharacterFace.#eye(scene, faceRoot, side);
 
+    // Front-facing painted portrait card — sphere UV alone often hides features at play angles
+    const faceCard = BABYLON.MeshBuilder.CreateDisc("face-card", { radius: 0.11, tessellation: 28 }, scene);
+    faceCard.material = skinMat;
+    faceCard.parent = faceRoot;
+    faceCard.position.set(0, 0.01, 0.125);
+    faceCard.rotation.x = Math.PI; // disc faces +Z after flip
+    faceCard.isPickable = false;
+
     const browMat = new BABYLON.StandardMaterial("face-brow-mat", scene);
     browMat.diffuseColor = new BABYLON.Color3(0.12, 0.06, 0.03);
     browMat.emissiveColor = new BABYLON.Color3(0.04, 0.02, 0.01);
