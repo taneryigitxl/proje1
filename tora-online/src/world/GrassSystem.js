@@ -1,5 +1,5 @@
 const QUALITY_ORDER = ["low", "medium", "high"];
-const MAX_GRASS = 360;
+const MAX_GRASS = 420;
 const CELL_SIZE = 12;
 
 export class GrassSystem {
@@ -16,6 +16,7 @@ export class GrassSystem {
     this.autoReduced = false;
     this.disabled = false;
     this.error = null;
+    this.tufts = [];
   }
 
   async build(profile, quality = "medium") {
@@ -23,34 +24,34 @@ export class GrassSystem {
     this.disabled = false;
     this.error = null;
     this.candidates = this.#generate(MAX_GRASS);
+    // Always use bright procedural grass blades — GLB thin-instances were
+    // frequently invisible (tiny/dark) on WebGPU and after quality drops.
+    const templateRoot = this.assets.createProceduralGrass
+      ? this.assets.createProceduralGrass()
+      : await this.#makeLocalGrassTemplate();
     const keys = [...new Set(this.candidates.map((item) => item.cell))];
-    console.info(`[Tora Grass] Dağılım üretildi: ${this.candidates.length}/${MAX_GRASS} çim, ${keys.length} hücre.`);
+    console.info(`[Tora Grass] Prosedürel çim: ${this.candidates.length} aday, ${keys.length} hücre.`);
 
     for (const key of keys) {
-      const root = await this.assets.instantiateStatic("grass", `grass-cell-${key}`, BABYLON.Vector3.Zero(), 0, 1);
+      const root = templateRoot.clone(`grass-cell-${key}`, null, false);
+      if (!root) continue;
+      root.setEnabled(true);
+      root.position.setAll(0);
       const [gridX, gridZ] = key.split(":").map(Number);
-      const meshes = root.getChildMeshes(false).filter((mesh) => (
-        typeof mesh?.thinInstanceSetBuffer === "function" &&
-        typeof mesh?.makeGeometryUnique === "function" &&
-        typeof mesh?.getTotalVertices === "function" &&
-        mesh.getTotalVertices() > 0
-      ));
-      if (!meshes.length) {
-        console.warn(`[Tora Grass] ${key} hücresinde thin-instance destekleyen render mesh yok; hücre atlandı.`);
-        root.dispose();
-        continue;
-      }
+      const meshes = root.getChildMeshes(false).filter((mesh) => mesh.getTotalVertices?.() > 0);
+      if (!meshes.length) { root.dispose(); continue; }
       for (const mesh of meshes) {
-        // AssetManager clones static GLB meshes with shared Geometry. Thin-instance
-        // vertex buffers live on that Geometry, so each independently culled cell
-        // must own a unique copy or WebGPU can draw N instances with another
-        // cell's smaller matrix buffer.
-        mesh.makeGeometryUnique();
+        mesh.makeGeometryUnique?.();
         mesh.isPickable = false;
         mesh.checkCollisions = false;
         mesh.receiveShadows = false;
         mesh.thinInstanceEnablePicking = false;
-        this.#enableVertexColors(mesh.material);
+        if (mesh.material) {
+          mesh.material = mesh.material.clone(`${mesh.material.name}-${key}`);
+          mesh.material.backFaceCulling = false;
+          if ("diffuseColor" in mesh.material) mesh.material.diffuseColor = new BABYLON.Color3(0.25, 0.62, 0.2);
+          if ("emissiveColor" in mesh.material) mesh.material.emissiveColor = new BABYLON.Color3(0.04, 0.1, 0.03);
+        }
       }
       this.cells.set(key, {
         root,
@@ -59,9 +60,58 @@ export class GrassSystem {
         count: 0,
       });
     }
-    if (!this.cells.size) throw new Error("grass.glb içinde kullanılabilir render mesh bulunamadı.");
+    templateRoot.setEnabled(false);
+    if (!this.cells.size) throw new Error("Çim hücreleri oluşturulamadı.");
     this.applyQuality(profile, quality);
-    console.info(`[Tora Grass] Hazır: ${this.getStats().instances} thin instance, ${this.cells.size} hücre.`);
+    // Guaranteed near-spawn patches without thin-instances (always visible)
+    this.#plantNearSpawnTufts(templateRoot);
+    console.info(`[Tora Grass] Hazır: ${this.getStats().instances} instance + yakın tutamlar.`);
+  }
+
+  #plantNearSpawnTufts(templateRoot) {
+    const spots = [
+      [1.2, -16.5], [-1.4, -17.2], [2.6, -19], [-2.8, -15.5], [0.4, -14.2],
+      [3.5, -17.8], [-3.2, -18.5], [1.8, -20.5], [-0.8, -21], [4.2, -15.8],
+      [-4.5, -16.8], [2.1, -13.5], [-1.9, -13.8], [5.0, -18.2], [-5.1, -19.4],
+    ];
+    this.tufts = [];
+    for (const [x, z] of spots) {
+      const tuft = templateRoot.clone(`grass-tuft-${x}-${z}`, null, false);
+      if (!tuft) continue;
+      tuft.setEnabled(true);
+      tuft.position.set(x, this.heightAt(x, z), z);
+      tuft.scaling.setAll(1.35 + Math.random() * 0.4);
+      tuft.rotation.y = Math.random() * Math.PI * 2;
+      tuft.getChildMeshes(false).forEach((mesh) => {
+        mesh.isPickable = false;
+        if (mesh.material) {
+          mesh.material = mesh.material.clone(`${mesh.material.name}-tuft`);
+          mesh.material.backFaceCulling = false;
+          if ("diffuseColor" in mesh.material) mesh.material.diffuseColor = new BABYLON.Color3(0.3, 0.7, 0.22);
+          if ("emissiveColor" in mesh.material) mesh.material.emissiveColor = new BABYLON.Color3(0.06, 0.14, 0.04);
+        }
+      });
+      this.tufts.push(tuft);
+    }
+  }
+
+  async #makeLocalGrassTemplate() {
+    const root = new BABYLON.TransformNode("local-grass-template", this.scene);
+    const material = new BABYLON.StandardMaterial("local-grass-mat", this.scene);
+    material.diffuseColor = new BABYLON.Color3(0.3, 0.65, 0.22);
+    material.emissiveColor = new BABYLON.Color3(0.05, 0.12, 0.03);
+    material.specularColor = BABYLON.Color3.Black();
+    material.backFaceCulling = false;
+    for (let i = 0; i < 3; i++) {
+      const blade = BABYLON.MeshBuilder.CreatePlane(`blade-${i}`, { width: 0.45, height: 0.7 }, this.scene);
+      blade.material = material;
+      blade.parent = root;
+      blade.rotation.y = (i / 3) * Math.PI;
+      blade.position.y = 0.35;
+      blade.isPickable = false;
+    }
+    root.setEnabled(false);
+    return root;
   }
 
   applyQuality(profile, quality = "medium", automatic = false) {
@@ -133,11 +183,14 @@ export class GrassSystem {
     this.disabled = true;
     this.error = error?.message || String(error || "Çim devre dışı");
     for (const cell of this.cells.values()) cell.root.setEnabled(false);
+    for (const tuft of this.tufts || []) tuft.setEnabled(false);
   }
 
   dispose() {
     for (const cell of this.cells.values()) cell.root?.dispose?.();
     this.cells.clear();
+    for (const tuft of this.tufts || []) tuft?.dispose?.();
+    this.tufts = [];
     this.candidates = [];
   }
 
@@ -156,11 +209,11 @@ export class GrassSystem {
       const x = center.x + Math.cos(angle) * radius;
       const z = center.z + Math.sin(angle) * radius;
       if (!this.#allowed(x, z)) continue;
-      const scale = .72 + random() * .5;
+      const scale = 1.05 + random() * .55;
       const matrix = BABYLON.Matrix.Compose(
-        new BABYLON.Vector3(scale * (.86 + random() * .22), scale, scale * (.86 + random() * .22)),
+        new BABYLON.Vector3(scale * (.9 + random() * .2), scale * 1.15, scale * (.9 + random() * .2)),
         BABYLON.Quaternion.FromEulerAngles(0, random() * Math.PI * 2, 0),
-        new BABYLON.Vector3(x, this.heightAt(x, z) + .012, z)
+        new BABYLON.Vector3(x, this.heightAt(x, z) + .02, z)
       );
       const tint = .88 + random() * .18;
       const gridX = Math.floor((x + 36) / CELL_SIZE);

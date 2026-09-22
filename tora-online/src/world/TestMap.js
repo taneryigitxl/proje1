@@ -79,22 +79,22 @@ export class TestMap {
   }
 
   #atmosphere() {
-    this.scene.clearColor = new BABYLON.Color4(.025, .032, .045, 1);
-    this.scene.ambientColor = new BABYLON.Color3(.2, .18, .24);
+    this.scene.clearColor = new BABYLON.Color4(.12, .18, .14, 1);
+    this.scene.ambientColor = new BABYLON.Color3(.55, .58, .5);
     this.scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
-    this.scene.fogDensity = .0095;
-    this.scene.fogColor = new BABYLON.Color3(.09, .105, .12);
+    this.scene.fogDensity = .0045;
+    this.scene.fogColor = new BABYLON.Color3(.28, .34, .3);
     const hemi = new BABYLON.HemisphericLight("dusk-fill", new BABYLON.Vector3(-.25, 1, .15), this.scene);
-    hemi.intensity = .72; hemi.diffuse = new BABYLON.Color3(.5, .58, .67); hemi.groundColor = new BABYLON.Color3(.1, .075, .09);
-    const sun = new BABYLON.DirectionalLight("late-sun", new BABYLON.Vector3(-.6, -1, .38), this.scene);
-    sun.position.set(24, 38, -28); sun.intensity = 1.35; sun.diffuse = new BABYLON.Color3(.96, .72, .55);
+    hemi.intensity = 1.35; hemi.diffuse = new BABYLON.Color3(.95, .98, .9); hemi.groundColor = new BABYLON.Color3(.35, .42, .25);
+    const sun = new BABYLON.DirectionalLight("late-sun", new BABYLON.Vector3(-.55, -1, .35), this.scene);
+    sun.position.set(24, 42, -28); sun.intensity = 1.85; sun.diffuse = new BABYLON.Color3(1, .95, .82);
     this.shadowGenerator = new BABYLON.ShadowGenerator(this.profile.shadows, sun);
     this.shadowGenerator.usePercentageCloserFiltering = true;
     this.shadowGenerator.filteringQuality = this.profile.shadows > 1024 ? BABYLON.ShadowGenerator.QUALITY_HIGH : BABYLON.ShadowGenerator.QUALITY_MEDIUM;
     this.scene.imageProcessingConfiguration.toneMappingEnabled = true;
     this.scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
-    this.scene.imageProcessingConfiguration.exposure = 1.12;
-    this.scene.imageProcessingConfiguration.contrast = 1.18;
+    this.scene.imageProcessingConfiguration.exposure = 1.45;
+    this.scene.imageProcessingConfiguration.contrast = 1.08;
   }
 
   #terrain() {
@@ -110,14 +110,15 @@ export class TestMap {
     BABYLON.VertexData.ComputeNormals(positions, indices, normals);
     const ground = new BABYLON.Mesh("tora-heightfield", this.scene);
     const data = new BABYLON.VertexData(); data.positions = positions; data.indices = indices; data.normals = normals; data.uvs = uvs; data.applyToMesh(ground);
-    ground.material = this.#pbr("terrain-forest", this.assets.manifest.terrain.forest, 1, false, new BABYLON.Color3(0.22, 0.42, 0.18));
+    // Procedural bright grass — never depends on dark albedo JPGs
+    ground.material = this.#paintedGround("terrain-forest", "grass", new BABYLON.Color3(0.32, 0.62, 0.24));
     ground.receiveShadows = true; ground.checkCollisions = true; ground.isPickable = true; ground.metadata = { ground: true, cursor: "move" };
   }
 
   #path() {
     const points = Array.from({ length: 25 }, (_, i) => new BABYLON.Vector3(Math.sin(i * .43) * 2.4, 0, -34 + i * 2.9));
-    const path = this.#ribbon("village-road", points, 6.4, 5, [0, .62, 1, .62, 0], .045);
-    path.material = this.#pbr("terrain-mud", this.assets.manifest.terrain.mud, .96, true, new BABYLON.Color3(0.42, 0.32, 0.2));
+    const path = this.#ribbon("village-road", points, 6.4, 5, [0, .62, 1, .62, 0], .06);
+    path.material = this.#paintedGround("terrain-mud", "mud", new BABYLON.Color3(0.62, 0.46, 0.28), true);
     path.metadata = { ground: true, cursor: "move" }; path.isPickable = true; path.receiveShadows = true;
   }
 
@@ -149,32 +150,85 @@ export class TestMap {
     return mesh;
   }
 
+  #paintedGround(name, kind, baseColor, alphaBlend = false) {
+    const material = new BABYLON.StandardMaterial(name, this.scene);
+    material.diffuseColor = BABYLON.Color3.White();
+    material.ambientColor = baseColor.scale(0.85);
+    material.specularColor = new BABYLON.Color3(0.04, 0.04, 0.03);
+    material.emissiveColor = baseColor.scale(0.18);
+    material.diffuseTexture = this.#paintTerrainTexture(name, kind, baseColor);
+    material.diffuseTexture.uScale = 1;
+    material.diffuseTexture.vScale = 1;
+    if (alphaBlend) {
+      material.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
+      material.useVertexAlpha = true;
+    }
+    return material;
+  }
+
+  #paintTerrainTexture(name, kind, baseColor) {
+    const size = 256;
+    const tex = new BABYLON.DynamicTexture(`${name}-paint`, { width: size, height: size }, this.scene, false);
+    const ctx = tex.getContext();
+    const toHex = (c) => {
+      const r = Math.round(BABYLON.Scalar.Clamp(c.r, 0, 1) * 255);
+      const g = Math.round(BABYLON.Scalar.Clamp(c.g, 0, 1) * 255);
+      const b = Math.round(BABYLON.Scalar.Clamp(c.b, 0, 1) * 255);
+      return `rgb(${r},${g},${b})`;
+    };
+    ctx.fillStyle = toHex(baseColor);
+    ctx.fillRect(0, 0, size, size);
+    // Soft mottling so the plane never reads as flat black
+    for (let i = 0; i < 900; i++) {
+      const x = Math.random() * size;
+      const y = Math.random() * size;
+      const radius = 2 + Math.random() * 10;
+      const lift = kind === "grass" ? 0.12 + Math.random() * 0.22 : 0.08 + Math.random() * 0.16;
+      const shade = kind === "grass"
+        ? `rgba(${40 + Math.random() * 50}, ${110 + Math.random() * 90}, ${30 + Math.random() * 40}, ${lift})`
+        : `rgba(${140 + Math.random() * 60}, ${90 + Math.random() * 40}, ${40 + Math.random() * 30}, ${lift})`;
+      ctx.fillStyle = shade;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (kind === "grass") {
+      ctx.strokeStyle = "rgba(70, 150, 55, 0.35)";
+      ctx.lineWidth = 1.2;
+      for (let i = 0; i < 180; i++) {
+        const x = Math.random() * size;
+        const y = Math.random() * size;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + (Math.random() - 0.5) * 6, y - 6 - Math.random() * 10);
+        ctx.stroke();
+      }
+    }
+    tex.update();
+    return tex;
+  }
+
+  #groundMaterial(name, textures, baseColor, alphaBlend = false) {
+    return this.#paintedGround(name, name.includes("mud") ? "mud" : "grass", baseColor, alphaBlend);
+  }
+
   #pbr(name, textures, roughness = 1, alphaBlend = false, fallbackColor = null) {
     const material = new BABYLON.PBRMaterial(name, this.scene);
-    const color = fallbackColor || new BABYLON.Color3(0.35, 0.4, 0.32);
-    material.albedoColor = color;
+    const color = fallbackColor || new BABYLON.Color3(0.55, 0.6, 0.45);
+    material.albedoColor = BABYLON.Color3.White();
     material.metallic = 0;
     material.roughness = roughness;
     try {
-      const albedo = new BABYLON.Texture(textures.albedo, this.scene, false, true, undefined, () => {}, () => {
-        console.warn(`[Tora Terrain] Albedo yüklenemedi (${textures.albedo}); düz renk kullanılıyor.`);
+      material.albedoTexture = new BABYLON.Texture(textures.albedo, this.scene, false, true, undefined, () => {}, () => {
         material.albedoTexture = null;
         material.albedoColor = color;
       });
-      material.albedoTexture = albedo;
-      const bump = new BABYLON.Texture(textures.normal, this.scene, false, true, undefined, () => {}, () => {
-        material.bumpTexture = null;
-      });
-      material.bumpTexture = bump;
-      material.bumpTexture.level = .7;
-      const rough = new BABYLON.Texture(textures.roughness, this.scene, false, true, undefined, () => {}, () => {
-        material.metallicTexture = null;
-      });
-      material.metallicTexture = rough;
+      material.bumpTexture = new BABYLON.Texture(textures.normal, this.scene, false, true, undefined, () => {}, () => { material.bumpTexture = null; });
+      if (material.bumpTexture) material.bumpTexture.level = .55;
+      material.metallicTexture = new BABYLON.Texture(textures.roughness, this.scene, false, true, undefined, () => {}, () => { material.metallicTexture = null; });
       material.useRoughnessFromMetallicTextureGreen = true;
       material.useMetallnessFromMetallicTextureBlue = false;
     } catch (error) {
-      console.warn(`[Tora Terrain] PBR doku hatası (${name}); düz renk.`, error);
       material.albedoColor = color;
     }
     if (alphaBlend) { material.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND; material.useVertexAlpha = true; }

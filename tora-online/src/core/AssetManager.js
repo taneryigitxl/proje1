@@ -160,21 +160,27 @@ export class AssetManager {
   #createProceduralGrassTemplate() {
     const root = new BABYLON.TransformNode("template-grass", this.scene);
     const material = new BABYLON.StandardMaterial("procedural-grass-mat", this.scene);
-    material.diffuseColor = new BABYLON.Color3(0.28, 0.55, 0.22);
-    material.specularColor = new BABYLON.Color3(0.05, 0.08, 0.04);
+    material.diffuseColor = new BABYLON.Color3(0.34, 0.72, 0.24);
+    material.emissiveColor = new BABYLON.Color3(0.08, 0.16, 0.04);
+    material.specularColor = new BABYLON.Color3(0.02, 0.03, 0.01);
     material.backFaceCulling = false;
     material.useVertexColors = true;
-    for (let i = 0; i < 3; i++) {
-      const blade = BABYLON.MeshBuilder.CreatePlane(`grass-blade-${i}`, { width: 0.35, height: 0.55 }, this.scene);
+    for (let i = 0; i < 4; i++) {
+      const blade = BABYLON.MeshBuilder.CreatePlane(`grass-blade-${i}`, { width: 0.5, height: 0.85 }, this.scene);
       blade.material = material;
       blade.parent = root;
-      blade.rotation.y = (i / 3) * Math.PI;
-      blade.position.y = 0.27;
+      blade.rotation.y = (i / 4) * Math.PI;
+      blade.position.y = 0.42;
+      blade.position.x = (i % 2 === 0 ? 0.05 : -0.05) * (i + 1) * 0.15;
       blade.isPickable = false;
       blade.receiveShadows = false;
     }
     root.setEnabled(false);
     return root;
+  }
+
+  createProceduralGrass() {
+    return this.#createProceduralGrassTemplate();
   }
 
   async #load(url) {
