@@ -1,5 +1,5 @@
-import { Entity } from "./Entity.js?v=25";
-import { DamageSystem } from "../combat/DamageSystem.js?v=25";
+import { Entity } from "./Entity.js?v=26";
+import { DamageSystem } from "../combat/DamageSystem.js?v=26";
 
 export class Mob extends Entity {
   constructor(scene, spawn, index, navigation, onDamage, visual) {

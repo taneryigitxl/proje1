@@ -1,5 +1,5 @@
 // GrassSystem disabled — square blade patches removed
-// import { GrassSystem } from "./GrassSystem.js?v=25";
+// import { GrassSystem } from "./GrassSystem.js?v=26";
 
 /**
  * Dark medieval MMORPG test valley — Metin2-inspired atmosphere without rewriting gameplay systems.
@@ -131,22 +131,22 @@ export class TestMap {
   }
 
   #atmosphere() {
-    // Readable dusk — warm sun, soft fog, no gray washout on ground
-    this.scene.clearColor = new BABYLON.Color4(0.28, 0.34, 0.26, 1);
-    this.scene.ambientColor = new BABYLON.Color3(0.55, 0.58, 0.48);
+    // Readable dusk — warm sun, light fog (heavy fog washed textured ground into flat olive)
+    this.scene.clearColor = new BABYLON.Color4(0.32, 0.38, 0.3, 1);
+    this.scene.ambientColor = new BABYLON.Color3(0.58, 0.6, 0.5);
     this.scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
-    this.scene.fogDensity = 0.0026;
-    this.scene.fogColor = new BABYLON.Color3(0.46, 0.52, 0.4);
+    this.scene.fogDensity = 0.00115;
+    this.scene.fogColor = new BABYLON.Color3(0.5, 0.56, 0.42);
 
     const hemi = new BABYLON.HemisphericLight("valley-fill", new BABYLON.Vector3(-0.2, 1, 0.2), this.scene);
-    hemi.intensity = 1.35;
+    hemi.intensity = 1.4;
     hemi.diffuse = new BABYLON.Color3(0.98, 0.96, 0.9);
-    hemi.groundColor = new BABYLON.Color3(0.38, 0.46, 0.3);
+    hemi.groundColor = new BABYLON.Color3(0.4, 0.48, 0.32);
     hemi.specular = BABYLON.Color3.Black();
 
     const sun = new BABYLON.DirectionalLight("late-sun", new BABYLON.Vector3(-0.62, -1.05, 0.28), this.scene);
     sun.position.set(28, 48, -22);
-    sun.intensity = 2.15;
+    sun.intensity = 2.2;
     sun.diffuse = new BABYLON.Color3(1, 0.96, 0.84);
     sun.specular = new BABYLON.Color3(0.28, 0.26, 0.22);
     this.sun = sun;
@@ -156,7 +156,7 @@ export class TestMap {
     this.shadowGenerator.filteringQuality = this.profile.shadows > 1024
       ? BABYLON.ShadowGenerator.QUALITY_HIGH
       : BABYLON.ShadowGenerator.QUALITY_MEDIUM;
-    this.shadowGenerator.darkness = 0.42;
+    this.shadowGenerator.darkness = 0.4;
     this.shadowGenerator.bias = 0.0003;
     this.shadowGenerator.normalBias = 0.03;
     sun.shadowMaxZ = 95;
@@ -166,10 +166,10 @@ export class TestMap {
 
     this.scene.imageProcessingConfiguration.toneMappingEnabled = true;
     this.scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
-    this.scene.imageProcessingConfiguration.exposure = 1.35;
-    this.scene.imageProcessingConfiguration.contrast = 1.08;
+    this.scene.imageProcessingConfiguration.exposure = 1.38;
+    this.scene.imageProcessingConfiguration.contrast = 1.06;
     this.scene.imageProcessingConfiguration.vignetteEnabled = true;
-    this.scene.imageProcessingConfiguration.vignetteWeight = 1.1;
+    this.scene.imageProcessingConfiguration.vignetteWeight = 0.9;
     this.scene.imageProcessingConfiguration.vignetteColor = new BABYLON.Color4(0.05, 0.06, 0.04, 1);
   }
 

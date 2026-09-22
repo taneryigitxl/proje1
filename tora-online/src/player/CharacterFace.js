@@ -18,10 +18,12 @@ export class CharacterFace {
     const skinMat = new BABYLON.StandardMaterial("face-skin-mat", scene);
     skinMat.diffuseTexture = faceTex;
     skinMat.emissiveTexture = faceTex;
-    skinMat.diffuseColor = new BABYLON.Color3(1.05, 0.98, 0.94);
-    skinMat.emissiveColor = new BABYLON.Color3(0.45, 0.32, 0.26);
-    skinMat.specularColor = new BABYLON.Color3(0.12, 0.08, 0.06);
-    skinMat.ambientColor = new BABYLON.Color3(0.6, 0.48, 0.4);
+    skinMat.diffuseTexture.level = 1.35;
+    skinMat.emissiveTexture.level = 0.85;
+    skinMat.diffuseColor = new BABYLON.Color3(1, 0.95, 0.9);
+    skinMat.emissiveColor = new BABYLON.Color3(0.22, 0.16, 0.12);
+    skinMat.specularColor = new BABYLON.Color3(0.1, 0.07, 0.05);
+    skinMat.ambientColor = new BABYLON.Color3(0.5, 0.4, 0.34);
 
     const head = BABYLON.MeshBuilder.CreateSphere("face-head", { diameter: 0.3, segments: 32 }, scene);
     head.material = skinMat;
@@ -262,24 +264,24 @@ export class CharacterFace {
   static #eye(scene, parent, side) {
     const whiteMat = new BABYLON.StandardMaterial(`face-sclera-${side}`, scene);
     whiteMat.disableLighting = true;
-    whiteMat.emissiveColor = new BABYLON.Color3(0.95, 0.95, 1);
+    whiteMat.emissiveColor = new BABYLON.Color3(0.92, 0.93, 0.96);
     whiteMat.diffuseColor = whiteMat.emissiveColor;
     whiteMat.specularColor = BABYLON.Color3.Black();
-    const sclera = BABYLON.MeshBuilder.CreateSphere(`face-sclera-${side}`, { diameter: 0.058, segments: 14 }, scene);
+    const sclera = BABYLON.MeshBuilder.CreateSphere(`face-sclera-${side}`, { diameter: 0.04, segments: 12 }, scene);
     sclera.material = whiteMat;
     sclera.parent = parent;
-    sclera.position.set(side * 0.052, 0.034, 0.148);
-    sclera.scaling.set(1.2, 0.9, 0.75);
+    sclera.position.set(side * 0.048, 0.032, 0.14);
+    sclera.scaling.set(1.15, 0.85, 0.7);
     sclera.isPickable = false;
 
     const irisMat = new BABYLON.StandardMaterial(`face-iris-${side}`, scene);
     irisMat.disableLighting = true;
-    irisMat.emissiveColor = new BABYLON.Color3(0.2, 0.55, 0.7);
+    irisMat.emissiveColor = new BABYLON.Color3(0.22, 0.5, 0.62);
     irisMat.diffuseColor = irisMat.emissiveColor;
-    const iris = BABYLON.MeshBuilder.CreateSphere(`face-iris-${side}`, { diameter: 0.034, segments: 12 }, scene);
+    const iris = BABYLON.MeshBuilder.CreateSphere(`face-iris-${side}`, { diameter: 0.022, segments: 10 }, scene);
     iris.material = irisMat;
     iris.parent = parent;
-    iris.position.set(side * 0.052, 0.034, 0.17);
+    iris.position.set(side * 0.048, 0.032, 0.156);
     iris.scaling.set(1, 1, 0.55);
     iris.isPickable = false;
 
@@ -287,20 +289,20 @@ export class CharacterFace {
     pupilMat.disableLighting = true;
     pupilMat.emissiveColor = new BABYLON.Color3(0.02, 0.02, 0.02);
     pupilMat.diffuseColor = pupilMat.emissiveColor;
-    const pupil = BABYLON.MeshBuilder.CreateSphere(`face-pupil-${side}`, { diameter: 0.016, segments: 8 }, scene);
+    const pupil = BABYLON.MeshBuilder.CreateSphere(`face-pupil-${side}`, { diameter: 0.01, segments: 8 }, scene);
     pupil.material = pupilMat;
     pupil.parent = parent;
-    pupil.position.set(side * 0.052, 0.034, 0.178);
+    pupil.position.set(side * 0.048, 0.032, 0.162);
     pupil.isPickable = false;
 
     const hiMat = new BABYLON.StandardMaterial(`face-eye-hi-${side}`, scene);
     hiMat.disableLighting = true;
     hiMat.emissiveColor = BABYLON.Color3.White();
     hiMat.diffuseColor = BABYLON.Color3.White();
-    const hi = BABYLON.MeshBuilder.CreateSphere(`face-eye-hi-${side}`, { diameter: 0.009, segments: 6 }, scene);
+    const hi = BABYLON.MeshBuilder.CreateSphere(`face-eye-hi-${side}`, { diameter: 0.006, segments: 6 }, scene);
     hi.material = hiMat;
     hi.parent = parent;
-    hi.position.set(side * 0.045, 0.042, 0.182);
+    hi.position.set(side * 0.042, 0.038, 0.165);
     hi.isPickable = false;
   }
 }
