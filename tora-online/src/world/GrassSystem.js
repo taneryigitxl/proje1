@@ -136,7 +136,7 @@ export class GrassSystem {
       });
       for (const mesh of cell.meshes) {
         mesh.thinInstanceSetBuffer("matrix", matrices, 16, true);
-        if (this.#enableVertexColors(mesh.material)) mesh.thinInstanceSetBuffer("color", colors, 4, true);
+        // Skip color buffer — keeps unlit emissive grass green
         try {
           if (typeof mesh.thinInstanceRefreshBoundingInfo === "function") mesh.thinInstanceRefreshBoundingInfo(true);
         } catch (_) {

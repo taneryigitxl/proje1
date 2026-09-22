@@ -1,4 +1,4 @@
-import { CharacterFace } from "../player/CharacterFace.js?v=11";
+import { CharacterFace } from "../player/CharacterFace.js?v=13";
 
 export class AssetManager {
   constructor(scene, config, onProgress = () => {}) {
@@ -181,7 +181,8 @@ export class AssetManager {
     material.diffuseColor = material.emissiveColor;
     material.specularColor = BABYLON.Color3.Black();
     material.backFaceCulling = false;
-    material.useVertexColors = true;
+    // Do NOT enable useVertexColors — thin-instance color buffers were
+    // multiplying emissive to black on WebGL.
     for (let i = 0; i < 7; i++) {
       const blade = BABYLON.MeshBuilder.CreatePlane(`grass-blade-${i}`, { width: 0.09, height: 0.36 }, this.scene);
       blade.material = material;
