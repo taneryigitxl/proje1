@@ -1,5 +1,5 @@
-import { Entity } from "./Entity.js?v=14";
-import { DamageSystem } from "../combat/DamageSystem.js?v=14";
+import { Entity } from "./Entity.js?v=15";
+import { DamageSystem } from "../combat/DamageSystem.js?v=15";
 
 export class Mob extends Entity {
   constructor(scene, spawn, index, navigation, onDamage, visual) {
@@ -54,6 +54,7 @@ export class Mob extends Entity {
     const result = DamageSystem.apply(attacker, this, baseDamage, stats);
     if (!result) return null;
     this.aggro = true;
+    if (attacker?.position) { const to = attacker.position.subtract(this.position); to.y = 0; if (to.lengthSquared() > 0.01) this.#face(to); }
     if (!this.alive) this.die();
     else { this.hitTimer = .35; this.state = "hit"; this.#play("hit", false, true); }
     return result;

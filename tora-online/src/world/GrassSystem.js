@@ -1,9 +1,9 @@
 const QUALITY_ORDER = ["low", "medium", "high"];
-const TUFT_COUNT = 180;
+const TUFT_COUNT = 240;
 
 /**
- * Green grass tufts only — thin-instance billboards caused black vertical
- * "particle" artifacts across the terrain on WebGL.
+ * Clustered 3D grass tufts with light wind sway.
+ * Avoids thin-instance color buffers (they blackened blades on WebGL).
  */
 export class GrassSystem {
   constructor(scene, assets, navigation, heightAt) {
@@ -11,8 +11,6 @@ export class GrassSystem {
     this.assets = assets;
     this.navigation = navigation;
     this.heightAt = heightAt;
-    this.cells = new Map();
-    this.candidates = [];
     this.quality = "medium";
     this.profile = null;
     this.lowFpsTime = 0;
@@ -20,6 +18,8 @@ export class GrassSystem {
     this.disabled = false;
     this.error = null;
     this.tufts = [];
+    this.windTime = 0;
+    this.budget = 160;
   }
 
   async build(profile, quality = "medium") {
@@ -28,38 +28,51 @@ export class GrassSystem {
     this.error = null;
     this.quality = quality;
     this.profile = profile;
+    this.budget = Math.max(50, Number(profile?.grass) || 160);
     const templateRoot = this.assets.createProceduralGrass
       ? this.assets.createProceduralGrass()
       : await this.#makeLocalGrassTemplate();
-    this.#plantTufts(templateRoot, TUFT_COUNT);
+    const dryTemplate = this.assets.createProceduralDryGrass
+      ? this.assets.createProceduralDryGrass()
+      : this.#makeDryGrassTemplate();
+    this.#plantTufts(templateRoot, dryTemplate, Math.min(TUFT_COUNT, this.budget + 40));
     templateRoot.setEnabled(false);
-    console.info(`[Tora Grass] Yeşil tutamlar: ${this.tufts.length} (siyah thin-instance yok).`);
+    dryTemplate.setEnabled(false);
+    console.info(`[Tora Grass] 3D tutamlar: ${this.tufts.length} (rüzgar + yol hariç).`);
   }
 
-  #plantTufts(templateRoot, count) {
+  #plantTufts(greenTemplate, dryTemplate, count) {
     this.tufts = [];
     const random = this.#random(0x544f5241);
     let attempts = 0;
-    while (this.tufts.length < count && attempts < count * 40) {
+    while (this.tufts.length < count && attempts < count * 50) {
       attempts++;
       const angle = random() * Math.PI * 2;
-      const radius = 6 + Math.pow(random(), 1.2) * 28;
+      const radius = 5 + Math.pow(random(), 1.15) * 30;
       const x = Math.cos(angle) * radius;
       const z = Math.sin(angle) * radius;
       if (!this.#allowed(x, z)) continue;
-      const tuft = templateRoot.clone(`grass-tuft-${this.tufts.length}`, null, false);
+      const dry = random() > 0.78;
+      const source = dry ? dryTemplate : greenTemplate;
+      const tuft = source.clone(`grass-tuft-${this.tufts.length}`, null, false);
       if (!tuft) continue;
-      tuft.setEnabled(true);
+      tuft.setEnabled(this.tufts.length < this.budget);
+      const scale = 0.7 + random() * 0.7;
       tuft.position.set(x, this.heightAt(x, z), z);
-      tuft.scaling.setAll(0.85 + random() * 0.55);
+      tuft.scaling.set(scale * (0.85 + random() * 0.3), scale * (0.75 + random() * 0.55), scale * (0.85 + random() * 0.3));
       tuft.rotation.y = random() * Math.PI * 2;
+      tuft.metadata = {
+        windPhase: random() * Math.PI * 2,
+        windAmp: 0.04 + random() * 0.07,
+        baseRotZ: (random() - 0.5) * 0.08,
+      };
+      tuft.rotation.z = tuft.metadata.baseRotZ;
       tuft.getChildMeshes(false).forEach((mesh) => {
         mesh.isPickable = false;
         mesh.receiveShadows = false;
         if (mesh.material) {
           mesh.material = mesh.material.clone(`${mesh.material.name}-t${this.tufts.length}`);
           mesh.material.backFaceCulling = false;
-          if ("emissiveColor" in mesh.material) mesh.material.emissiveColor = new BABYLON.Color3(0.28 + random() * 0.1, 0.55 + random() * 0.12, 0.18);
           if ("useVertexColors" in mesh.material) mesh.material.useVertexColors = false;
         }
       });
@@ -69,19 +82,39 @@ export class GrassSystem {
 
   async #makeLocalGrassTemplate() {
     if (this.assets.createProceduralGrass) return this.assets.createProceduralGrass();
-    const root = new BABYLON.TransformNode("local-grass-template", this.scene);
-    const material = new BABYLON.StandardMaterial("local-grass-mat", this.scene);
-    material.disableLighting = true;
-    material.emissiveColor = new BABYLON.Color3(0.32, 0.62, 0.22);
-    material.diffuseColor = material.emissiveColor;
+    return this.#bladeCluster("local-grass", new BABYLON.Color3(0.22, 0.38, 0.14), 6);
+  }
+
+  #makeDryGrassTemplate() {
+    if (this.assets.createProceduralDryGrass) return this.assets.createProceduralDryGrass();
+    return this.#bladeCluster("local-dry-grass", new BABYLON.Color3(0.42, 0.36, 0.18), 5);
+  }
+
+  #bladeCluster(name, color, blades) {
+    const root = new BABYLON.TransformNode(name, this.scene);
+    const material = new BABYLON.StandardMaterial(`${name}-mat`, this.scene);
+    material.disableLighting = false;
+    material.diffuseColor = color;
+    material.emissiveColor = color.scale(0.35);
+    material.ambientColor = color.scale(0.5);
     material.specularColor = BABYLON.Color3.Black();
     material.backFaceCulling = false;
-    for (let i = 0; i < 5; i++) {
-      const blade = BABYLON.MeshBuilder.CreatePlane(`blade-${i}`, { width: 0.1, height: 0.34 }, this.scene);
+    for (let i = 0; i < blades; i++) {
+      const blade = BABYLON.MeshBuilder.CreateTube(`blade-${i}`, {
+        path: [
+          new BABYLON.Vector3(0, 0, 0),
+          new BABYLON.Vector3((Math.random() - 0.5) * 0.02, 0.12, 0),
+          new BABYLON.Vector3((Math.random() - 0.5) * 0.04, 0.28 + Math.random() * 0.08, (Math.random() - 0.5) * 0.02),
+        ],
+        radius: 0.012,
+        tessellation: 4,
+        cap: BABYLON.Mesh.NO_CAP,
+      }, this.scene);
       blade.material = material;
       blade.parent = root;
-      blade.rotation.y = (i / 5) * Math.PI * 2;
-      blade.position.set(Math.sin(i) * 0.05, 0.16, Math.cos(i) * 0.05);
+      blade.rotation.y = (i / blades) * Math.PI * 2;
+      blade.position.set(Math.sin(i * 1.7) * 0.05, 0, Math.cos(i * 1.7) * 0.05);
+      blade.scaling.y = 0.85 + (i % 3) * 0.15;
       blade.isPickable = false;
     }
     root.setEnabled(false);
@@ -91,22 +124,29 @@ export class GrassSystem {
   applyQuality(profile, quality = "medium") {
     this.profile = profile;
     this.quality = quality;
-    // Density via enable/disable tufts
-    const budget = Math.max(40, Number(profile?.grass) || 120);
-    this.tufts.forEach((tuft, index) => tuft.setEnabled(index < budget && !this.disabled));
+    this.budget = Math.max(40, Number(profile?.grass) || 120);
+    this.tufts.forEach((tuft, index) => tuft.setEnabled(index < this.budget && !this.disabled));
   }
 
   update(dt, camera, fps) {
     if (!this.profile || this.disabled || !camera?.position) return;
+    this.windTime += dt;
     const maxDistance = this.profile.grassDistance || 24;
     const maxD2 = (maxDistance + 4) ** 2;
-    for (const tuft of this.tufts) {
-      if (!tuft.isEnabled() && this.disabled) continue;
-      const dx = camera.position.x - tuft.position.x;
-      const dz = camera.position.z - tuft.position.z;
+    const cam = camera.position;
+    for (let i = 0; i < this.tufts.length; i++) {
+      const tuft = this.tufts[i];
+      const dx = cam.x - tuft.position.x;
+      const dz = cam.z - tuft.position.z;
       const inRange = dx * dx + dz * dz <= maxD2;
-      const budgetOk = this.tufts.indexOf(tuft) < (Number(this.profile?.grass) || 120);
-      tuft.setEnabled(inRange && budgetOk && !this.disabled);
+      const budgetOk = i < this.budget;
+      const visible = inRange && budgetOk && !this.disabled;
+      if (tuft.isEnabled() !== visible) tuft.setEnabled(visible);
+      if (!visible) continue;
+      const meta = tuft.metadata || {};
+      const sway = Math.sin(this.windTime * 1.6 + (meta.windPhase || 0)) * (meta.windAmp || 0.05);
+      tuft.rotation.z = (meta.baseRotZ || 0) + sway;
+      tuft.rotation.x = sway * 0.35;
     }
     this.lowFpsTime = fps > 0 && fps < 35 ? this.lowFpsTime + dt : Math.max(0, this.lowFpsTime - dt * 2);
     if (this.lowFpsTime < 5) return;
@@ -114,8 +154,8 @@ export class GrassSystem {
     if (index <= 0) { this.lowFpsTime = 0; return; }
     const next = QUALITY_ORDER[index - 1];
     const fallback = next === "low"
-      ? { ...this.profile, grass: 60, grassDistance: 16 }
-      : { ...this.profile, grass: 100, grassDistance: 22 };
+      ? { ...this.profile, grass: 60, grassDistance: 15 }
+      : { ...this.profile, grass: 110, grassDistance: 22 };
     console.warn(`[Tora Online] Sürekli düşük FPS: çim yoğunluğu ${this.quality} → ${next}.`);
     this.applyQuality(fallback, next);
     this.autoReduced = true;
@@ -142,20 +182,18 @@ export class GrassSystem {
   dispose() {
     for (const tuft of this.tufts) tuft?.dispose?.();
     this.tufts = [];
-    this.cells.clear();
-    this.candidates = [];
   }
 
   #allowed(x, z) {
-    if (Math.abs(x) > 35 || Math.abs(z) > 35) return false;
-    if (Math.hypot(x, z + 18) < 2.4) return false;
+    if (Math.abs(x) > 34 || Math.abs(z) > 34) return false;
+    if (Math.hypot(x, z + 18) < 2.6) return false;
     const roadIndex = (z + 34) / 2.9;
-    if (roadIndex >= 0 && roadIndex <= 24 && Math.abs(x - Math.sin(roadIndex * .43) * 2.4) < 3.7) return false;
-    const streamIndex = (x + 27) / 2.55;
-    if (streamIndex >= 0 && streamIndex <= 23 && Math.abs(z - (6 + Math.sin(streamIndex * .48) * 3.5)) < 2.45) return false;
+    if (roadIndex >= 0 && roadIndex <= 26 && Math.abs(x - Math.sin(roadIndex * 0.4) * 2.35) < 4.1) return false;
+    const streamIndex = (x + 28) / 2.4;
+    if (streamIndex >= 0 && streamIndex <= 25 && Math.abs(z - (6 + Math.sin(streamIndex * 0.46) * 3.4)) < 2.6) return false;
     if (x > -25 && x < -5 && z > -22 && z < -6) return false;
-    if (Math.hypot(x, z - 17) < 9.2) return false;
-    return this.navigation.canOccupy(new BABYLON.Vector3(x, 0, z), .18);
+    if (Math.hypot(x, z - 17) < 9) return false;
+    return this.navigation.canOccupy(new BABYLON.Vector3(x, 0, z), 0.18);
   }
 
   #random(seed) {
@@ -163,9 +201,9 @@ export class GrassSystem {
     return () => {
       value += 0x6d2b79f5;
       let t = value;
-      t = Math.imul(t ^ t >>> 15, t | 1);
-      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
-      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
   }
 }

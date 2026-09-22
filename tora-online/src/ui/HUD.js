@@ -1,6 +1,6 @@
-import { SkillBar } from "./SkillBar.js?v=14";
-import { TargetFrame } from "./TargetFrame.js?v=14";
-import { ITEM_DEFS } from "../progression/InventorySystem.js?v=14";
+import { SkillBar } from "./SkillBar.js?v=15";
+import { TargetFrame } from "./TargetFrame.js?v=15";
+import { ITEM_DEFS } from "../progression/InventorySystem.js?v=15";
 
 function itemName(id) {
   return ITEM_DEFS[id]?.name || id || "—";
@@ -378,10 +378,13 @@ export class HUD {
       dot.hidden = !mob.alive;
       if (!mob.alive) continue;
       this.#minimapPosition(dot, mob.position, 0, false);
-      const screen = this.#project(mob.position.add(new BABYLON.Vector3(0, 2.45, 0)));
+      const screen = this.#project(mob.position.add(new BABYLON.Vector3(0, 2.15, 0)));
+      const dist = BABYLON.Vector3.Distance(p.position, mob.position);
       node.style.left = `${screen.x}px`;
       node.style.top = `${screen.y}px`;
-      node.style.opacity = screen.z > 0 && screen.z < 1 ? "1" : "0";
+      const visible = screen.z > 0 && screen.z < 1 && dist < 28;
+      node.style.opacity = visible ? String(BABYLON.Scalar.Clamp(1.15 - dist / 28, 0.35, 1)) : "0";
+      node.style.transform = `translate(-50%,-100%) scale(${BABYLON.Scalar.Clamp(1.15 - dist / 40, 0.75, 1.1)})`;
       node.classList.toggle("selected", this.entities.selected === mob);
       node.querySelector("i").style.width = `${mob.health / mob.maxHealth * 100}%`;
     }

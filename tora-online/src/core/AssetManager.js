@@ -1,5 +1,5 @@
-import { CharacterFace } from "../player/CharacterFace.js?v=14";
-import { WeaponSheath } from "../player/WeaponSheath.js?v=14";
+import { CharacterFace } from "../player/CharacterFace.js?v=15";
+import { WeaponSheath } from "../player/WeaponSheath.js?v=15";
 
 export class AssetManager {
   constructor(scene, config, onProgress = () => {}) {
@@ -147,6 +147,9 @@ export class AssetManager {
     if (!loaded.skeletons.length || !loaded.animationGroups.length) throw new Error(`Animasyonlu düşman GLB geçersiz: ${definition.url}`);
     const root = this.#wrap(`mob-model-${index}`, loaded.meshes, loaded.transformNodes);
     root.scaling.setAll(definition.scale || 1);
+    // Slight per-instance jitter so packs don't look cloned
+    const jitter = 0.92 + (index % 5) * 0.03;
+    root.scaling.scaleInPlace(jitter);
     return { root, animationGroups: loaded.animationGroups, definition };
   }
 
@@ -182,23 +185,30 @@ export class AssetManager {
 
   #createProceduralGrassTemplate() {
     const root = new BABYLON.TransformNode("template-grass", this.scene);
-    // Opaque green blades — always visible (alpha test vanished on some GPUs)
     const material = new BABYLON.StandardMaterial("procedural-grass-mat", this.scene);
-    material.disableLighting = true;
-    material.emissiveColor = new BABYLON.Color3(0.32, 0.62, 0.22);
-    material.diffuseColor = material.emissiveColor;
+    material.disableLighting = false;
+    material.diffuseColor = new BABYLON.Color3(0.24, 0.4, 0.16);
+    material.emissiveColor = new BABYLON.Color3(0.08, 0.14, 0.05);
+    material.ambientColor = new BABYLON.Color3(0.2, 0.28, 0.14);
     material.specularColor = BABYLON.Color3.Black();
     material.backFaceCulling = false;
-    // Do NOT enable useVertexColors — thin-instance color buffers were
-    // multiplying emissive to black on WebGL.
-    for (let i = 0; i < 7; i++) {
-      const blade = BABYLON.MeshBuilder.CreatePlane(`grass-blade-${i}`, { width: 0.09, height: 0.36 }, this.scene);
+    for (let i = 0; i < 8; i++) {
+      const path = [
+        new BABYLON.Vector3(0, 0, 0),
+        new BABYLON.Vector3((i % 3 - 1) * 0.01, 0.1, 0),
+        new BABYLON.Vector3((i % 3 - 1) * 0.025, 0.26 + (i % 4) * 0.03, (i % 2) * 0.01),
+      ];
+      const blade = BABYLON.MeshBuilder.CreateTube(`grass-blade-${i}`, {
+        path,
+        radius: 0.012,
+        tessellation: 4,
+        cap: BABYLON.Mesh.NO_CAP,
+      }, this.scene);
       blade.material = material;
       blade.parent = root;
-      blade.rotation.y = (i / 7) * Math.PI * 2;
-      blade.rotation.z = ((i % 3) - 1) * 0.2;
-      blade.scaling.x = 0.55 + (i % 3) * 0.15;
-      blade.position.set(Math.sin(i * 1.9) * 0.07, 0.17, Math.cos(i * 1.9) * 0.07);
+      blade.rotation.y = (i / 8) * Math.PI * 2;
+      blade.rotation.z = ((i % 3) - 1) * 0.12;
+      blade.position.set(Math.sin(i * 1.9) * 0.06, 0, Math.cos(i * 1.9) * 0.06);
       blade.isPickable = false;
       blade.receiveShadows = false;
     }
@@ -208,6 +218,36 @@ export class AssetManager {
 
   createProceduralGrass() {
     return this.#createProceduralGrassTemplate();
+  }
+
+  createProceduralDryGrass() {
+    const root = new BABYLON.TransformNode("template-dry-grass", this.scene);
+    const material = new BABYLON.StandardMaterial("procedural-dry-grass-mat", this.scene);
+    material.disableLighting = false;
+    material.diffuseColor = new BABYLON.Color3(0.45, 0.38, 0.2);
+    material.emissiveColor = new BABYLON.Color3(0.12, 0.1, 0.04);
+    material.ambientColor = new BABYLON.Color3(0.28, 0.24, 0.14);
+    material.specularColor = BABYLON.Color3.Black();
+    material.backFaceCulling = false;
+    for (let i = 0; i < 5; i++) {
+      const blade = BABYLON.MeshBuilder.CreateTube(`dry-blade-${i}`, {
+        path: [
+          new BABYLON.Vector3(0, 0, 0),
+          new BABYLON.Vector3(0.01, 0.08, 0),
+          new BABYLON.Vector3(0.03, 0.2, 0.01),
+        ],
+        radius: 0.01,
+        tessellation: 3,
+        cap: BABYLON.Mesh.NO_CAP,
+      }, this.scene);
+      blade.material = material;
+      blade.parent = root;
+      blade.rotation.y = (i / 5) * Math.PI * 2;
+      blade.position.set(Math.sin(i) * 0.04, 0, Math.cos(i) * 0.04);
+      blade.isPickable = false;
+    }
+    root.setEnabled(false);
+    return root;
   }
 
   async #load(url) {

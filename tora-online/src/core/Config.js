@@ -6,28 +6,28 @@ export const GAME_CONFIG = Object.freeze({
   mapHalfSize: 38,
   spawn: { x: 0, y: 0, z: -18 },
   camera: Object.freeze({
-    distance: 7.5,
-    minDistance: 3.8,
-    minCollisionDistance: 1.25,
-    maxDistance: 11,
-    pitch: 1.08,
-    minPitch: 0.62,
-    maxPitch: 1.38,
-    sensitivityX: 0.0042,
-    sensitivityY: 0.0036,
-    zoomStep: 0.006,
-    zoomSmoothness: 13,
-    followSmoothness: 11,
-    collisionSmoothness: 20,
-    collisionPadding: 0.42,
-    focusHeight: 1.35,
+    distance: 8.2,
+    minDistance: 3.2,
+    minCollisionDistance: 1.15,
+    maxDistance: 14,
+    pitch: 1.12,
+    minPitch: 0.48,
+    maxPitch: 1.42,
+    sensitivityX: 0.0046,
+    sensitivityY: 0.0038,
+    zoomStep: 0.007,
+    zoomSmoothness: 12,
+    followSmoothness: 10,
+    collisionSmoothness: 18,
+    collisionPadding: 0.48,
+    focusHeight: 1.42,
   }),
 });
 
 export const QUALITY_PROFILES = Object.freeze({
-  low: { dpr: 1, antialias: false, shadows: 1024, particles: 0.3, lod: 0.6, bloom: false, grass: 80, grassDistance: 20 },
-  medium: { dpr: 1.1, antialias: true, shadows: 1536, particles: 0.5, lod: 0.85, bloom: false, grass: 140, grassDistance: 26 },
-  high: { dpr: 1.35, antialias: true, shadows: 2048, particles: 0.85, lod: 1.1, bloom: true, grass: 180, grassDistance: 32 },
+  low: { dpr: 1, antialias: false, shadows: 1024, particles: 0.3, lod: 0.65, bloom: false, grass: 90, grassDistance: 18, natureMul: 0.7 },
+  medium: { dpr: 1.15, antialias: true, shadows: 1536, particles: 0.55, lod: 0.95, bloom: false, grass: 160, grassDistance: 26, natureMul: 1 },
+  high: { dpr: 1.4, antialias: true, shadows: 2048, particles: 0.9, lod: 1.2, bloom: true, grass: 220, grassDistance: 34, natureMul: 1.25 },
 });
 
 export const SKILLS = Object.freeze([
@@ -42,6 +42,14 @@ export const SKILLS = Object.freeze([
   { slot: 9, name: "Nihai Darbe", icon: "ultimate", description: "Uzun bekleme süreli ezici saldırı.", mana: 45, cooldown: 30, range: 3.5, damage: 78, impact: [0.82], duration: 1.35, target: "enemy", animation: "skill9", trail: true, color: "#d4ad5e" },
 ]);
 
+/** Natural scattered spawn rings around the ruin fight zone — not stacked. */
 export const MOB_SPAWNS = Object.freeze([
-  { x: -7, z: 9 }, { x: 4, z: 12 }, { x: 11, z: 7 }, { x: -13, z: 15 }, { x: 13, z: 18 },
+  { x: -8.5, z: 10.5 },
+  { x: -2.2, z: 14.8 },
+  { x: 5.4, z: 11.2 },
+  { x: 10.8, z: 8.4 },
+  { x: 12.6, z: 16.5 },
+  { x: -12.4, z: 16.2 },
+  { x: 1.5, z: 19.5 },
+  { x: -5.8, z: 20.2 },
 ]);

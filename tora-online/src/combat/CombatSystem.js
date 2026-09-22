@@ -1,5 +1,5 @@
-import { SkillSystem } from "./SkillSystem.js?v=14";
-import { PlayerCombat } from "../player/PlayerCombat.js?v=14";
+import { SkillSystem } from "./SkillSystem.js?v=15";
+import { PlayerCombat } from "../player/PlayerCombat.js?v=15";
 
 export class CombatSystem {
   constructor(scene, player, animator, entities, callbacks = {}, stats = null) {
@@ -39,6 +39,8 @@ export class CombatSystem {
       onImpact: (skill, from, to) => {
         this.#spawnImpact(skill, from, to);
         callbacks.onImpact?.(skill, from, to);
+        const heavy = skill.slot === 9 || skill.slot === 3 || skill.aoe;
+        callbacks.onCameraShake?.(heavy ? 0.09 : 0.045, heavy ? 0.2 : 0.12);
       },
     });
     this.playerRespawn = 0;
@@ -114,6 +116,7 @@ export class CombatSystem {
 
   damagePlayer(result) {
     this.callbacks.onDamage?.(this.player, result, null);
+    this.callbacks.onCameraShake?.(0.05, 0.12);
     if (this.player.alive) {
       if (!this.player.actionLocked) {
         this.playerHitTimer = .28;

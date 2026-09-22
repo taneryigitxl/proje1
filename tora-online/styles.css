@@ -108,3 +108,6 @@ body[data-quality="low"] .menu-grid,body[data-quality="low"] .rune-field{display
 @media(max-width:900px){.minimap{transform:scale(.78);transform-origin:top right}.quest-panel{top:188px}.chat-panel{width:230px}.skill-slot{width:38px;height:42px}}
 @media(max-width:760px){.stats-panel{right:8px;top:auto;bottom:120px;transform:none}.inventory-panel{transform:translate(-50%,-48%)}.buff-bar{top:100px}}
 @media(max-width:640px){.minimap,.chat-panel{display:none}.player-frame{width:280px}.skill-bar{bottom:8px}.target-frame{top:108px}}
+
+/* Atmosphere pack UI polish v15 */
+.hud .player-frame{width:300px;height:82px}.hud .portrait{width:54px;height:54px}.hud .meter{height:11px}.hud .meter.hp i{background:linear-gradient(#c44538,#6e221c)}.hud .meter.mana i{background:linear-gradient(#4a7aab,#243c61)}.hud .xp{height:8px}.hud .xp i{background:linear-gradient(90deg,#a07a3c,#e0bc66)}.hud .quest-panel{width:168px;padding:9px}.hud .quest-panel span{color:#b9a786;font-size:.6rem;line-height:1.4}.hud .skill-slot{width:44px;height:44px}.hud .skill-slot:hover{border-color:#e0bc66;box-shadow:0 0 10px rgba(212,173,94,.22)}.hud .mob-label .bar{height:4px;border:1px solid #5a3428}.hud .minimap{width:168px}.hud .minimap-map{width:154px;height:154px}

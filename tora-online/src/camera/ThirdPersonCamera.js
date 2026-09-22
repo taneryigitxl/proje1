@@ -17,6 +17,9 @@ export class ThirdPersonCamera {
     this.dragging = false;
     this.pointerId = null;
     this.collisionWarningShown = false;
+    this.shakeTime = 0;
+    this.shakeAmp = 0;
+    this.shakeOffset = new BABYLON.Vector3();
     this.camera = new BABYLON.ArcRotateCamera("third-person-camera", -Math.PI / 2, config.pitch, config.distance, this.focus, scene);
     this.camera.lowerRadiusLimit = config.minCollisionDistance;
     this.camera.upperRadiusLimit = config.maxDistance;
@@ -38,6 +41,13 @@ export class ThirdPersonCamera {
     canvas.addEventListener("wheel", this.onWheel, { passive: false });
     scene.activeCamera = this.camera;
   }
+
+  /** Subtle combat punch — amplitude ~0.04–0.12, duration ~0.12–0.22s */
+  shake(amplitude = 0.06, duration = 0.16) {
+    this.shakeAmp = Math.max(this.shakeAmp, amplitude);
+    this.shakeTime = Math.max(this.shakeTime, duration);
+  }
+
   update(dt) {
     const position = this.target?.position;
     if (!position || !Number.isFinite(position.x) || !Number.isFinite(position.y) || !Number.isFinite(position.z)) return;
@@ -45,11 +55,28 @@ export class ThirdPersonCamera {
     const desired = new BABYLON.Vector3(position.x, this.groundFocusY, position.z);
     const follow = 1 - Math.exp(-this.config.followSmoothness * dt);
     this.focus.copyFrom(BABYLON.Vector3.Lerp(this.focus, desired, follow));
-    this.camera.setTarget(this.focus);
-    const direction = this.camera.position.subtract(this.focus);
-    if (direction.lengthSquared() < .001) direction.set(0, .35, -1);
+
+    if (this.shakeTime > 0) {
+      this.shakeTime -= dt;
+      const t = Math.max(0, this.shakeTime);
+      const falloff = Math.min(1, t * 6);
+      this.shakeOffset.set(
+        (Math.random() - 0.5) * this.shakeAmp * falloff,
+        (Math.random() - 0.5) * this.shakeAmp * 0.6 * falloff,
+        (Math.random() - 0.5) * this.shakeAmp * falloff,
+      );
+      if (this.shakeTime <= 0) {
+        this.shakeAmp = 0;
+        this.shakeOffset.setAll(0);
+      }
+    }
+
+    const lookAt = this.focus.add(this.shakeOffset);
+    this.camera.setTarget(lookAt);
+    const direction = this.camera.position.subtract(lookAt);
+    if (direction.lengthSquared() < 0.001) direction.set(0, 0.35, -1);
     direction.normalize();
-    const ray = new BABYLON.Ray(this.focus, direction, this.zoomDistance);
+    const ray = new BABYLON.Ray(lookAt, direction, this.zoomDistance);
     let hit = null;
     try {
       hit = this.scene.pickWithRay(ray, (mesh) => Boolean(mesh?.metadata?.cameraBlocker) && mesh.isEnabled?.() && mesh.isVisible);
@@ -64,10 +91,13 @@ export class ThirdPersonCamera {
     this.collisionDistance = BABYLON.Scalar.Lerp(this.collisionDistance, allowed, 1 - Math.exp(-rate * dt));
     this.camera.radius = BABYLON.Scalar.Clamp(this.collisionDistance, this.config.minCollisionDistance, this.config.maxDistance);
   }
+
   forwardOnGround() {
-    const forward = this.focus.subtract(this.camera.position); forward.y = 0;
+    const forward = this.focus.subtract(this.camera.position);
+    forward.y = 0;
     return forward.lengthSquared() > 0.001 ? forward.normalize() : new BABYLON.Vector3(0, 0, 1);
   }
+
   #pointerDown(event) {
     if (event.button !== 2 || event.target !== this.canvas) return;
     event.preventDefault();
@@ -77,15 +107,22 @@ export class ThirdPersonCamera {
     catch (error) { console.warn("[Tora Camera] Pointer capture kullanılamıyor; sürükleme capture olmadan devam edecek.", error); }
     this.canvas.dataset.cursor = "hidden";
   }
+
   #pointerMove(event) {
     if (!this.dragging || event.pointerId !== this.pointerId || !(event.buttons & 2)) return;
     this.camera.alpha -= (event.movementX || 0) * this.config.sensitivityX;
-    this.camera.beta = BABYLON.Scalar.Clamp(this.camera.beta + (event.movementY || 0) * this.config.sensitivityY, this.config.minPitch, this.config.maxPitch);
+    this.camera.beta = BABYLON.Scalar.Clamp(
+      this.camera.beta + (event.movementY || 0) * this.config.sensitivityY,
+      this.config.minPitch,
+      this.config.maxPitch,
+    );
   }
+
   #pointerUp(event) {
     if (event.button !== 2 || (this.pointerId !== null && event.pointerId !== this.pointerId)) return;
     this.#cancelDrag();
   }
+
   #cancelDrag() {
     try {
       if (this.pointerId !== null && this.canvas.hasPointerCapture?.(this.pointerId)) this.canvas.releasePointerCapture(this.pointerId);
@@ -96,11 +133,17 @@ export class ThirdPersonCamera {
     this.pointerId = null;
     if (this.canvas.dataset.cursor === "hidden") this.canvas.dataset.cursor = "normal";
   }
+
   #wheel(event) {
     if (event.target !== this.canvas) return;
     event.preventDefault();
-    this.zoomDistance = BABYLON.Scalar.Clamp(this.zoomDistance + event.deltaY * this.config.zoomStep, this.config.minDistance, this.config.maxDistance);
+    this.zoomDistance = BABYLON.Scalar.Clamp(
+      this.zoomDistance + event.deltaY * this.config.zoomStep,
+      this.config.minDistance,
+      this.config.maxDistance,
+    );
   }
+
   dispose() {
     this.canvas.removeEventListener("pointerdown", this.onPointerDown);
     this.canvas.removeEventListener("pointermove", this.onPointerMove);

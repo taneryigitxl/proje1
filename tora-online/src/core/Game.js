@@ -1,20 +1,21 @@
-import { GAME_CONFIG, MOB_SPAWNS } from "./Config.js?v=14";
-import { AssetManager } from "./AssetManager.js?v=14";
-import { Navigation } from "../world/Navigation.js?v=14";
-import { TestMap } from "../world/TestMap.js?v=14";
-import { InputManager } from "../input/InputManager.js?v=14";
-import { CursorManager } from "../input/CursorManager.js?v=14";
-import { ThirdPersonCamera } from "../camera/ThirdPersonCamera.js?v=14";
-import { PlayerController } from "../player/PlayerController.js?v=14";
-import { PlayerAnimator } from "../player/PlayerAnimator.js?v=14";
-import { EntityManager } from "../entities/EntityManager.js?v=14";
-import { CombatSystem } from "../combat/CombatSystem.js?v=14";
-import { NetworkAdapter } from "../network/NetworkAdapter.js?v=14";
-import { HUD } from "../ui/HUD.js?v=14";
-import { ProgressionSystem } from "../progression/ProgressionSystem.js?v=14";
-import { StatsSystem } from "../progression/StatsSystem.js?v=14";
-import { InventorySystem } from "../progression/InventorySystem.js?v=14";
-import { LootSystem } from "../progression/LootSystem.js?v=14";
+import { GAME_CONFIG, MOB_SPAWNS } from "./Config.js?v=15";
+import { AssetManager } from "./AssetManager.js?v=15";
+import { Navigation } from "../world/Navigation.js?v=15";
+import { TestMap } from "../world/TestMap.js?v=15";
+import { InputManager } from "../input/InputManager.js?v=15";
+import { CursorManager } from "../input/CursorManager.js?v=15";
+import { ThirdPersonCamera } from "../camera/ThirdPersonCamera.js?v=15";
+import { PlayerController } from "../player/PlayerController.js?v=15";
+import { PlayerAnimator } from "../player/PlayerAnimator.js?v=15";
+import { EntityManager } from "../entities/EntityManager.js?v=15";
+import { CombatSystem } from "../combat/CombatSystem.js?v=15";
+import { NetworkAdapter } from "../network/NetworkAdapter.js?v=15";
+import { HUD } from "../ui/HUD.js?v=15";
+import { ProgressionSystem } from "../progression/ProgressionSystem.js?v=15";
+import { StatsSystem } from "../progression/StatsSystem.js?v=15";
+import { InventorySystem } from "../progression/InventorySystem.js?v=15";
+import { LootSystem } from "../progression/LootSystem.js?v=15";
+import { AmbientAudio } from "../audio/AmbientAudio.js?v=15";
 
 export class Game {
   constructor(runtime, onProgress = () => {}, onFatal = () => {}) {
@@ -89,8 +90,13 @@ export class Game {
         onKill: (mob) => this.#onMobDefeated(mob),
         onStatus: (message) => this.hud?.setStatus(message),
         onActionStart: (skill) => this.player.visual?.weaponSheath?.markCombat(skill?.duration || 1.2),
+        onCameraShake: (amp, dur) => {
+          this.camera?.shake(amp, dur);
+          this.audio?.playHit(amp > 0.07);
+        },
       }, this.stats);
       this.loot = new LootSystem(this.scene, this.inventory, (message) => this.hud?.setStatus(message), this.navigation);
+      this.audio = new AmbientAudio();
 
       console.info("[Tora Startup] 8/10 HUD ve cursor bağlanıyor.");
       this.hud = new HUD(this.scene, this.engine, this.player, this.entities, this.combat.skills, this.progression, (slot) => this.#useSkill(slot), this.stats, this.inventory, {
@@ -157,6 +163,7 @@ export class Game {
     document.getElementById("pause-menu").hidden = true;
     this.canvas.focus();
     this.lastTime = performance.now();
+    void this.audio?.ensure();
   }
 
   leave() {
@@ -196,6 +203,7 @@ export class Game {
     this.hud?.dispose();
     this.map?.dispose();
     this.loot?.dispose();
+    this.audio?.dispose();
     this.scene?.dispose();
     if (window.__TORA_DEBUG__?.map === this.map) delete window.__TORA_DEBUG__;
     console.info("[Tora Startup] Başarısız/sonlandırılmış oyun instance kaynakları temizlendi.");
@@ -353,6 +361,7 @@ export class Game {
       this.map.update(dt, this.camera.camera, this.engine.getFps());
       this.entities.update(dt, this.player);
       this.loot?.update(dt);
+      this.audio?.update(dt, this.player);
       if (this.player.alive) this.player.mana = Math.min(this.player.maxMana, this.player.mana + 4 * dt);
       this.snapshotTimer += dt;
       if (this.snapshotTimer > .25) {

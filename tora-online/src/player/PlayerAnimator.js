@@ -83,9 +83,10 @@ export class PlayerAnimator {
       try { this.activeGroup.setWeightForAllAnimatables(1); } catch (_) { /* ok */ }
     }
     if (this.state === "walk") {
-      this.activeGroup.speedRatio = BABYLON.Scalar.Clamp((speedRatio * 6.4) / 3.65, 0.75, 1.3);
+      // Match clip cadence to world walk speed (~3.65 u/s) to reduce foot slide
+      this.activeGroup.speedRatio = BABYLON.Scalar.Clamp((speedRatio * 6.4) / 3.65, 0.85, 1.15);
     } else if (this.state === "run") {
-      this.activeGroup.speedRatio = BABYLON.Scalar.Clamp(speedRatio, 0.85, 1.4);
+      this.activeGroup.speedRatio = BABYLON.Scalar.Clamp(speedRatio * 1.05, 0.9, 1.25);
     } else if (this.actionSpeed) {
       this.activeGroup.speedRatio = this.actionSpeed;
     }
