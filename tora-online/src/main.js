@@ -1,5 +1,5 @@
-import { EngineRuntime } from "./core/Engine.js?v=13";
-import { Game } from "./core/Game.js?v=13";
+import { EngineRuntime } from "./core/Engine.js?v=14";
+import { Game } from "./core/Game.js?v=14";
 
 if (window.__TORA_BOOTSTRAP__) {
   console.warn("[Tora Startup] İkinci bootstrap isteği engellendi; mevcut oyun instance korunuyor.");
@@ -16,6 +16,7 @@ if (window.__TORA_BOOTSTRAP__) {
   let game = null;
   let starting = false;
   let lastQuality = "medium";
+  let lastIdentity = { username: "admin", isAdmin: true };
 
   function progress(value, message) {
     const safe = Math.max(0, Math.min(100, Math.round(value)));
@@ -46,12 +47,16 @@ if (window.__TORA_BOOTSTRAP__) {
     starting = false;
   }
 
-  async function enter(quality) {
+  async function enter(quality, identity = lastIdentity) {
     if (starting || game?.running) {
       console.warn("[Tora Startup] Yinelenen oyun başlatma isteği engellendi.");
       return;
     }
     lastQuality = quality || lastQuality;
+    lastIdentity = {
+      username: identity?.username || "admin",
+      isAdmin: identity?.isAdmin !== false,
+    };
     starting = true;
     fatal.hidden = true;
     loading.hidden = false;
@@ -62,10 +67,11 @@ if (window.__TORA_BOOTSTRAP__) {
         game = new Game(runtime, progress, showError);
         window.__TORA_BOOTSTRAP__.runtime = runtime;
         window.__TORA_BOOTSTRAP__.game = game;
-        const result = await game.initialize();
+        const result = await game.initialize(lastIdentity);
         console.info(`[Tora Online] ${result.backend}; zorunlu GLB varlık seti doğrulandı.`);
       } else {
         game.applyQuality(lastQuality);
+        game.applyIdentity?.(lastIdentity);
       }
       progress(100, "Dünya hazır.");
       await new Promise((resolve) => setTimeout(resolve, 280));
@@ -82,10 +88,13 @@ if (window.__TORA_BOOTSTRAP__) {
     if (starting) return;
     fatal.hidden = true;
     window.ToraMenu?.unlock();
-    void enter(lastQuality);
+    void enter(lastQuality, lastIdentity);
   }
 
-  const onEnter = (event) => void enter(event.detail.quality);
+  const onEnter = (event) => void enter(event.detail.quality, {
+    username: event.detail.username,
+    isAdmin: event.detail.isAdmin,
+  });
   const onQuality = (event) => game?.applyQuality(event.detail.quality);
   const onWindowError = (event) => console.error("[Tora Online] Çalışma zamanı hatası:", event.error || event.message);
   const onUnhandledRejection = (event) => console.error("[Tora Online] Promise hatası:", event.reason);

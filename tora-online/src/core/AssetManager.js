@@ -1,4 +1,5 @@
-import { CharacterFace } from "../player/CharacterFace.js?v=13";
+import { CharacterFace } from "../player/CharacterFace.js?v=14";
+import { WeaponSheath } from "../player/WeaponSheath.js?v=14";
 
 export class AssetManager {
   constructor(scene, config, onProgress = () => {}) {
@@ -111,7 +112,14 @@ export class AssetManager {
     this.onProgress(70, "Yüz detayı ekleniyor…");
     CharacterFace.attach(this.scene, skeleton, skinnedMesh, root);
 
-    return { root, skeleton, weaponRoot, animationGroups };
+    const handPose = {
+      position: BABYLON.Vector3.FromArray(this.manifest.weapon.position),
+      rotation: BABYLON.Vector3.FromArray(this.manifest.weapon.rotation),
+      scale: this.manifest.weapon.scale || 1,
+    };
+    const weaponSheath = new WeaponSheath(weaponRoot, skeleton, skinnedMesh, hand, handPose);
+
+    return { root, skeleton, weaponRoot, weaponSheath, animationGroups };
   }
 
   async preloadStatics(keys = Object.keys(this.manifest.environment)) {

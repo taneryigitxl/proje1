@@ -112,6 +112,34 @@ export class InventorySystem {
     return this.add(itemId);
   }
 
+  move(fromIndex, toIndex) {
+    if (fromIndex < 0 || toIndex < 0 || fromIndex >= this.capacity || toIndex >= this.capacity) return false;
+    if (fromIndex === toIndex) return true;
+    const temp = this.slots[toIndex];
+    this.slots[toIndex] = this.slots[fromIndex];
+    this.slots[fromIndex] = temp;
+    this.selected = toIndex;
+    this.#save();
+    return true;
+  }
+
+  removeAt(index) {
+    if (index < 0 || index >= this.capacity) return null;
+    const id = this.slots[index];
+    if (!id) return null;
+    this.slots[index] = null;
+    if (this.selected === index) this.selected = -1;
+    // Unequip if dropped equipped item
+    for (const [slot, equippedId] of Object.entries(this.equipped)) {
+      if (equippedId === id && !this.slots.includes(id)) {
+        this.equipped[slot] = null;
+      }
+    }
+    this.#recomputeGear();
+    this.#save();
+    return id;
+  }
+
   #equip(item) {
     const slot = item.slot || item.type;
     const previous = this.equipped[slot];

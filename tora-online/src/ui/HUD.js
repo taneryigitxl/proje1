@@ -1,13 +1,13 @@
-import { SkillBar } from "./SkillBar.js?v=13";
-import { TargetFrame } from "./TargetFrame.js?v=13";
-import { ITEM_DEFS } from "../progression/InventorySystem.js?v=13";
+import { SkillBar } from "./SkillBar.js?v=14";
+import { TargetFrame } from "./TargetFrame.js?v=14";
+import { ITEM_DEFS } from "../progression/InventorySystem.js?v=14";
 
 function itemName(id) {
   return ITEM_DEFS[id]?.name || id || "—";
 }
 
 export class HUD {
-  constructor(scene, engine, player, entities, skillSystem, progression, onSkill, stats, inventory) {
+  constructor(scene, engine, player, entities, skillSystem, progression, onSkill, stats, inventory, options = {}) {
     this.scene = scene;
     this.engine = engine;
     this.player = player;
@@ -15,6 +15,7 @@ export class HUD {
     this.progression = progression;
     this.stats = stats;
     this.inventory = inventory;
+    this.onDropItem = options.onDropItem || null;
     this.root = document.getElementById("hud");
     this.hpBar = document.getElementById("player-hp-bar");
     this.hpText = document.getElementById("player-hp-text");
@@ -23,6 +24,8 @@ export class HUD {
     this.level = document.getElementById("player-level");
     this.xpBar = document.getElementById("player-xp-bar");
     this.xpText = document.getElementById("player-xp-text");
+    this.nameEl = document.getElementById("player-name");
+    this.portrait = document.getElementById("player-portrait");
     this.fps = document.getElementById("debug-fps");
     this.questPanel = document.querySelector(".quest-panel");
     this.quest = document.getElementById("quest-status");
@@ -53,7 +56,23 @@ export class HUD {
     this.buffBar = document.getElementById("buff-bar");
     this.equipSummary = document.getElementById("equip-summary");
     this.useItemButton = document.getElementById("inventory-use");
+    this.dropDialog = document.getElementById("drop-confirm");
+    this.dropYes = document.getElementById("drop-yes");
+    this.dropNo = document.getElementById("drop-no");
     this.openPanel = null;
+    this.chatBubbles = [];
+    this.pendingDropIndex = -1;
+    this.dragFrom = -1;
+    this._lastHudTime = performance.now();
+
+    this.playerLabel = document.createElement("div");
+    this.playerLabel.className = "player-label";
+    this.playerLabel.innerHTML = `<small class="player-label-level">Lv.1</small><strong class="player-label-name">—</strong>`;
+    this.labelLayer.append(this.playerLabel);
+
+    this.bubbleLayer = document.createElement("div");
+    this.bubbleLayer.className = "chat-bubbles";
+    this.labelLayer.append(this.bubbleLayer);
 
     for (const mob of entities.mobs) {
       this.#labelFor(mob);
@@ -112,11 +131,97 @@ export class HUD {
       }
     };
 
+    this.onDragStart = (event) => {
+      const slot = event.target.closest("[data-inv-slot]");
+      if (!slot || slot.classList.contains("empty")) {
+        event.preventDefault();
+        return;
+      }
+      this.dragFrom = Number(slot.dataset.invSlot);
+      event.dataTransfer.setData("text/plain", String(this.dragFrom));
+      event.dataTransfer.effectAllowed = "move";
+      slot.classList.add("dragging");
+    };
+    this.onDragEnd = (event) => {
+      event.target.closest("[data-inv-slot]")?.classList.remove("dragging");
+    };
+    this.onDragOver = (event) => {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+    };
+    this.onDrop = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const from = Number(event.dataTransfer.getData("text/plain") || this.dragFrom);
+      if (!Number.isFinite(from) || from < 0) return;
+      const slot = event.target.closest?.("[data-inv-slot]");
+      if (slot) {
+        const to = Number(slot.dataset.invSlot);
+        this.inventory.move(from, to);
+        this.dragFrom = -1;
+        this.#renderInventory();
+        this.#renderStats();
+        return;
+      }
+      this.dragFrom = -1;
+    };
+    this.onDocDragOver = (event) => {
+      if (this.dragFrom < 0) return;
+      event.preventDefault();
+    };
+    this.onDocDrop = (event) => {
+      if (this.dragFrom < 0) return;
+      event.preventDefault();
+      const from = this.dragFrom;
+      this.dragFrom = -1;
+      if (event.target.closest?.("#inventory-panel")) return;
+      this.#askDrop(from);
+    };
+    this.onDropYes = () => {
+      if (this.pendingDropIndex < 0) return this.#hideDropDialog();
+      const itemId = this.inventory.removeAt(this.pendingDropIndex);
+      this.#hideDropDialog();
+      if (itemId) {
+        this.onDropItem?.(itemId);
+        this.setStatus(`${ITEM_DEFS[itemId]?.name || "Eşya"} yere bırakıldı.`);
+        this.#renderInventory();
+        this.#renderStats();
+      }
+    };
+    this.onDropNo = () => this.#hideDropDialog();
+
     this.chatForm.addEventListener("submit", this.onChatSubmit);
     addEventListener("keydown", this.onGlobalKeyDown);
     this.root.addEventListener("click", this.onPanelClick);
+    this.inventoryGrid?.addEventListener("dragstart", this.onDragStart);
+    this.inventoryGrid?.addEventListener("dragend", this.onDragEnd);
+    this.inventoryPanel?.addEventListener("dragover", this.onDragOver);
+    this.inventoryPanel?.addEventListener("drop", this.onDrop);
+    document.addEventListener("dragover", this.onDocDragOver);
+    document.addEventListener("drop", this.onDocDrop);
+    this.dropYes?.addEventListener("click", this.onDropYes);
+    this.dropNo?.addEventListener("click", this.onDropNo);
     this.#renderInventory();
     this.#renderStats();
+    this.applyIdentity({ username: player.name, isAdmin: player.isAdmin });
+  }
+
+  applyIdentity(identity) {
+    const name = identity?.username || this.player.name || "Oyuncu";
+    this.player.name = name;
+    this.player.isAdmin = Boolean(identity?.isAdmin);
+    if (this.nameEl) this.nameEl.textContent = name;
+    if (this.portrait) {
+      if (this.player.isAdmin) {
+        this.portrait.classList.add("is-gm");
+        this.portrait.innerHTML = `<span class="gm-badge">GM</span>`;
+      } else {
+        this.portrait.classList.remove("is-gm");
+        this.portrait.innerHTML = `<span class="player-initial">${name.slice(0, 1).toUpperCase()}</span>`;
+      }
+    }
+    const labelName = this.playerLabel?.querySelector(".player-label-name");
+    if (labelName) labelName.textContent = name;
   }
 
   show(value = true) {
@@ -142,6 +247,22 @@ export class HUD {
     this.chatLog.append(line);
     while (this.chatLog.children.length > 6) this.chatLog.firstElementChild.remove();
     this.chatLog.scrollTop = this.chatLog.scrollHeight;
+
+    if (author === "Sen" || author === this.player.name) {
+      this.#pushBubble(message);
+    }
+  }
+
+  #pushBubble(message) {
+    const node = document.createElement("div");
+    node.className = "chat-bubble";
+    node.textContent = message;
+    this.bubbleLayer.append(node);
+    this.chatBubbles.push({ node, life: 3 });
+    while (this.chatBubbles.length > 4) {
+      const old = this.chatBubbles.shift();
+      old.node.remove();
+    }
   }
 
   showDamage(entity, result) {
@@ -199,6 +320,7 @@ export class HUD {
     this.openPanel = null;
     if (this.inventoryPanel) this.inventoryPanel.hidden = true;
     if (this.statsPanel) this.statsPanel.hidden = true;
+    this.#hideDropDialog();
   }
 
   update() {
@@ -211,6 +333,36 @@ export class HUD {
     this.level.textContent = progress.level;
     this.xpBar.style.width = `${Math.min(100, progress.xp / progress.nextLevelXp * 100)}%`;
     this.xpText.textContent = `${progress.xp} / ${progress.nextLevelXp} XP`;
+    if (this.nameEl && this.nameEl.textContent !== p.name) this.nameEl.textContent = p.name;
+
+    const labelName = this.playerLabel.querySelector(".player-label-name");
+    const labelLevel = this.playerLabel.querySelector(".player-label-level");
+    if (labelName) labelName.textContent = p.name;
+    if (labelLevel) labelLevel.textContent = `Lv.${progress.level}`;
+    const playerScreen = this.#project(p.position.add(new BABYLON.Vector3(0, 2.55, 0)));
+    this.playerLabel.style.left = `${playerScreen.x}px`;
+    this.playerLabel.style.top = `${playerScreen.y}px`;
+    this.playerLabel.style.opacity = playerScreen.z > 0 && playerScreen.z < 1 ? "1" : "0";
+
+    // Chat bubbles stack upward; newest at bottom (closest to head)
+    const now = performance.now();
+    const dt = Math.min(0.05, (now - this._lastHudTime) / 1000 || 0.016);
+    this._lastHudTime = now;
+    for (let i = this.chatBubbles.length - 1; i >= 0; i--) {
+      const bubble = this.chatBubbles[i];
+      bubble.life -= dt;
+      if (bubble.life <= 0) {
+        bubble.node.remove();
+        this.chatBubbles.splice(i, 1);
+        continue;
+      }
+      const stack = this.chatBubbles.length - 1 - i;
+      const screen = this.#project(p.position.add(new BABYLON.Vector3(0, 2.85 + stack * 0.38, 0)));
+      bubble.node.style.left = `${screen.x}px`;
+      bubble.node.style.top = `${screen.y}px`;
+      bubble.node.style.opacity = screen.z > 0 && screen.z < 1 ? String(Math.min(1, bubble.life)) : "0";
+    }
+
     const questText = this.#questText(progress);
     this.quest.textContent = performance.now() < this.statusUntil ? this.statusMessage : questText;
     this.questPanel.classList.toggle("is-complete", progress.quest.completed && (!progress.secondQuest.unlocked || progress.secondQuest.completed));
@@ -243,12 +395,37 @@ export class HUD {
     this.chatForm.removeEventListener("submit", this.onChatSubmit);
     removeEventListener("keydown", this.onGlobalKeyDown);
     this.root.removeEventListener("click", this.onPanelClick);
+    this.inventoryGrid?.removeEventListener("dragstart", this.onDragStart);
+    this.inventoryGrid?.removeEventListener("dragend", this.onDragEnd);
+    this.inventoryPanel?.removeEventListener("dragover", this.onDragOver);
+    this.inventoryPanel?.removeEventListener("drop", this.onDrop);
+    document.removeEventListener("dragover", this.onDocDragOver);
+    document.removeEventListener("drop", this.onDocDrop);
+    this.dropYes?.removeEventListener("click", this.onDropYes);
+    this.dropNo?.removeEventListener("click", this.onDropNo);
     this.skillBar.dispose();
     for (const node of this.labels.values()) node.remove();
     for (const node of this.damagePool) node.remove();
+    this.playerLabel?.remove();
+    this.bubbleLayer?.remove();
     this.minimapMobs.replaceChildren();
     this.labels.clear();
+    this.chatBubbles = [];
     this.root.hidden = true;
+  }
+
+  #askDrop(index) {
+    this.pendingDropIndex = index;
+    const item = this.inventory.slots[index] ? ITEM_DEFS[this.inventory.slots[index]] : null;
+    if (!item || !this.dropDialog) return;
+    const label = this.dropDialog.querySelector("[data-drop-name]");
+    if (label) label.textContent = item.name;
+    this.dropDialog.hidden = false;
+  }
+
+  #hideDropDialog() {
+    this.pendingDropIndex = -1;
+    if (this.dropDialog) this.dropDialog.hidden = true;
   }
 
   #questText(progress) {
@@ -276,6 +453,7 @@ export class HUD {
     snap.slots.forEach((item, index) => {
       const button = document.createElement("button");
       button.type = "button";
+      button.draggable = Boolean(item);
       const equipped = item && (snap.equipped.weapon === item.id || snap.equipped.armor === item.id);
       button.className = `inv-slot${item ? "" : " empty"}${snap.selected === index ? " selected" : ""}${equipped ? " equipped" : ""}`;
       button.dataset.invSlot = String(index);
@@ -290,8 +468,8 @@ export class HUD {
     });
     const selected = snap.selected >= 0 ? snap.slots[snap.selected] : null;
     this.inventoryHint.textContent = selected
-      ? `${selected.name} — Kullan ile iksir/ekipman`
-      : "Eşya seç, sonra Kullan.";
+      ? `${selected.name} — sürükle taşı / dışarı bırakınca at`
+      : "Eşyayı sürükle; dışarı bırakınca yere at.";
     if (this.equipSummary) {
       this.equipSummary.textContent = `Silah: ${itemName(snap.equipped.weapon)} · Zırh: ${itemName(snap.equipped.armor)}`;
     }

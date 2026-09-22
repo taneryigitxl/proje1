@@ -1,4 +1,4 @@
-import { GrassSystem } from "./GrassSystem.js?v=13";
+import { GrassSystem } from "./GrassSystem.js?v=14";
 
 export class TestMap {
   constructor(scene, navigation, profile, quality = "medium") {
@@ -91,7 +91,11 @@ export class TestMap {
     this.shadowGenerator = new BABYLON.ShadowGenerator(this.profile.shadows, sun);
     this.shadowGenerator.usePercentageCloserFiltering = true;
     this.shadowGenerator.filteringQuality = this.profile.shadows > 1024 ? BABYLON.ShadowGenerator.QUALITY_HIGH : BABYLON.ShadowGenerator.QUALITY_MEDIUM;
-    this.shadowGenerator.darkness = 0.35;
+    this.shadowGenerator.darkness = 0.22;
+    this.shadowGenerator.bias = 0.0005;
+    this.shadowGenerator.normalBias = 0.02;
+    sun.shadowMaxZ = 80;
+    sun.shadowMinZ = 1;
     this.scene.imageProcessingConfiguration.toneMappingEnabled = true;
     this.scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
     this.scene.imageProcessingConfiguration.exposure = 1.55;
@@ -153,14 +157,16 @@ export class TestMap {
 
   #paintedGround(name, kind, baseColor, alphaBlend = false) {
     const material = new BABYLON.StandardMaterial(name, this.scene);
-    // Unlit bright ground — never crushed by shadows/fog/PBR
-    material.disableLighting = true;
+    // Lit ground so directional shadows read on the terrain
+    material.disableLighting = false;
     material.diffuseColor = BABYLON.Color3.White();
-    material.ambientColor = BABYLON.Color3.White();
+    material.ambientColor = new BABYLON.Color3(0.55, 0.6, 0.48);
     material.specularColor = BABYLON.Color3.Black();
-    material.emissiveColor = BABYLON.Color3.White();
-    material.emissiveTexture = this.#paintTerrainTexture(name, kind, baseColor);
-    material.diffuseTexture = material.emissiveTexture;
+    // Mild emissive keeps forest greens readable under dusk light
+    material.emissiveColor = new BABYLON.Color3(0.28, 0.34, 0.2);
+    const paint = this.#paintTerrainTexture(name, kind, baseColor);
+    material.diffuseTexture = paint;
+    material.emissiveTexture = paint;
     material.diffuseTexture.uScale = 1;
     material.diffuseTexture.vScale = 1;
     if (alphaBlend) {

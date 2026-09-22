@@ -11,6 +11,14 @@
   const VALID_USER = "admin";
   const VALID_PASS = "2850";
 
+  // Block DevTools on the landing page as well
+  addEventListener("keydown", (event) => {
+    if (event.code === "F12" || (event.ctrlKey && event.shiftKey && ["KeyI", "KeyJ", "KeyC"].includes(event.code)) || (event.ctrlKey && event.code === "KeyU")) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }, true);
+
   function apply(value, announce) {
     const selected = allowed.has(value) ? value : "medium";
     document.body.dataset.quality = selected;
@@ -25,21 +33,24 @@
   function validateLogin() {
     const user = (username?.value || "").trim();
     const pass = password?.value || "";
-    if (user === VALID_USER && pass === VALID_PASS) return true;
+    if (user === VALID_USER && pass === VALID_PASS) return { ok: true, username: user, isAdmin: true };
     status.textContent = "Giriş reddedildi. Yalnızca admin hesabı kabul edilir.";
     password?.focus();
     password?.select?.();
-    return false;
+    return { ok: false };
   }
 
   form?.addEventListener("submit", function (event) {
     event.preventDefault();
     if (button.disabled) return;
-    if (!validateLogin()) return;
+    const auth = validateLogin();
+    if (!auth.ok) return;
     button.disabled = true;
     button.classList.add("is-launching");
     status.textContent = "Diyar kapısı açılıyor…";
-    document.dispatchEvent(new CustomEvent("tora:enter", { detail: { quality: quality.value, username: VALID_USER } }));
+    document.dispatchEvent(new CustomEvent("tora:enter", {
+      detail: { quality: quality.value, username: auth.username, isAdmin: auth.isAdmin },
+    }));
   });
 
   quality.addEventListener("change", (event) => apply(event.target.value, true));

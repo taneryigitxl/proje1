@@ -1,5 +1,5 @@
-import { SkillSystem } from "./SkillSystem.js?v=13";
-import { PlayerCombat } from "../player/PlayerCombat.js?v=13";
+import { SkillSystem } from "./SkillSystem.js?v=14";
+import { PlayerCombat } from "../player/PlayerCombat.js?v=14";
 
 export class CombatSystem {
   constructor(scene, player, animator, entities, callbacks = {}, stats = null) {
@@ -24,8 +24,14 @@ export class CombatSystem {
     this.playerCombat = new PlayerCombat(player, animator, entities, this.skills, {
       ...callbacks,
       stats,
-      onActionStart: (skill) => this.#trail(true, skill),
-      onActionEnd: () => this.#trail(false),
+      onActionStart: (skill) => {
+        this.#trail(true, skill);
+        callbacks.onActionStart?.(skill);
+      },
+      onActionEnd: (skill) => {
+        this.#trail(false);
+        callbacks.onActionEnd?.(skill);
+      },
       onCast: (skill, from, to) => {
         this.#spawnCast(skill, from, to);
         callbacks.onCast?.(skill, from, to);

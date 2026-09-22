@@ -5,6 +5,7 @@ export class PlayerCombat {
   }
   request(slot,target,fallbackDirection){const skill=this.skills.get(slot);if(!skill||this.active||this.pending)return false;const check=this.skills.canUse(skill,this.player);if(!check.ok){this.callbacks.onStatus?.(check.reason);return false;}this.fallbackDirection=fallbackDirection?.clone()||this.fallbackDirection;if(skill.target==="enemy"&&!target){this.callbacks.onStatus?.("Önce bir hedef seç.");return false;}this.pending={skill,target};this.player.targetId=target?.id||null;return true;}
   requestBasic(target,fallbackDirection){return this.request(1,target,fallbackDirection);}
+  cancel(){this.pending=null;this.player.targetId=null;if(!this.active)this.player.cancelDestination();}
   update(dt){
     if(!this.player.alive){this.#finish();this.pending=null;return;}
     if(this.active){

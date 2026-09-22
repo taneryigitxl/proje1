@@ -1,219 +1,188 @@
 /**
- * Clear stylized face that sits in front of the ranger hood opening.
- * Hides Female_Ranger_Head_Hood and attaches to the Head bone.
+ * Compact realistic female face seated inside the ranger hood opening.
+ * Hood stays visible — face is scaled down to fit the cavity.
  */
 export class CharacterFace {
   static attach(scene, skeleton, skinnedMesh, root) {
-    CharacterFace.#hideHood(root);
+    // Soften hood-face clash without fully removing the hood silhouette
+    CharacterFace.#softenHoodFacePlate(root);
     const headBone = skeleton.bones.find((bone) => bone.name === "Head")
       || skeleton.bones.find((bone) => /head/i.test(bone.name));
 
     const faceRoot = new BABYLON.TransformNode("player-face-root", scene);
 
-    // Unlit skin so features stay readable in dusk lighting
     const skinMat = new BABYLON.StandardMaterial("face-skin-mat", scene);
     skinMat.disableLighting = true;
-    skinMat.emissiveColor = new BABYLON.Color3(0.92, 0.72, 0.58);
+    skinMat.emissiveColor = new BABYLON.Color3(0.94, 0.74, 0.62);
     skinMat.diffuseColor = skinMat.emissiveColor;
     skinMat.specularColor = BABYLON.Color3.Black();
 
-    const head = BABYLON.MeshBuilder.CreateSphere("face-head", { diameter: 0.24, segments: 28 }, scene);
+    const head = BABYLON.MeshBuilder.CreateSphere("face-head", { diameter: 0.18, segments: 28 }, scene);
     head.material = skinMat;
     head.parent = faceRoot;
-    head.position.set(0, 0.01, 0.05);
-    head.scaling.set(0.9, 1.08, 0.92);
+    head.position.set(0, 0.008, 0.035);
+    head.scaling.set(0.88, 1.05, 0.9);
     head.isPickable = false;
 
-    const jaw = BABYLON.MeshBuilder.CreateSphere("face-jaw", { diameter: 0.15, segments: 16 }, scene);
+    const jaw = BABYLON.MeshBuilder.CreateSphere("face-jaw", { diameter: 0.11, segments: 16 }, scene);
     jaw.material = skinMat;
     jaw.parent = faceRoot;
-    jaw.position.set(0, -0.05, 0.07);
-    jaw.scaling.set(0.92, 0.58, 0.9);
+    jaw.position.set(0, -0.038, 0.05);
+    jaw.scaling.set(0.88, 0.52, 0.85);
     jaw.isPickable = false;
 
     for (const side of [-1, 1]) {
-      const cheek = BABYLON.MeshBuilder.CreateSphere(`face-cheek-${side}`, { diameter: 0.085, segments: 12 }, scene);
+      const cheek = BABYLON.MeshBuilder.CreateSphere(`face-cheek-${side}`, { diameter: 0.06, segments: 12 }, scene);
       cheek.material = skinMat;
       cheek.parent = faceRoot;
-      cheek.position.set(side * 0.068, -0.005, 0.1);
-      cheek.scaling.set(0.65, 0.8, 0.7);
+      cheek.position.set(side * 0.048, -0.002, 0.072);
+      cheek.scaling.set(0.6, 0.75, 0.65);
       cheek.isPickable = false;
     }
 
     const noseMat = new BABYLON.StandardMaterial("face-nose-mat", scene);
     noseMat.disableLighting = true;
-    noseMat.emissiveColor = new BABYLON.Color3(0.88, 0.68, 0.55);
+    noseMat.emissiveColor = new BABYLON.Color3(0.9, 0.7, 0.58);
     noseMat.diffuseColor = noseMat.emissiveColor;
-    const bridge = BABYLON.MeshBuilder.CreateSphere("face-nose-bridge", { diameter: 0.03, segments: 10 }, scene);
+    const bridge = BABYLON.MeshBuilder.CreateSphere("face-nose-bridge", { diameter: 0.022, segments: 10 }, scene);
     bridge.material = noseMat;
     bridge.parent = faceRoot;
-    bridge.position.set(0, 0.02, 0.145);
-    bridge.scaling.set(0.48, 1.5, 1.1);
+    bridge.position.set(0, 0.014, 0.105);
+    bridge.scaling.set(0.42, 1.35, 1.0);
     bridge.isPickable = false;
-    const tip = BABYLON.MeshBuilder.CreateSphere("face-nose-tip", { diameter: 0.034, segments: 10 }, scene);
+    const tip = BABYLON.MeshBuilder.CreateSphere("face-nose-tip", { diameter: 0.024, segments: 10 }, scene);
     tip.material = noseMat;
     tip.parent = faceRoot;
-    tip.position.set(0, -0.01, 0.162);
-    tip.scaling.set(0.95, 0.7, 1.1);
+    tip.position.set(0, -0.008, 0.118);
+    tip.scaling.set(0.9, 0.65, 1.0);
     tip.isPickable = false;
 
     for (const side of [-1, 1]) CharacterFace.#eye(scene, faceRoot, side);
 
     const browMat = new BABYLON.StandardMaterial("face-brow-mat", scene);
     browMat.disableLighting = true;
-    browMat.emissiveColor = new BABYLON.Color3(0.14, 0.07, 0.03);
+    browMat.emissiveColor = new BABYLON.Color3(0.18, 0.09, 0.04);
     browMat.diffuseColor = browMat.emissiveColor;
     for (const side of [-1, 1]) {
-      const brow = BABYLON.MeshBuilder.CreateBox(`face-brow-${side}`, { width: 0.055, height: 0.01, depth: 0.016 }, scene);
+      const brow = BABYLON.MeshBuilder.CreateBox(`face-brow-${side}`, { width: 0.04, height: 0.007, depth: 0.012 }, scene);
       brow.material = browMat;
       brow.parent = faceRoot;
-      brow.position.set(side * 0.045, 0.06, 0.14);
-      brow.rotation.z = side * -0.25;
+      brow.position.set(side * 0.032, 0.042, 0.1);
+      brow.rotation.z = side * -0.18;
       brow.isPickable = false;
     }
 
     const lipMat = new BABYLON.StandardMaterial("face-lip-mat", scene);
     lipMat.disableLighting = true;
-    lipMat.emissiveColor = new BABYLON.Color3(0.78, 0.3, 0.36);
+    lipMat.emissiveColor = new BABYLON.Color3(0.72, 0.28, 0.34);
     lipMat.diffuseColor = lipMat.emissiveColor;
-    const upper = BABYLON.MeshBuilder.CreateSphere("face-lip-upper", { diameter: 0.05, segments: 10 }, scene);
+    const upper = BABYLON.MeshBuilder.CreateSphere("face-lip-upper", { diameter: 0.036, segments: 10 }, scene);
     upper.material = lipMat;
     upper.parent = faceRoot;
-    upper.position.set(0, -0.04, 0.14);
-    upper.scaling.set(1.45, 0.28, 0.52);
+    upper.position.set(0, -0.03, 0.1);
+    upper.scaling.set(1.35, 0.26, 0.48);
     upper.isPickable = false;
-    const lower = BABYLON.MeshBuilder.CreateSphere("face-lip-lower", { diameter: 0.048, segments: 10 }, scene);
+    const lower = BABYLON.MeshBuilder.CreateSphere("face-lip-lower", { diameter: 0.034, segments: 10 }, scene);
     lower.material = lipMat;
     lower.parent = faceRoot;
-    lower.position.set(0, -0.055, 0.138);
-    lower.scaling.set(1.28, 0.34, 0.55);
+    lower.position.set(0, -0.042, 0.098);
+    lower.scaling.set(1.18, 0.3, 0.5);
     lower.isPickable = false;
 
-    // Hair sits behind/above so it does not hide eyes from the camera
+    // Soft fringe under the hood — no oversized wig
     const hairMat = new BABYLON.StandardMaterial("face-hair-mat", scene);
     hairMat.disableLighting = true;
-    hairMat.emissiveColor = new BABYLON.Color3(0.2, 0.09, 0.04);
+    hairMat.emissiveColor = new BABYLON.Color3(0.22, 0.1, 0.05);
     hairMat.diffuseColor = hairMat.emissiveColor;
-    const scalp = BABYLON.MeshBuilder.CreateSphere("face-scalp", { diameter: 0.28, segments: 18 }, scene);
-    scalp.material = hairMat;
-    scalp.parent = faceRoot;
-    scalp.position.set(0, 0.085, -0.02);
-    scalp.scaling.set(1.02, 0.68, 0.95);
-    scalp.isPickable = false;
-
-    // Short side bangs only — keep face plate open
     for (const side of [-1, 1]) {
-      const bang = BABYLON.MeshBuilder.CreateSphere(`face-bang-${side}`, { diameter: 0.09, segments: 12 }, scene);
+      const bang = BABYLON.MeshBuilder.CreateSphere(`face-bang-${side}`, { diameter: 0.055, segments: 10 }, scene);
       bang.material = hairMat;
       bang.parent = faceRoot;
-      bang.position.set(side * 0.08, 0.07, 0.08);
-      bang.scaling.set(0.7, 0.55, 0.5);
+      bang.position.set(side * 0.055, 0.055, 0.055);
+      bang.scaling.set(0.65, 0.45, 0.45);
       bang.isPickable = false;
     }
 
     for (const side of [-1, 1]) {
-      const lock = BABYLON.MeshBuilder.CreateSphere(`face-lock-${side}`, { diameter: 0.11, segments: 12 }, scene);
-      lock.material = hairMat;
-      lock.parent = faceRoot;
-      lock.position.set(side * 0.11, -0.02, -0.02);
-      lock.scaling.set(0.6, 1.6, 0.7);
-      lock.isPickable = false;
-    }
-
-    const pony = BABYLON.MeshBuilder.CreateSphere("face-pony", { diameter: 0.12, segments: 12 }, scene);
-    pony.material = hairMat;
-    pony.parent = faceRoot;
-    pony.position.set(0, -0.05, -0.14);
-    pony.scaling.set(0.7, 1.8, 0.8);
-    pony.isPickable = false;
-
-    for (const side of [-1, 1]) {
-      const ear = BABYLON.MeshBuilder.CreateSphere(`face-ear-${side}`, { diameter: 0.048, segments: 10 }, scene);
+      const ear = BABYLON.MeshBuilder.CreateSphere(`face-ear-${side}`, { diameter: 0.032, segments: 8 }, scene);
       ear.material = skinMat;
       ear.parent = faceRoot;
-      ear.position.set(side * 0.12, 0.01, 0);
-      ear.scaling.set(0.4, 0.95, 0.65);
+      ear.position.set(side * 0.085, 0.008, -0.01);
+      ear.scaling.set(0.35, 0.9, 0.55);
       ear.isPickable = false;
     }
 
     if (headBone && skinnedMesh) {
       faceRoot.attachToBone(headBone, skinnedMesh);
-      // Push forward out of the green tunic hood cavity
-      faceRoot.position.set(0, 0.1, 0.12);
-      faceRoot.rotation.set(-0.05, 0, 0);
-      faceRoot.scaling.setAll(1.35);
-      console.info(`[Tora Face] Yüz '${headBone.name}' kemiğine bağlandı (hood önü).`);
+      // Nested into the hood cavity — small and forward enough to read
+      faceRoot.position.set(0, 0.02, 0.06);
+      faceRoot.rotation.set(-0.08, 0, 0);
+      faceRoot.scaling.setAll(0.78);
+      console.info(`[Tora Face] Küçük yüz '${headBone.name}' içinde, kapüşona oturtuldu.`);
     } else {
       faceRoot.parent = root;
-      faceRoot.position.set(0, 1.58, 0.12);
+      faceRoot.position.set(0, 1.55, 0.08);
+      faceRoot.scaling.setAll(0.78);
       console.warn("[Tora Face] Head kemiği yok; yüz köke sabitlendi.");
     }
     return faceRoot;
   }
 
-  static #hideHood(root) {
+  static #softenHoodFacePlate(root) {
     const visit = (node) => {
       const name = (node.name || "").toLowerCase();
-      if (name.includes("hood") || name.includes("helmet") || name.includes("mask") || name.includes("head_hood")) {
+      // Only hide flat painted face plates / masks — keep the hood cloth
+      if (name.includes("face_plate") || name.includes("faceplate") || (name.includes("mask") && !name.includes("hood"))) {
         if (typeof node.setEnabled === "function") node.setEnabled(false);
         if ("isVisible" in node) node.isVisible = false;
         if ("visibility" in node) node.visibility = 0;
-        console.info(`[Tora Face] Hood gizlendi: ${node.name}`);
       }
       (node.getChildren?.() || []).forEach(visit);
     };
     visit(root);
-    root.getChildMeshes?.(false)?.forEach((mesh) => {
-      const name = (mesh.name || "").toLowerCase();
-      if (name.includes("hood") || name.includes("helmet") || name.includes("head_hood")) {
-        mesh.setEnabled(false);
-        mesh.isVisible = false;
-        mesh.visibility = 0;
-      }
-    });
   }
 
   static #eye(scene, parent, side) {
     const whiteMat = new BABYLON.StandardMaterial(`face-sclera-${side}`, scene);
     whiteMat.disableLighting = true;
-    whiteMat.emissiveColor = new BABYLON.Color3(0.95, 0.95, 0.97);
+    whiteMat.emissiveColor = new BABYLON.Color3(0.96, 0.96, 0.98);
     whiteMat.diffuseColor = whiteMat.emissiveColor;
-    const sclera = BABYLON.MeshBuilder.CreateSphere(`face-sclera-${side}`, { diameter: 0.038, segments: 14 }, scene);
+    const sclera = BABYLON.MeshBuilder.CreateSphere(`face-sclera-${side}`, { diameter: 0.028, segments: 14 }, scene);
     sclera.material = whiteMat;
     sclera.parent = parent;
-    sclera.position.set(side * 0.042, 0.034, 0.152);
-    sclera.scaling.set(1.05, 0.78, 0.55);
+    sclera.position.set(side * 0.03, 0.024, 0.11);
+    sclera.scaling.set(1.05, 0.72, 0.5);
     sclera.isPickable = false;
 
     const irisMat = new BABYLON.StandardMaterial(`face-iris-${side}`, scene);
     irisMat.disableLighting = true;
-    irisMat.emissiveColor = new BABYLON.Color3(0.15, 0.48, 0.62);
+    irisMat.emissiveColor = new BABYLON.Color3(0.22, 0.42, 0.38);
     irisMat.diffuseColor = irisMat.emissiveColor;
-    const iris = BABYLON.MeshBuilder.CreateSphere(`face-iris-${side}`, { diameter: 0.024, segments: 12 }, scene);
+    const iris = BABYLON.MeshBuilder.CreateSphere(`face-iris-${side}`, { diameter: 0.016, segments: 12 }, scene);
     iris.material = irisMat;
     iris.parent = parent;
-    iris.position.set(side * 0.042, 0.034, 0.168);
-    iris.scaling.set(1, 1, 0.5);
+    iris.position.set(side * 0.03, 0.024, 0.122);
+    iris.scaling.set(1, 1, 0.45);
     iris.isPickable = false;
 
     const pupilMat = new BABYLON.StandardMaterial(`face-pupil-${side}`, scene);
     pupilMat.disableLighting = true;
     pupilMat.emissiveColor = new BABYLON.Color3(0.02, 0.02, 0.03);
     pupilMat.diffuseColor = pupilMat.emissiveColor;
-    const pupil = BABYLON.MeshBuilder.CreateSphere(`face-pupil-${side}`, { diameter: 0.012, segments: 8 }, scene);
+    const pupil = BABYLON.MeshBuilder.CreateSphere(`face-pupil-${side}`, { diameter: 0.008, segments: 8 }, scene);
     pupil.material = pupilMat;
     pupil.parent = parent;
-    pupil.position.set(side * 0.042, 0.034, 0.175);
+    pupil.position.set(side * 0.03, 0.024, 0.128);
     pupil.isPickable = false;
 
     const hiMat = new BABYLON.StandardMaterial(`face-eye-hi-${side}`, scene);
     hiMat.disableLighting = true;
     hiMat.emissiveColor = BABYLON.Color3.White();
     hiMat.diffuseColor = BABYLON.Color3.White();
-    const hi = BABYLON.MeshBuilder.CreateSphere(`face-eye-hi-${side}`, { diameter: 0.006, segments: 6 }, scene);
+    const hi = BABYLON.MeshBuilder.CreateSphere(`face-eye-hi-${side}`, { diameter: 0.004, segments: 6 }, scene);
     hi.material = hiMat;
     hi.parent = parent;
-    hi.position.set(side * 0.036, 0.04, 0.178);
+    hi.position.set(side * 0.026, 0.028, 0.13);
     hi.isPickable = false;
   }
 }

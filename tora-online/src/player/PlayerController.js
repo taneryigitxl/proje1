@@ -1,9 +1,10 @@
-import { Entity } from "../entities/Entity.js?v=13";
+import { Entity } from "../entities/Entity.js?v=14";
 
 export class PlayerController extends Entity {
-  constructor(visual, input, navigation) {
-    super({ type: "player", name: "Tora Savaşçısı", level: 1, health: 140, mana: 100 });
+  constructor(visual, input, navigation, identity = {}) {
+    super({ type: "player", name: identity.username || "Tora Savaşçısı", level: 1, health: 140, mana: 100 });
     this.visual = visual; this.root = visual.root; this.input = input; this.navigation = navigation;
+    this.isAdmin = Boolean(identity.isAdmin);
     this.position = this.root.position; this.velocity = new BABYLON.Vector3(); this.destination = null; this.stopRange = .2;
     this.destinationTimer = 0; this.destinationStall = 0; this.previousDestinationDistance = Infinity;
     this.grounded = true; this.verticalVelocity = 0; this.landingTimer = 0; this.actionLocked = false;

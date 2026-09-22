@@ -1,20 +1,20 @@
-import { GAME_CONFIG, MOB_SPAWNS } from "./Config.js?v=13";
-import { AssetManager } from "./AssetManager.js?v=13";
-import { Navigation } from "../world/Navigation.js?v=13";
-import { TestMap } from "../world/TestMap.js?v=13";
-import { InputManager } from "../input/InputManager.js?v=13";
-import { CursorManager } from "../input/CursorManager.js?v=13";
-import { ThirdPersonCamera } from "../camera/ThirdPersonCamera.js?v=13";
-import { PlayerController } from "../player/PlayerController.js?v=13";
-import { PlayerAnimator } from "../player/PlayerAnimator.js?v=13";
-import { EntityManager } from "../entities/EntityManager.js?v=13";
-import { CombatSystem } from "../combat/CombatSystem.js?v=13";
-import { NetworkAdapter } from "../network/NetworkAdapter.js?v=13";
-import { HUD } from "../ui/HUD.js?v=13";
-import { ProgressionSystem } from "../progression/ProgressionSystem.js?v=13";
-import { StatsSystem } from "../progression/StatsSystem.js?v=13";
-import { InventorySystem } from "../progression/InventorySystem.js?v=13";
-import { LootSystem } from "../progression/LootSystem.js?v=13";
+import { GAME_CONFIG, MOB_SPAWNS } from "./Config.js?v=14";
+import { AssetManager } from "./AssetManager.js?v=14";
+import { Navigation } from "../world/Navigation.js?v=14";
+import { TestMap } from "../world/TestMap.js?v=14";
+import { InputManager } from "../input/InputManager.js?v=14";
+import { CursorManager } from "../input/CursorManager.js?v=14";
+import { ThirdPersonCamera } from "../camera/ThirdPersonCamera.js?v=14";
+import { PlayerController } from "../player/PlayerController.js?v=14";
+import { PlayerAnimator } from "../player/PlayerAnimator.js?v=14";
+import { EntityManager } from "../entities/EntityManager.js?v=14";
+import { CombatSystem } from "../combat/CombatSystem.js?v=14";
+import { NetworkAdapter } from "../network/NetworkAdapter.js?v=14";
+import { HUD } from "../ui/HUD.js?v=14";
+import { ProgressionSystem } from "../progression/ProgressionSystem.js?v=14";
+import { StatsSystem } from "../progression/StatsSystem.js?v=14";
+import { InventorySystem } from "../progression/InventorySystem.js?v=14";
+import { LootSystem } from "../progression/LootSystem.js?v=14";
 
 export class Game {
   constructor(runtime, onProgress = () => {}, onFatal = () => {}) {
@@ -32,6 +32,7 @@ export class Game {
     this.snapshotTimer = 0;
     this.lastTime = performance.now();
     this.pointerObserver = null;
+    this.identity = { username: "admin", isAdmin: true };
     this.renderFrame = () => {
       try { this.#frame(); }
       catch (error) {
@@ -44,8 +45,12 @@ export class Game {
     };
   }
 
-  async initialize() {
+  async initialize(identity = this.identity) {
     try {
+      this.identity = {
+        username: identity?.username || "admin",
+        isAdmin: identity?.isAdmin !== false,
+      };
       this.onProgress(28, "Yerel dünya oturumu açılıyor…");
       this.network = new NetworkAdapter();
       await this.network.connect();
@@ -69,7 +74,7 @@ export class Game {
 
       console.info("[Tora Startup] 6/10 Input ve kamera bağlanıyor.");
       this.input = new InputManager(this.canvas);
-      this.player = new PlayerController(visual, this.input, this.navigation);
+      this.player = new PlayerController(visual, this.input, this.navigation, this.identity);
       this.player.position.copyFrom(world.spawn);
       this.stats = new StatsSystem(this.player);
       this.inventory = new InventorySystem(this.player, this.stats);
@@ -83,13 +88,17 @@ export class Game {
         onDamage: (entity, result) => this.hud?.showDamage(entity, result),
         onKill: (mob) => this.#onMobDefeated(mob),
         onStatus: (message) => this.hud?.setStatus(message),
+        onActionStart: (skill) => this.player.visual?.weaponSheath?.markCombat(skill?.duration || 1.2),
       }, this.stats);
-      this.loot = new LootSystem(this.scene, this.inventory, (message) => this.hud?.setStatus(message));
+      this.loot = new LootSystem(this.scene, this.inventory, (message) => this.hud?.setStatus(message), this.navigation);
 
       console.info("[Tora Startup] 8/10 HUD ve cursor bağlanıyor.");
-      this.hud = new HUD(this.scene, this.engine, this.player, this.entities, this.combat.skills, this.progression, (slot) => this.#useSkill(slot), this.stats, this.inventory);
+      this.hud = new HUD(this.scene, this.engine, this.player, this.entities, this.combat.skills, this.progression, (slot) => this.#useSkill(slot), this.stats, this.inventory, {
+        onDropItem: (itemId) => this.#dropInventoryItem(itemId),
+      });
       this.cursor = new CursorManager(this.scene, this.canvas, this.player, this.entities);
       this.hud.setDebug(GAME_CONFIG.debug);
+      this.hud.applyIdentity(this.identity);
       this.map.addShadowCaster(this.player.root);
       this.entities.mobs.forEach((mob) => this.map.addShadowCaster(mob.root));
       this.#bindInput();
@@ -106,7 +115,6 @@ export class Game {
 
       this.onProgress(92, "Opsiyonel çevre ayrıntıları hazırlanıyor…");
       await this.map.buildOptional();
-      // Soft wait — DynamicTextures / alpha grass must not block world entry
       try {
         await Promise.race([
           this.scene.whenReadyAsync(),
@@ -125,6 +133,18 @@ export class Game {
       console.error("[Tora Startup] Game.initialize başarısız.", error);
       throw error;
     }
+  }
+
+  applyIdentity(identity) {
+    this.identity = {
+      username: identity?.username || this.identity.username,
+      isAdmin: identity?.isAdmin !== false,
+    };
+    if (this.player) {
+      this.player.name = this.identity.username;
+      this.player.isAdmin = this.identity.isAdmin;
+    }
+    this.hud?.applyIdentity(this.identity);
   }
 
   enter() {
@@ -181,6 +201,24 @@ export class Game {
     console.info("[Tora Startup] Başarısız/sonlandırılmış oyun instance kaynakları temizlendi.");
   }
 
+  #clearTarget() {
+    this.entities?.clear();
+    if (this.player) this.player.targetId = null;
+    this.combat?.playerCombat?.cancel?.();
+    this.cursor?.reset();
+  }
+
+  #dropInventoryItem(itemId) {
+    if (!itemId) return false;
+    const offset = new BABYLON.Vector3(
+      Math.sin(this.player.rotation) * 1.2,
+      0,
+      Math.cos(this.player.rotation) * 1.2,
+    );
+    const pos = this.player.position.add(offset);
+    return this.loot.spawnDrop(this.player, itemId, pos);
+  }
+
   #bindInput() {
     this.input.onEscape = () => {
       if (this.hud?.openPanel) {
@@ -199,6 +237,10 @@ export class Game {
       if (!this.running || this.paused) return;
       this.hud.togglePanel("stats");
     };
+    this.input.onClearTarget = () => {
+      if (!this.running || this.paused) return;
+      this.#clearTarget();
+    };
     this.pointerObserver = this.scene.onPointerObservable.add((info) => {
       if (!this.running || this.paused || info.type !== BABYLON.PointerEventTypes.POINTERDOWN || info.event.button !== 0) return;
       if (this.hud?.openPanel) this.hud.closePanels();
@@ -215,8 +257,14 @@ export class Game {
         }
         if (data.mob) {
           const mob = this.entities.getById(data.entityId);
-          this.entities.select(mob);
-          this.combat.basicAttack(mob, this.camera.forwardOnGround());
+          // Soft target: first click selects only — attack via skills / second click
+          if (this.entities.selected === mob) {
+            this.combat.basicAttack(mob, this.camera.forwardOnGround());
+          } else {
+            this.entities.select(mob);
+            this.player.targetId = mob?.id || null;
+            this.hud.setStatus(`${mob.name} hedef alındı — tekrar tıkla veya 1–9 ile saldır.`);
+          }
         } else if (data.npc) {
           this.hud.addChat("Demirci Ayame", "İksir için örse dokun. 3 Kurt Dişi getirirsen Demir Kılıç veririm.");
           this.hud.setStatus("Demirci: örse tıkla.");
@@ -229,9 +277,10 @@ export class Game {
       }
       const groundPick = this.scene.pick(this.scene.pointerX, this.scene.pointerY, (mesh) => Boolean(mesh.metadata?.ground));
       if (groundPick?.hit) {
-        this.entities.clear();
-        this.player.targetId = null;
+        this.#clearTarget();
         this.player.setDestination(groundPick.pickedPoint, .18);
+      } else {
+        this.#clearTarget();
       }
     });
   }
@@ -299,6 +348,7 @@ export class Game {
       this.player.update(dt, this.camera);
       this.animator.setState(this.player.state);
       this.animator.update(dt, this.player.speedRatio);
+      this.player.visual?.weaponSheath?.update(dt, this.player.state);
       this.camera.update(dt);
       this.map.update(dt, this.camera.camera, this.engine.getFps());
       this.entities.update(dt, this.player);
