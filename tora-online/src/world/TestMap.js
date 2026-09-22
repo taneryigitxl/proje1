@@ -1,5 +1,5 @@
 // GrassSystem disabled — square blade patches removed
-// import { GrassSystem } from "./GrassSystem.js?v=23";
+// import { GrassSystem } from "./GrassSystem.js?v=24";
 
 /**
  * Dark medieval MMORPG test valley — Metin2-inspired atmosphere without rewriting gameplay systems.
@@ -289,21 +289,28 @@ export class TestMap {
         const sum = grass + dirt + path + rock + 0.001;
         grass /= sum; dirt /= sum; path /= sum; rock /= sum;
 
-        // Readable dusk colors (no gray)
-        const gR = 70 + n * 40, gG = 130 + n * 50, gB = 45 + n * 25;
-        const dR = 140 + n * 30, dG = 100 + n * 20, dB = 55 + n * 15;
-        const pR = 160 + n * 25, pG = 120 + n * 18, pB = 70 + n * 12;
-        const rR = 110 + n * 25, rG = 105 + n * 20, rB = 95 + n * 15;
+        const speck = noise(px * 0.7, py * 0.7);
+
+        // Readable dusk colors with stronger local variation (avoid flat olive slab)
+        const gR = 55 + n * 55 + speck * 30, gG = 110 + n * 70 + speck * 25, gB = 35 + n * 35;
+        const dR = 130 + n * 45, dG = 95 + n * 30, dB = 50 + n * 20;
+        const pR = 155 + n * 35, pG = 115 + n * 25, pB = 65 + n * 18;
+        const rR = 100 + n * 35, rG = 95 + n * 30, rB = 85 + n * 25;
 
         let r = gR * grass + dR * dirt + pR * path + rR * rock;
         let g = gG * grass + dG * dirt + pG * path + rG * rock;
         let b = gB * grass + dB * dirt + pB * path + rB * rock;
 
-        // Fine litter
-        const speck = noise(px * 0.7, py * 0.7);
-        r = BABYLON.Scalar.Clamp(r + (speck - 0.5) * 18, 0, 255);
-        g = BABYLON.Scalar.Clamp(g + (speck - 0.5) * 18, 0, 255);
-        b = BABYLON.Scalar.Clamp(b + (speck - 0.5) * 14, 0, 255);
+        // Blade-stroke / pebble micro-detail so ground never reads as solid fill
+        const micro = noise(px * 2.3, py * 2.1);
+        const stroke = noise(px * 0.15 + py * 0.02, py * 0.15);
+        if (grass > 0.4 && stroke > 0.62) {
+          g = Math.min(255, g + 28);
+          r = Math.max(0, r - 8);
+        }
+        r = BABYLON.Scalar.Clamp(r + (micro - 0.5) * 28, 0, 255);
+        g = BABYLON.Scalar.Clamp(g + (micro - 0.5) * 32, 0, 255);
+        b = BABYLON.Scalar.Clamp(b + (micro - 0.5) * 18, 0, 255);
 
         const i = (py * size + px) * 4;
         data[i] = r | 0;

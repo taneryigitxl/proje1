@@ -19,9 +19,9 @@ export class CharacterFace {
     skinMat.diffuseTexture = faceTex;
     skinMat.emissiveTexture = faceTex;
     skinMat.diffuseColor = new BABYLON.Color3(1.05, 0.98, 0.94);
-    skinMat.emissiveColor = new BABYLON.Color3(0.32, 0.22, 0.18);
-    skinMat.specularColor = new BABYLON.Color3(0.18, 0.12, 0.1);
-    skinMat.ambientColor = new BABYLON.Color3(0.55, 0.42, 0.36);
+    skinMat.emissiveColor = new BABYLON.Color3(0.45, 0.32, 0.26);
+    skinMat.specularColor = new BABYLON.Color3(0.12, 0.08, 0.06);
+    skinMat.ambientColor = new BABYLON.Color3(0.6, 0.48, 0.4);
 
     const head = BABYLON.MeshBuilder.CreateSphere("face-head", { diameter: 0.3, segments: 32 }, scene);
     head.material = skinMat;
@@ -140,9 +140,10 @@ export class CharacterFace {
 
     if (headBone && skinnedMesh) {
       faceRoot.attachToBone(headBone, skinnedMesh);
-      faceRoot.position.set(0, 0.1, 0.08);
-      faceRoot.rotation.set(0.05, 0, 0);
-      faceRoot.scaling.setAll(1.18);
+      // Push out of any remaining head/skin cavity; face features sit on +Z
+      faceRoot.position.set(0, 0.06, 0.14);
+      faceRoot.rotation.set(-0.08, 0, 0);
+      faceRoot.scaling.setAll(1.35);
       console.info(`[Tora Face] Boyalı yüz '${headBone.name}' kemiğine bağlandı (hood mesh gizlendi).`);
     } else {
       faceRoot.parent = root;

@@ -1,5 +1,5 @@
-import { SkillSystem } from "./SkillSystem.js?v=23";
-import { PlayerCombat } from "../player/PlayerCombat.js?v=23";
+import { SkillSystem } from "./SkillSystem.js?v=24";
+import { PlayerCombat } from "../player/PlayerCombat.js?v=24";
 
 export class CombatSystem {
   constructor(scene, player, animator, entities, callbacks = {}, stats = null) {
