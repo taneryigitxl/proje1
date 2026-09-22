@@ -140,10 +140,10 @@ export class CharacterFace {
 
     if (headBone && skinnedMesh) {
       faceRoot.attachToBone(headBone, skinnedMesh);
-      // Push out of any remaining head/skin cavity; face features sit on +Z
-      faceRoot.position.set(0, 0.06, 0.14);
-      faceRoot.rotation.set(-0.08, 0, 0);
-      faceRoot.scaling.setAll(1.35);
+      // Seat face in the hood cavity opening; features face local +Z
+      faceRoot.position.set(0, 0.08, 0.1);
+      faceRoot.rotation.set(0.02, 0, 0);
+      faceRoot.scaling.setAll(1.15);
       console.info(`[Tora Face] Boyalı yüz '${headBone.name}' kemiğine bağlandı (hood mesh gizlendi).`);
     } else {
       faceRoot.parent = root;
@@ -261,42 +261,46 @@ export class CharacterFace {
 
   static #eye(scene, parent, side) {
     const whiteMat = new BABYLON.StandardMaterial(`face-sclera-${side}`, scene);
-    whiteMat.diffuseColor = new BABYLON.Color3(0.98, 0.98, 1);
-    whiteMat.emissiveColor = new BABYLON.Color3(0.4, 0.4, 0.45);
-    whiteMat.specularColor = new BABYLON.Color3(0.5, 0.5, 0.55);
-    const sclera = BABYLON.MeshBuilder.CreateSphere(`face-sclera-${side}`, { diameter: 0.05, segments: 14 }, scene);
+    whiteMat.disableLighting = true;
+    whiteMat.emissiveColor = new BABYLON.Color3(0.95, 0.95, 1);
+    whiteMat.diffuseColor = whiteMat.emissiveColor;
+    whiteMat.specularColor = BABYLON.Color3.Black();
+    const sclera = BABYLON.MeshBuilder.CreateSphere(`face-sclera-${side}`, { diameter: 0.058, segments: 14 }, scene);
     sclera.material = whiteMat;
     sclera.parent = parent;
-    sclera.position.set(side * 0.048, 0.032, 0.142);
-    sclera.scaling.set(1.15, 0.85, 0.7);
+    sclera.position.set(side * 0.052, 0.034, 0.148);
+    sclera.scaling.set(1.2, 0.9, 0.75);
     sclera.isPickable = false;
 
     const irisMat = new BABYLON.StandardMaterial(`face-iris-${side}`, scene);
-    irisMat.diffuseColor = new BABYLON.Color3(0.25, 0.55, 0.65);
-    irisMat.emissiveColor = new BABYLON.Color3(0.12, 0.22, 0.26);
-    const iris = BABYLON.MeshBuilder.CreateSphere(`face-iris-${side}`, { diameter: 0.028, segments: 12 }, scene);
+    irisMat.disableLighting = true;
+    irisMat.emissiveColor = new BABYLON.Color3(0.2, 0.55, 0.7);
+    irisMat.diffuseColor = irisMat.emissiveColor;
+    const iris = BABYLON.MeshBuilder.CreateSphere(`face-iris-${side}`, { diameter: 0.034, segments: 12 }, scene);
     iris.material = irisMat;
     iris.parent = parent;
-    iris.position.set(side * 0.048, 0.032, 0.16);
+    iris.position.set(side * 0.052, 0.034, 0.17);
     iris.scaling.set(1, 1, 0.55);
     iris.isPickable = false;
 
     const pupilMat = new BABYLON.StandardMaterial(`face-pupil-${side}`, scene);
-    pupilMat.diffuseColor = BABYLON.Color3.Black();
+    pupilMat.disableLighting = true;
     pupilMat.emissiveColor = new BABYLON.Color3(0.02, 0.02, 0.02);
-    const pupil = BABYLON.MeshBuilder.CreateSphere(`face-pupil-${side}`, { diameter: 0.014, segments: 8 }, scene);
+    pupilMat.diffuseColor = pupilMat.emissiveColor;
+    const pupil = BABYLON.MeshBuilder.CreateSphere(`face-pupil-${side}`, { diameter: 0.016, segments: 8 }, scene);
     pupil.material = pupilMat;
     pupil.parent = parent;
-    pupil.position.set(side * 0.048, 0.032, 0.168);
+    pupil.position.set(side * 0.052, 0.034, 0.178);
     pupil.isPickable = false;
 
     const hiMat = new BABYLON.StandardMaterial(`face-eye-hi-${side}`, scene);
-    hiMat.diffuseColor = BABYLON.Color3.White();
+    hiMat.disableLighting = true;
     hiMat.emissiveColor = BABYLON.Color3.White();
-    const hi = BABYLON.MeshBuilder.CreateSphere(`face-eye-hi-${side}`, { diameter: 0.008, segments: 6 }, scene);
+    hiMat.diffuseColor = BABYLON.Color3.White();
+    const hi = BABYLON.MeshBuilder.CreateSphere(`face-eye-hi-${side}`, { diameter: 0.009, segments: 6 }, scene);
     hi.material = hiMat;
     hi.parent = parent;
-    hi.position.set(side * 0.042, 0.038, 0.172);
+    hi.position.set(side * 0.045, 0.042, 0.182);
     hi.isPickable = false;
   }
 }

@@ -1,5 +1,5 @@
 // GrassSystem disabled — square blade patches removed
-// import { GrassSystem } from "./GrassSystem.js?v=24";
+// import { GrassSystem } from "./GrassSystem.js?v=25";
 
 /**
  * Dark medieval MMORPG test valley — Metin2-inspired atmosphere without rewriting gameplay systems.
@@ -185,8 +185,8 @@ export class TestMap {
         const px = (x / steps) * size - size / 2;
         const pz = (z / steps) * size - size / 2;
         positions.push(px, this.heightAt(px, pz), pz);
-        // World-space UVs — one continuous atlas, no chunk seams
-        uvs.push(x / steps, z / steps);
+        // World tiling — continuous across the heightfield, no chunk seams
+        uvs.push(px * 0.12 + 40, pz * 0.12 + 40);
       }
     }
     for (let z = 0; z < steps; z++) {
@@ -206,127 +206,26 @@ export class TestMap {
     data.normals = normals;
     data.uvs = uvs;
     data.applyToMesh(ground);
-    // Single continuous biome paint — no ribbon patches (those created gray/green rectangles)
-    ground.material = this.#worldTerrainMaterial();
+    // Real forest albedo across the whole playable map — no gray slabs, no ribbon squares
+    ground.material = this.#terrainMaterial("terrain-world", "forest", new BABYLON.Color3(0.42, 0.68, 0.28), false);
+    if (ground.material?.diffuseTexture) {
+      ground.material.diffuseTexture.uScale = 14;
+      ground.material.diffuseTexture.vScale = 14;
+      ground.material.diffuseTexture.level = 1.6;
+    }
+    if (ground.material) {
+      ground.material.diffuseColor = new BABYLON.Color3(1.15, 1.35, 0.95);
+      ground.material.emissiveColor = new BABYLON.Color3(0.08, 0.12, 0.05);
+      ground.material.ambientColor = new BABYLON.Color3(0.55, 0.6, 0.48);
+    }
     ground.receiveShadows = true;
     ground.checkCollisions = true;
     ground.isPickable = true;
     ground.metadata = { ground: true, cursor: "move" };
   }
 
-  /** Full-map DynamicTexture: grass / dirt / path / rock via noise + road distance. */
-  #worldTerrainMaterial() {
-    const material = new BABYLON.StandardMaterial("terrain-world", this.scene);
-    material.disableLighting = false;
-    material.diffuseColor = BABYLON.Color3.White();
-    material.ambientColor = new BABYLON.Color3(0.55, 0.58, 0.48);
-    material.specularColor = BABYLON.Color3.Black();
-    material.emissiveColor = new BABYLON.Color3(0.06, 0.09, 0.04);
-    material.diffuseTexture = this.#paintWorldBiome(1024);
-    material.diffuseTexture.level = 1.25;
-    material.diffuseTexture.wrapU = BABYLON.Texture.CLAMP_ADDRESSMODE;
-    material.diffuseTexture.wrapV = BABYLON.Texture.CLAMP_ADDRESSMODE;
-    return material;
-  }
-
-  #paintWorldBiome(size) {
-    const tex = new BABYLON.DynamicTexture("terrain-world-paint", { width: size, height: size }, this.scene, false);
-    const ctx = tex.getContext();
-    const half = 40; // mapHalfSize-ish world units
-    const roadDist = (wx, wz) => {
-      const roadIndex = (wz + 35) / 2.65;
-      if (roadIndex < 0 || roadIndex > 28) return 99;
-      const roadX = Math.sin(roadIndex * 0.4) * 2.35;
-      return Math.abs(wx - roadX);
-    };
-    const noise = (x, y) => {
-      const n = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
-      return n - Math.floor(n);
-    };
-    const fbm = (x, y) => {
-      let v = 0, a = 0.5, f = 1;
-      for (let i = 0; i < 4; i++) {
-        v += a * noise(x * f, y * f);
-        f *= 2.05;
-        a *= 0.5;
-      }
-      return v;
-    };
-
-    const img = ctx.createImageData(size, size);
-    const data = img.data;
-    for (let py = 0; py < size; py++) {
-      for (let px = 0; px < size; px++) {
-        const wx = (px / (size - 1)) * (half * 2) - half;
-        const wz = (py / (size - 1)) * (half * 2) - half;
-        const n = fbm(wx * 0.08, wz * 0.08);
-        const edge = Math.max(Math.abs(wx), Math.abs(wz));
-        const rd = roadDist(wx, wz);
-        const streamIndex = (wx + 28) / 2.4;
-        const streamZ = 6 + Math.sin(streamIndex * 0.46) * 3.4;
-        const streamD = (streamIndex >= 0 && streamIndex <= 25) ? Math.abs(wz - streamZ) : 99;
-        const village = (wx > -25 && wx < -5 && wz > -22 && wz < -6);
-        const camp = Math.hypot(wx, wz - 17) < 11;
-
-        // biome weights — soft, no hard rectangles
-        let grass = 0.55 + n * 0.45;
-        let dirt = 0.15 + (1 - n) * 0.25;
-        let path = 0;
-        let rock = edge > 28 ? BABYLON.Scalar.Clamp((edge - 28) / 8, 0, 1) : 0;
-
-        if (rd < 5.5) path = BABYLON.Scalar.Clamp(1 - rd / 5.5, 0, 1);
-        if (streamD < 3.2) dirt = Math.max(dirt, BABYLON.Scalar.Clamp(1 - streamD / 3.2, 0, 1) * 0.9);
-        if (village || camp) {
-          dirt = Math.max(dirt, 0.7);
-          grass *= 0.35;
-        }
-        if (path > 0) {
-          grass *= 1 - path;
-          dirt = Math.max(dirt, path * 0.85);
-        }
-        grass *= 1 - rock * 0.85;
-
-        const sum = grass + dirt + path + rock + 0.001;
-        grass /= sum; dirt /= sum; path /= sum; rock /= sum;
-
-        const speck = noise(px * 0.7, py * 0.7);
-
-        // Readable dusk colors with stronger local variation (avoid flat olive slab)
-        const gR = 55 + n * 55 + speck * 30, gG = 110 + n * 70 + speck * 25, gB = 35 + n * 35;
-        const dR = 130 + n * 45, dG = 95 + n * 30, dB = 50 + n * 20;
-        const pR = 155 + n * 35, pG = 115 + n * 25, pB = 65 + n * 18;
-        const rR = 100 + n * 35, rG = 95 + n * 30, rB = 85 + n * 25;
-
-        let r = gR * grass + dR * dirt + pR * path + rR * rock;
-        let g = gG * grass + dG * dirt + pG * path + rG * rock;
-        let b = gB * grass + dB * dirt + pB * path + rB * rock;
-
-        // Blade-stroke / pebble micro-detail so ground never reads as solid fill
-        const micro = noise(px * 2.3, py * 2.1);
-        const stroke = noise(px * 0.15 + py * 0.02, py * 0.15);
-        if (grass > 0.4 && stroke > 0.62) {
-          g = Math.min(255, g + 28);
-          r = Math.max(0, r - 8);
-        }
-        r = BABYLON.Scalar.Clamp(r + (micro - 0.5) * 28, 0, 255);
-        g = BABYLON.Scalar.Clamp(g + (micro - 0.5) * 32, 0, 255);
-        b = BABYLON.Scalar.Clamp(b + (micro - 0.5) * 18, 0, 255);
-
-        const i = (py * size + px) * 4;
-        data[i] = r | 0;
-        data[i + 1] = g | 0;
-        data[i + 2] = b | 0;
-        data[i + 3] = 255;
-      }
-    }
-    ctx.putImageData(img, 0, 0);
-    tex.update();
-    console.info("[Tora Terrain] Dünya biome boyaması uygulandı (tek sürekli material).");
-    return tex;
-  }
-
   #path() {
-    // Soft dirt road only — alpha-faded so no hard rectangular cut into the biome paint
+    // Soft dirt road only — alpha-faded into the forest ground
     const points = Array.from({ length: 28 }, (_, i) => new BABYLON.Vector3(Math.sin(i * 0.4) * 2.35, 0, -35 + i * 2.65));
     const path = this.#ribbon("village-road", points, 7.2, 9, [0, 0.12, 0.35, 0.65, 0.85, 0.65, 0.35, 0.12, 0], 0.04);
     path.material = this.#terrainMaterial("terrain-mud", "mud", new BABYLON.Color3(0.55, 0.4, 0.24), true);

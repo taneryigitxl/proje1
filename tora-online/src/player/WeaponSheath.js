@@ -31,9 +31,9 @@ export class WeaponSheath {
     this.weaponRoot.attachToBone(this.backBone, this.skinnedMesh);
     // spine_02 local: keep blade in the back plane (small |Z|), diagonal across torso
     // Verified against female-ranger + greatsword (+Y blade axis)
-    this.weaponRoot.position.set(-0.06, 0.18, -0.08);
-    this.weaponRoot.rotation.set(0.25, 1.2, -0.65);
-    this.weaponRoot.scaling.setAll((this.handPose.scale || 1.32) * 0.88);
+    this.weaponRoot.position.set(-0.05, 0.16, -0.05);
+    this.weaponRoot.rotation.set(0.2, 1.15, -0.55);
+    this.weaponRoot.scaling.setAll((this.handPose.scale || 1.32) * 0.86);
     this.sheathed = true;
   }
 
