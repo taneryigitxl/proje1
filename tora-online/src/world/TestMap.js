@@ -1,5 +1,5 @@
 // GrassSystem disabled — square blade patches removed
-// import { GrassSystem } from "./GrassSystem.js?v=27";
+// import { GrassSystem } from "./GrassSystem.js?v=28";
 
 /**
  * Dark medieval MMORPG test valley — Metin2-inspired atmosphere without rewriting gameplay systems.
@@ -375,15 +375,15 @@ export class TestMap {
       return `rgb(${r},${g},${b})`;
     };
     // Brighter base so ground never reads gray/black under dusk lighting
-    ctx.fillStyle = toHex(baseColor, 0.1);
+    ctx.fillStyle = toHex(baseColor, 0.18);
     ctx.fillRect(0, 0, size, size);
-    for (let i = 0; i < 80; i++) {
+    for (let i = 0; i < 100; i++) {
       const x = Math.random() * size;
       const y = Math.random() * size;
-      const radius = 28 + Math.random() * 90;
+      const radius = 30 + Math.random() * 100;
       const patch = ctx.createRadialGradient(x, y, 2, x, y, radius);
       if (kind === "grass") {
-        patch.addColorStop(0, Math.random() > 0.5 ? "rgba(110, 185, 65, 0.55)" : "rgba(55, 120, 40, 0.45)");
+        patch.addColorStop(0, Math.random() > 0.5 ? "rgba(130, 210, 75, 0.7)" : "rgba(60, 140, 45, 0.55)");
         patch.addColorStop(1, "rgba(0,0,0,0)");
       } else if (kind === "rock") {
         patch.addColorStop(0, Math.random() > 0.5 ? "rgba(120, 115, 100, 0.5)" : "rgba(75, 70, 60, 0.45)");
@@ -397,24 +397,24 @@ export class TestMap {
       ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.fill();
     }
-    for (let i = 0; i < 3000; i++) {
-      const a = 0.07 + Math.random() * 0.2;
+    for (let i = 0; i < 3600; i++) {
+      const a = 0.1 + Math.random() * 0.28;
       ctx.fillStyle = kind === "grass"
-        ? `rgba(${55 + Math.random() * 70}, ${110 + Math.random() * 90}, ${30 + Math.random() * 40}, ${a})`
+        ? `rgba(${60 + Math.random() * 80}, ${130 + Math.random() * 100}, ${35 + Math.random() * 45}, ${a})`
         : kind === "rock"
           ? `rgba(${90 + Math.random() * 55}, ${85 + Math.random() * 45}, ${70 + Math.random() * 35}, ${a})`
           : `rgba(${120 + Math.random() * 70}, ${85 + Math.random() * 45}, ${45 + Math.random() * 30}, ${a})`;
-      ctx.fillRect(Math.random() * size, Math.random() * size, 1 + Math.random() * 2, 1 + Math.random() * 2);
+      ctx.fillRect(Math.random() * size, Math.random() * size, 1 + Math.random() * 3, 1 + Math.random() * 3);
     }
     if (kind === "grass") {
-      ctx.strokeStyle = "rgba(90, 170, 55, 0.3)";
-      ctx.lineWidth = 1.2;
-      for (let i = 0; i < 500; i++) {
+      ctx.strokeStyle = "rgba(100, 190, 60, 0.45)";
+      ctx.lineWidth = 1.4;
+      for (let i = 0; i < 700; i++) {
         const x = Math.random() * size;
         const y = Math.random() * size;
         ctx.beginPath();
         ctx.moveTo(x, y);
-        ctx.lineTo(x + (Math.random() - 0.5) * 5, y - 5 - Math.random() * 10);
+        ctx.lineTo(x + (Math.random() - 0.5) * 6, y - 6 - Math.random() * 12);
         ctx.stroke();
       }
     } else {

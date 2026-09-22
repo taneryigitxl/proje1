@@ -1,4 +1,4 @@
-import { Entity } from "../entities/Entity.js?v=27";
+import { Entity } from "../entities/Entity.js?v=28";
 
 export class PlayerController extends Entity {
   constructor(visual, input, navigation, identity = {}) {
