@@ -12,6 +12,8 @@ import { CombatSystem } from "../combat/CombatSystem.js";
 import { NetworkAdapter } from "../network/NetworkAdapter.js";
 import { HUD } from "../ui/HUD.js";
 import { ProgressionSystem } from "../progression/ProgressionSystem.js";
+import { StatsSystem } from "../progression/StatsSystem.js";
+import { InventorySystem } from "../progression/InventorySystem.js";
 
 export class Game {
   constructor(runtime, onProgress = () => {}, onFatal = () => {}) {
@@ -68,7 +70,9 @@ export class Game {
       this.input = new InputManager(this.canvas);
       this.player = new PlayerController(visual, this.input, this.navigation);
       this.player.position.copyFrom(world.spawn);
-      this.progression = new ProgressionSystem(this.player);
+      this.stats = new StatsSystem(this.player);
+      this.inventory = new InventorySystem(this.player, this.stats);
+      this.progression = new ProgressionSystem(this.player, this.stats);
       this.camera = new ThirdPersonCamera(this.scene, this.canvas, this.player, GAME_CONFIG.camera);
 
       console.info("[Tora Startup] 7/10 Animasyon ve combat hazırlanıyor.");
@@ -78,10 +82,10 @@ export class Game {
         onDamage: (entity, result) => this.hud?.showDamage(entity, result),
         onKill: (mob) => this.#onMobDefeated(mob),
         onStatus: (message) => this.hud?.setStatus(message),
-      });
+      }, this.stats);
 
       console.info("[Tora Startup] 8/10 HUD ve cursor bağlanıyor.");
-      this.hud = new HUD(this.scene, this.engine, this.player, this.entities, this.combat.skills, this.progression, (slot) => this.#useSkill(slot));
+      this.hud = new HUD(this.scene, this.engine, this.player, this.entities, this.combat.skills, this.progression, (slot) => this.#useSkill(slot), this.stats, this.inventory);
       this.cursor = new CursorManager(this.scene, this.canvas, this.player, this.entities);
       this.hud.setDebug(GAME_CONFIG.debug);
       this.map.addShadowCaster(this.player.root);
@@ -131,6 +135,7 @@ export class Game {
     this.running = false;
     this.paused = false;
     if (this.input) { this.input.enabled = false; this.input.reset(); }
+    this.hud?.closePanels();
     this.hud?.show(false);
     document.getElementById("pause-menu").hidden = true;
   }
@@ -168,11 +173,26 @@ export class Game {
   }
 
   #bindInput() {
-    this.input.onEscape = () => this.togglePause();
+    this.input.onEscape = () => {
+      if (this.hud?.openPanel) {
+        this.hud.closePanels();
+        return;
+      }
+      this.togglePause();
+    };
     this.input.onTab = () => this.entities.cycle(this.player.position);
     this.input.onSkill = (slot) => this.#useSkill(slot);
+    this.input.onInventory = () => {
+      if (!this.running || this.paused) return;
+      this.hud.togglePanel("inventory");
+    };
+    this.input.onStats = () => {
+      if (!this.running || this.paused) return;
+      this.hud.togglePanel("stats");
+    };
     this.pointerObserver = this.scene.onPointerObservable.add((info) => {
       if (!this.running || this.paused || info.type !== BABYLON.PointerEventTypes.POINTERDOWN || info.event.button !== 0) return;
+      if (this.hud?.openPanel) this.hud.closePanels();
       const actionPick = this.scene.pick(this.scene.pointerX, this.scene.pointerY, (mesh) => Boolean(mesh.metadata?.mob || mesh.metadata?.npc || mesh.metadata?.loot || mesh.metadata?.interactive));
       if (actionPick?.hit) {
         const data = actionPick.pickedMesh.metadata;

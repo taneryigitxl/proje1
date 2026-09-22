@@ -7,6 +7,8 @@ export class InputManager {
     this.onEscape = null;
     this.onTab = null;
     this.onSkill = null;
+    this.onInventory = null;
+    this.onStats = null;
     this.enabled = true;
     this.onBlur = () => this.reset();
     this.onKeyDown = (event) => {
@@ -16,6 +18,8 @@ export class InputManager {
       this.keys.add(code); this.justPressed.add(code);
       if (code === "Escape") { event.preventDefault(); this.onEscape?.(); }
       if (code === "Tab") { event.preventDefault(); this.onTab?.(); }
+      if (code === "KeyI") { event.preventDefault(); this.onInventory?.(); }
+      if (code === "KeyC") { event.preventDefault(); this.onStats?.(); }
       if (/^Digit[1-9]$/.test(code)) this.onSkill?.(Number(code.slice(-1)));
       if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(code)) event.preventDefault();
     };

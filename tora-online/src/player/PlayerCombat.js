@@ -30,7 +30,7 @@ export class PlayerCombat {
     if(skill.action==="guard"){this.player.buffs.guard=6;this.callbacks.onStatus?.("Savaşçı Savunması aktif: alınan hasar azaldı.");}
     if(skill.action==="rage"){this.player.buffs.rage=8;this.callbacks.onStatus?.("Öfke aktif: saldırı ve hareket hızı arttı.");}
     const victims=skill.aoe?this.entities.inRadius(this.player.position,skill.range):(target?.alive&&skill.damage>0?[target]:[]);
-    for(const mob of victims){const damage=Math.round(skill.damage*(index>0?.75:1));const result=mob.takeHit(this.player,damage);if(result){this.callbacks.onDamage?.(mob,result,skill);if(!mob.alive)this.callbacks.onKill?.(mob,skill);}}
+    for(const mob of victims){const damage=Math.round(skill.damage*(index>0?.75:1));const result=mob.takeHit(this.player,damage,this.callbacks.stats||null);if(result){this.callbacks.onDamage?.(mob,result,skill);if(!mob.alive)this.callbacks.onKill?.(mob,skill);}}
     const impactTarget=skill.target==="enemy"||skill.action==="dash"?target?.position:null;
     this.callbacks.onImpact?.(skill,this.player.position,impactTarget);
   }

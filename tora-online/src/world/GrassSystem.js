@@ -112,8 +112,8 @@ export class GrassSystem {
     if (index <= 0) { this.lowFpsTime = 0; return; }
     const next = QUALITY_ORDER[index - 1];
     const fallback = next === "low"
-      ? { ...this.profile, grass: 90, grassDistance: 22 }
-      : { ...this.profile, grass: 210, grassDistance: 28 };
+      ? { ...this.profile, grass: 70, grassDistance: 18 }
+      : { ...this.profile, grass: 150, grassDistance: 24 };
     console.warn(`[Tora Online] Sürekli düşük FPS: çim yoğunluğu ${this.quality} → ${next}.`);
     this.applyQuality(fallback, next, true);
   }

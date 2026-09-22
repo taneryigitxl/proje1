@@ -110,14 +110,14 @@ export class TestMap {
     BABYLON.VertexData.ComputeNormals(positions, indices, normals);
     const ground = new BABYLON.Mesh("tora-heightfield", this.scene);
     const data = new BABYLON.VertexData(); data.positions = positions; data.indices = indices; data.normals = normals; data.uvs = uvs; data.applyToMesh(ground);
-    ground.material = this.#pbr("terrain-forest", this.assets.manifest.terrain.forest, 1);
+    ground.material = this.#pbr("terrain-forest", this.assets.manifest.terrain.forest, 1, false, new BABYLON.Color3(0.22, 0.42, 0.18));
     ground.receiveShadows = true; ground.checkCollisions = true; ground.isPickable = true; ground.metadata = { ground: true, cursor: "move" };
   }
 
   #path() {
     const points = Array.from({ length: 25 }, (_, i) => new BABYLON.Vector3(Math.sin(i * .43) * 2.4, 0, -34 + i * 2.9));
     const path = this.#ribbon("village-road", points, 6.4, 5, [0, .62, 1, .62, 0], .045);
-    path.material = this.#pbr("terrain-mud", this.assets.manifest.terrain.mud, .96, true);
+    path.material = this.#pbr("terrain-mud", this.assets.manifest.terrain.mud, .96, true, new BABYLON.Color3(0.42, 0.32, 0.2));
     path.metadata = { ground: true, cursor: "move" }; path.isPickable = true; path.receiveShadows = true;
   }
 
@@ -149,13 +149,34 @@ export class TestMap {
     return mesh;
   }
 
-  #pbr(name, textures, roughness = 1, alphaBlend = false) {
+  #pbr(name, textures, roughness = 1, alphaBlend = false, fallbackColor = null) {
     const material = new BABYLON.PBRMaterial(name, this.scene);
-    material.albedoTexture = new BABYLON.Texture(textures.albedo, this.scene);
-    material.bumpTexture = new BABYLON.Texture(textures.normal, this.scene); material.bumpTexture.level = .7;
-    material.metallicTexture = new BABYLON.Texture(textures.roughness, this.scene);
-    material.useRoughnessFromMetallicTextureGreen = true; material.useMetallnessFromMetallicTextureBlue = false;
-    material.metallic = 0; material.roughness = roughness;
+    const color = fallbackColor || new BABYLON.Color3(0.35, 0.4, 0.32);
+    material.albedoColor = color;
+    material.metallic = 0;
+    material.roughness = roughness;
+    try {
+      const albedo = new BABYLON.Texture(textures.albedo, this.scene, false, true, undefined, () => {}, () => {
+        console.warn(`[Tora Terrain] Albedo yüklenemedi (${textures.albedo}); düz renk kullanılıyor.`);
+        material.albedoTexture = null;
+        material.albedoColor = color;
+      });
+      material.albedoTexture = albedo;
+      const bump = new BABYLON.Texture(textures.normal, this.scene, false, true, undefined, () => {}, () => {
+        material.bumpTexture = null;
+      });
+      material.bumpTexture = bump;
+      material.bumpTexture.level = .7;
+      const rough = new BABYLON.Texture(textures.roughness, this.scene, false, true, undefined, () => {}, () => {
+        material.metallicTexture = null;
+      });
+      material.metallicTexture = rough;
+      material.useRoughnessFromMetallicTextureGreen = true;
+      material.useMetallnessFromMetallicTextureBlue = false;
+    } catch (error) {
+      console.warn(`[Tora Terrain] PBR doku hatası (${name}); düz renk.`, error);
+      material.albedoColor = color;
+    }
     if (alphaBlend) { material.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND; material.useVertexAlpha = true; }
     return material;
   }
@@ -175,17 +196,17 @@ export class TestMap {
   }
 
   async #populateNature() {
-    const count = Math.round(24 * this.profile.lod), jobs = [];
+    const count = Math.round(16 * this.profile.lod), jobs = [];
     for (let i = 0; i < count; i++) {
       const angle = i * 2.399, radius = 20 + (i % 6) * 3.05, x = Math.cos(angle) * radius, z = Math.sin(angle) * radius;
-      jobs.push(this.#place(i % 3 ? "common-tree" : "pine", `tree-${i}`, x, z, angle, .78 + (i % 5) * .08, { obstacle: .72, shadow: this.profile.lod > .8 }));
+      jobs.push(this.#place(i % 3 ? "common-tree" : "pine", `tree-${i}`, x, z, angle, .78 + (i % 5) * .08, { obstacle: .72, shadow: i % 3 === 0 && this.profile.lod > .9 }));
     }
-    const groundDetail = Math.round(34 * this.profile.particles);
+    const groundDetail = Math.round(22 * this.profile.particles);
     for (let i = 0; i < groundDetail; i++) {
       const angle = i * 2.17, radius = 12 + (i % 9) * 2.45, x = Math.cos(angle) * radius, z = Math.sin(angle) * radius;
       jobs.push(this.#place(i % 2 ? "bush" : "fern", `foliage-${i}`, x, z, angle, .7 + (i % 4) * .13, { shadow: false }));
     }
-    for (let i = 0; i < Math.round(16 * this.profile.lod); i++) {
+    for (let i = 0; i < Math.round(12 * this.profile.lod); i++) {
       const angle = i * 2.73, radius = 15 + (i % 7) * 3.1, x = Math.cos(angle) * radius, z = Math.sin(angle) * radius;
       jobs.push(this.#place(i % 2 ? "rock-a" : "rock-b", `rock-${i}`, x, z, angle, .38 + (i % 3) * .12, { obstacle: .35, shadow: false }));
     }

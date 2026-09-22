@@ -8,11 +8,11 @@
     <title>Tora Online</title>
     <link rel="icon" type="image/svg+xml" href="assets/tora-symbol.svg" />
     <link rel="preload" href="assets/tora-symbol.svg" as="image" />
-    <link rel="stylesheet" href="styles.css?v=1" />
+    <link rel="stylesheet" href="styles.css?v=2" />
     <script src="vendor/babylon.js" defer></script>
     <script src="vendor/babylonjs.loaders.min.js" defer></script>
-    <script src="menu.js?v=1" defer></script>
-    <script type="module" src="src/main.js?v=2"></script>
+    <script src="menu.js?v=2" defer></script>
+    <script type="module" src="src/main.js?v=3"></script>
   </head>
   <body data-quality="medium">
     <canvas id="game-canvas" aria-label="Tora Online oyun alanı"></canvas>
@@ -26,27 +26,42 @@
         <h1 id="game-title">TORA <em>ONLINE</em></h1>
         <p class="game-description">Kadim Tora diyarına adım at. Kılıcını kuşan, yaratıklarla savaş ve kendi efsaneni yaz.</p>
         <div class="menu-card">
-          <button id="start-button" type="button"><span><small>YOLCULUK BAŞLIYOR</small>DÜNYAYA GİR</span><b aria-hidden="true">→</b></button>
+          <form id="login-form" class="login-form" autocomplete="on">
+            <label for="login-username"><span><small>HESAP</small>KULLANICI ADI</span><input id="login-username" name="username" type="text" maxlength="24" autocomplete="username" placeholder="admin" required /></label>
+            <label for="login-password"><span><small>GÜVENLİK</small>ŞİFRE</span><input id="login-password" name="password" type="password" maxlength="24" autocomplete="current-password" placeholder="••••" required /></label>
+            <button id="start-button" type="submit"><span><small>YOLCULUK BAŞLIYOR</small>DÜNYAYA GİR</span><b aria-hidden="true">→</b></button>
+          </form>
           <div class="menu-options">
             <label class="quality-setting" for="quality-select"><span><small>GÖRÜNTÜ</small>GRAFİK KALİTESİ</span><select id="quality-select" aria-label="Grafik kalitesi"><option value="low">LOW</option><option value="medium" selected>MEDIUM</option><option value="high">HIGH</option></select></label>
-            <details class="controls-menu"><summary><span><small>KLAVYE &amp; FARE</small>KONTROLLER</span><b aria-hidden="true">+</b></summary><div class="control-grid"><span><kbd>WASD</kbd> Hareket</span><span><kbd>SHIFT</kbd> Koş</span><span><kbd>SPACE</kbd> Zıpla</span><span><kbd>1–9</kbd> Yetenek</span><span><kbd>SOL TIK</kbd> Yürü / hedefle</span><span><kbd>SAĞ SÜRÜKLE</kbd> Kamera</span><span><kbd>TAB</kbd> Hedef değiştir</span><span><kbd>ESC</kbd> Menü</span></div></details>
+            <details class="controls-menu"><summary><span><small>KLAVYE &amp; FARE</small>KONTROLLER</span><b aria-hidden="true">+</b></summary><div class="control-grid"><span><kbd>WASD</kbd> Hareket</span><span><kbd>SHIFT</kbd> Koş</span><span><kbd>SPACE</kbd> Zıpla</span><span><kbd>1–9</kbd> Yetenek</span><span><kbd>I</kbd> Envanter</span><span><kbd>C</kbd> Statlar</span><span><kbd>SOL TIK</kbd> Yürü / hedefle</span><span><kbd>SAĞ SÜRÜKLE</kbd> Kamera</span><span><kbd>TAB</kbd> Hedef değiştir</span><span><kbd>ESC</kbd> Menü</span></div></details>
             <a class="menu-link" href="../"><span><small>GERİ DÖN</small>OYUN MERKEZİ</span><b aria-hidden="true">↗</b></a>
           </div>
-          <p id="menu-status" class="menu-status" role="status" aria-live="polite"><i></i><span>Diyar bağlantıya hazır.</span></p>
+          <p id="menu-status" class="menu-status" role="status" aria-live="polite"><i></i><span>Giriş bekleniyor.</span></p>
         </div>
         <div class="menu-meta"><span><small>TÜR</small><b>ACTION MMORPG</b></span><span><small>MOD</small><b>OFFLINE PROTOTİP</b></span><span><small>MOTOR</small><b>BABYLON.JS</b></span></div>
       </section>
     </main>
     <section id="loading-screen" class="loading-screen" hidden aria-live="polite"><img src="assets/tora-symbol.svg" alt="" /><strong>TORA DİYARI HAZIRLANIYOR</strong><span id="loading-label">Motor başlatılıyor…</span><div class="loading-track"><i id="loading-bar"></i></div><b id="loading-percent">0%</b></section>
     <section id="hud" class="hud" hidden>
-      <div class="player-frame panel"><div class="portrait"><span>TS</span></div><div class="player-data"><div><strong>Tora Savaşçısı</strong><small>SEVİYE <b id="player-level">1</b></small></div><div class="meter hp"><i id="player-hp-bar"></i><span id="player-hp-text">140 / 140</span></div><div class="meter mana"><i id="player-mana-bar"></i><span id="player-mana-text">100 / 100</span></div><div class="xp"><i id="player-xp-bar"></i><span id="player-xp-text">0 / 150 XP</span></div></div></div>
+      <div class="player-frame panel"><div class="portrait" id="player-portrait" aria-hidden="true"><svg viewBox="0 0 64 64" width="48" height="48" aria-hidden="true"><circle cx="32" cy="30" r="18" fill="#e0b48e"/><circle cx="25" cy="28" r="2.4" fill="#1c2430"/><circle cx="39" cy="28" r="2.4" fill="#1c2430"/><path d="M24 38c3 4 13 4 16 0" stroke="#8a3d45" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M18 18c4-8 24-8 28 0" fill="#3a2418"/></svg></div><div class="player-data"><div><strong>Tora Savaşçısı</strong><small>SEVİYE <b id="player-level">1</b></small></div><div class="meter hp"><i id="player-hp-bar"></i><span id="player-hp-text">160 / 160</span></div><div class="meter mana"><i id="player-mana-bar"></i><span id="player-mana-text">94 / 94</span></div><div class="xp"><i id="player-xp-bar"></i><span id="player-xp-text">0 / 150 XP</span></div></div></div>
       <div id="target-frame" class="target-frame panel" hidden><div><strong id="target-name">—</strong><small>SEVİYE <b id="target-level">1</b></small></div><div class="meter hp"><i id="target-hp-bar"></i><span id="target-hp-text">0 / 0</span></div></div>
       <div class="quest-panel panel"><small>İLK SINAV</small><strong>Bozkır Yaratıkları</strong><span id="quest-status">Yaratıkları yen: 0 / 5</span></div>
       <output id="progress-toast" class="progress-toast" role="status" aria-live="polite" hidden></output>
       <aside class="minimap panel" aria-label="Bölge haritası"><div class="minimap-map"><i id="minimap-player" aria-label="Oyuncu"></i><div id="minimap-mobs"></div></div><strong>AYAZ VADİSİ</strong><span>Kadim Sınır</span></aside>
-      <section class="chat-panel panel" aria-label="Sohbet"><div id="chat-log"><p><b>Sistem</b> Ayaz Vadisi kanalına katıldın.</p></div><form id="chat-form"><label for="chat-input">SOHBET</label><input id="chat-input" maxlength="90" autocomplete="off" placeholder="Enter ile yaz…" /></form></section>
+      <section id="inventory-panel" class="game-panel inventory-panel panel" hidden aria-label="Envanter">
+        <header><small>TORBA</small><strong>ENVANTER <kbd>I</kbd></strong><button type="button" class="panel-close" data-close="inventory" aria-label="Kapat">✕</button></header>
+        <div id="inventory-grid" class="inventory-grid"></div>
+        <p id="inventory-hint" class="panel-hint">Boş slota tıkla veya eşya seç.</p>
+      </section>
+      <section id="stats-panel" class="game-panel stats-panel panel" hidden aria-label="Karakter özellikleri">
+        <header><small>KARAKTER</small><strong>STATLAR <kbd>C</kbd></strong><button type="button" class="panel-close" data-close="stats" aria-label="Kapat">✕</button></header>
+        <p class="stat-points">Dağıtılacak puan: <b id="stat-points">0</b></p>
+        <ul id="stats-list" class="stats-list"></ul>
+        <p id="stats-summary" class="panel-hint">Güç hasarı artırır. Canlılık can ve dayanıklılık verir.</p>
+      </section>
+      <section class="chat-panel panel" aria-label="Sohbet"><div id="chat-log"><p><b>Sistem</b> Ayaz Vadisi kanalına katıldın. <b>I</b> envanter, <b>C</b> statlar.</p></div><form id="chat-form"><label for="chat-input">SOHBET</label><input id="chat-input" maxlength="90" autocomplete="off" placeholder="Enter ile yaz…" /></form></section>
       <div id="world-labels" class="world-labels" aria-hidden="true"></div><div id="damage-layer" class="damage-layer" aria-hidden="true"></div><div id="skill-bar" class="skill-bar"></div>
-      <div class="hud-hint"><span>Sağ fare: Kamera</span><span>Fare tekeri: Yakınlaştır</span><span>ESC: Menü</span></div><output id="debug-fps" class="debug-fps" hidden>0 FPS</output>
+      <div class="hud-hint"><span>I: Envanter</span><span>C: Statlar</span><span>ESC: Menü</span></div><output id="debug-fps" class="debug-fps" hidden>0 FPS</output>
     </section>
     <section id="pause-menu" class="pause-menu" hidden><div class="pause-card panel"><img src="assets/tora-symbol.svg" alt="" /><small>OYUN DURAKLATILDI</small><h2>TORA ONLINE</h2><button id="resume-button" type="button">DEVAM ET</button><label>Grafik Kalitesi<select id="pause-quality"><option value="low">LOW</option><option value="medium">MEDIUM</option><option value="high">HIGH</option></select></label><button id="exit-button" class="secondary" type="button">ANA MENÜYE DÖN</button></div></section>
     <div id="fatal-error" class="fatal-error" hidden><strong>OYUN BAŞLATILAMADI</strong><span></span><button id="retry-button" type="button">YENİDEN DENE</button></div>

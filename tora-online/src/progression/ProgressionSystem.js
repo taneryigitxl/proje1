@@ -6,8 +6,9 @@ export const FIRST_TRIAL = Object.freeze({
 });
 
 export class ProgressionSystem {
-  constructor(player) {
+  constructor(player, stats = null) {
     this.player = player;
+    this.stats = stats;
     this.player.xp = Number.isFinite(player.xp) ? player.xp : 0;
     this.player.nextLevelXp = this.requiredXp(player.level);
     this.quest = { ...FIRST_TRIAL, progress: 0, completed: false };
@@ -32,13 +33,14 @@ export class ProgressionSystem {
       }
     }
 
-    const levelsGained = this.#grantXp(killXp + rewardXp);
+    const { levelsGained, statPointsGained } = this.#grantXp(killXp + rewardXp);
     return {
       killXp,
       rewardXp,
       totalXp: killXp + rewardXp,
       questCompleted,
       levelsGained,
+      statPointsGained,
       level: this.player.level,
       quest: this.snapshot().quest,
     };
@@ -56,16 +58,23 @@ export class ProgressionSystem {
   #grantXp(amount) {
     this.player.xp += amount;
     let levelsGained = 0;
+    let statPointsGained = 0;
     while (this.player.xp >= this.player.nextLevelXp) {
       this.player.xp -= this.player.nextLevelXp;
       this.player.level += 1;
       levelsGained += 1;
-      this.player.maxHealth += 18;
-      this.player.maxMana += 6;
-      this.player.health = this.player.maxHealth;
-      this.player.mana = this.player.maxMana;
+      this.stats?.grantPoints(2);
+      statPointsGained += 2;
       this.player.nextLevelXp = this.requiredXp(this.player.level);
+      if (this.stats) {
+        this.stats.refresh(true);
+      } else {
+        this.player.maxHealth += 18;
+        this.player.maxMana += 6;
+        this.player.health = this.player.maxHealth;
+        this.player.mana = this.player.maxMana;
+      }
     }
-    return levelsGained;
+    return { levelsGained, statPointsGained };
   }
 }

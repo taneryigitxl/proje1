@@ -43,8 +43,8 @@ export class Mob extends Entity {
       else { this.state = "idle"; this.#play("idle", true); }
     }
   }
-  takeHit(attacker, baseDamage) {
-    const result = DamageSystem.apply(attacker, this, baseDamage);
+  takeHit(attacker, baseDamage, stats = null) {
+    const result = DamageSystem.apply(attacker, this, baseDamage, stats);
     if (!result) return null;
     if (!this.alive) this.die();
     else { this.hitTimer = .35; this.state = "hit"; this.#play("hit", false, true); }

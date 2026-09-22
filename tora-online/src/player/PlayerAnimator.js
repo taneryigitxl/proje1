@@ -1,21 +1,21 @@
 const CLIP_ALIASES = {
-  idle: ["sword_idle", "idle_loop", "idle"],
-  walk: ["walk_carry_loop", "walk_loop", "walk"],
-  run: ["sprint_loop", "jog_fwd_loop", "run"],
-  jump: ["jump_start", "ninjajump_start"],
-  fall: ["jump_loop", "ninjajump_idle_loop"],
-  land: ["jump_land", "ninjajump_land"],
-  attack1: ["sword_regular_a", "sword_attack"],
-  attack2: ["sword_regular_combo", "sword_regular_b"],
-  heavy: ["sword_heavy_combo"],
-  skill4: ["sword_regular_combo", "sword_regular_c"],
-  skill5: ["sword_dash"],
-  skill6: ["sword_regular_c", "sword_attack"],
-  skill7: ["sword_block", "idle_shield_loop"],
-  skill8: ["spell_simple_enter", "sword_idle"],
-  skill9: ["sword_heavy_combo"],
-  hit: ["hit_knockback", "hit_chest", "hitreact"],
-  dead: ["death01", "death"]
+  idle: ["sword_idle", "idle_loop", "idle", "standing_idle"],
+  walk: ["walk_carry_loop", "walk_loop", "walk", "walking"],
+  run: ["sprint_loop", "jog_fwd_loop", "run", "running"],
+  jump: ["jump_start", "ninjajump_start", "jump"],
+  fall: ["jump_loop", "ninjajump_idle_loop", "fall"],
+  land: ["jump_land", "ninjajump_land", "land"],
+  attack1: ["sword_regular_a", "sword_attack", "attack", "slash"],
+  attack2: ["sword_regular_combo", "sword_regular_b", "combo"],
+  heavy: ["sword_heavy_combo", "heavy_attack", "power_attack"],
+  skill4: ["sword_regular_combo", "sword_regular_c", "spin"],
+  skill5: ["sword_dash", "dash", "roll"],
+  skill6: ["sword_regular_c", "sword_attack", "cast"],
+  skill7: ["sword_block", "idle_shield_loop", "block"],
+  skill8: ["spell_simple_enter", "sword_idle", "buff"],
+  skill9: ["sword_heavy_combo", "finisher", "ultimate"],
+  hit: ["hit_knockback", "hit_chest", "hitreact", "hit"],
+  dead: ["death01", "death", "die"]
 };
 
 export class PlayerAnimator {

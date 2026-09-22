@@ -25,9 +25,9 @@ export const GAME_CONFIG = Object.freeze({
 });
 
 export const QUALITY_PROFILES = Object.freeze({
-  low: { dpr: 1, antialias: false, shadows: 512, particles: 0.35, lod: 0.7, bloom: false, grass: 90, grassDistance: 22 },
-  medium: { dpr: 1.25, antialias: true, shadows: 1024, particles: 0.65, lod: 1, bloom: false, grass: 210, grassDistance: 28 },
-  high: { dpr: 1.5, antialias: true, shadows: 1536, particles: 1, lod: 1.25, bloom: true, grass: 360, grassDistance: 34 },
+  low: { dpr: 1, antialias: false, shadows: 512, particles: 0.3, lod: 0.6, bloom: false, grass: 70, grassDistance: 18 },
+  medium: { dpr: 1.1, antialias: true, shadows: 768, particles: 0.5, lod: 0.85, bloom: false, grass: 150, grassDistance: 24 },
+  high: { dpr: 1.35, antialias: true, shadows: 1280, particles: 0.85, lod: 1.1, bloom: true, grass: 260, grassDistance: 30 },
 });
 
 export const SKILLS = Object.freeze([
