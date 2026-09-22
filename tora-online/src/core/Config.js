@@ -42,14 +42,14 @@ export const SKILLS = Object.freeze([
   { slot: 9, name: "Nihai Darbe", icon: "ultimate", description: "Uzun bekleme süreli ezici saldırı.", mana: 45, cooldown: 30, range: 3.5, damage: 78, impact: [0.82], duration: 1.35, target: "enemy", animation: "skill9", trail: true, color: "#d4ad5e" },
 ]);
 
-/** Patrol posts around the orc camp (ring ~z=17) — no stacking. */
+/** Patrol posts around the orc camp ring — spaced so they don't stack or sink. */
 export const MOB_SPAWNS = Object.freeze([
-  { x: -9.2, z: 12.4, patrol: true },
-  { x: -4.0, z: 21.0, patrol: true },
-  { x: 3.8, z: 21.5, patrol: true },
-  { x: 9.5, z: 13.8, patrol: true },
-  { x: 7.2, z: 9.5, patrol: true },
-  { x: -7.8, z: 9.0, patrol: true },
-  { x: 0.5, z: 15.2, patrol: true },
-  { x: -11.5, z: 17.8, patrol: true },
+  { x: -10.5, z: 11.8, patrol: true },
+  { x: -5.2, z: 22.2, patrol: true },
+  { x: 4.5, z: 22.4, patrol: true },
+  { x: 10.8, z: 13.2, patrol: true },
+  { x: 8.5, z: 8.8, patrol: true },
+  { x: -8.8, z: 8.4, patrol: true },
+  { x: 0.2, z: 14.0, patrol: true },
+  { x: -12.2, z: 18.2, patrol: true },
 ]);

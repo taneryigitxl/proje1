@@ -33,8 +33,10 @@ export class ThirdPersonCamera {
     this.onPointerUp = (event) => this.#pointerUp(event);
     this.onWheel = (event) => this.#wheel(event);
     this.onBlur = () => this.#cancelDrag();
+    this.onLostCapture = () => this.#cancelDrag();
     canvas.addEventListener("pointerdown", this.onPointerDown);
     canvas.addEventListener("pointermove", this.onPointerMove);
+    canvas.addEventListener("lostpointercapture", this.onLostCapture);
     addEventListener("pointerup", this.onPointerUp);
     addEventListener("pointercancel", this.onPointerUp);
     addEventListener("blur", this.onBlur);
@@ -109,7 +111,8 @@ export class ThirdPersonCamera {
   }
 
   #pointerMove(event) {
-    if (!this.dragging || event.pointerId !== this.pointerId || !(event.buttons & 2)) return;
+    // While captured, keep orbiting even if buttons bitmask drops after skill/UI focus steal
+    if (!this.dragging || event.pointerId !== this.pointerId) return;
     this.camera.alpha -= (event.movementX || 0) * this.config.sensitivityX;
     this.camera.beta = BABYLON.Scalar.Clamp(
       this.camera.beta + (event.movementY || 0) * this.config.sensitivityY,
@@ -119,8 +122,11 @@ export class ThirdPersonCamera {
   }
 
   #pointerUp(event) {
-    if (event.button !== 2 || (this.pointerId !== null && event.pointerId !== this.pointerId)) return;
-    this.#cancelDrag();
+    // pointercancel often reports button !== 2 — always clear matching capture
+    if (this.pointerId !== null && event.pointerId !== this.pointerId) return;
+    if (event.type === "pointercancel" || event.type === "blur" || event.button === 2 || this.dragging) {
+      this.#cancelDrag();
+    }
   }
 
   #cancelDrag() {
@@ -147,6 +153,7 @@ export class ThirdPersonCamera {
   dispose() {
     this.canvas.removeEventListener("pointerdown", this.onPointerDown);
     this.canvas.removeEventListener("pointermove", this.onPointerMove);
+    this.canvas.removeEventListener("lostpointercapture", this.onLostCapture);
     this.canvas.removeEventListener("wheel", this.onWheel);
     removeEventListener("pointerup", this.onPointerUp);
     removeEventListener("pointercancel", this.onPointerUp);

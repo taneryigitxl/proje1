@@ -1,5 +1,5 @@
-import { CharacterFace } from "../player/CharacterFace.js?v=16";
-import { WeaponSheath } from "../player/WeaponSheath.js?v=16";
+import { CharacterFace } from "../player/CharacterFace.js?v=17";
+import { WeaponSheath } from "../player/WeaponSheath.js?v=17";
 
 export class AssetManager {
   constructor(scene, config, onProgress = () => {}) {
@@ -152,8 +152,9 @@ export class AssetManager {
     const bulkJitter = 0.94 + ((index * 3) % 5) * 0.02;
     root.scaling.set(baseScale * bulkJitter, baseScale * heightJitter, baseScale * bulkJitter);
     this.#styleMob(root, definition, index);
-    this.#attachMobWeapon(root, loaded.skeletons[0], definition, index);
+    // Measure feet before weapons skew the AABB (weapons were burying mobs)
     const footOffset = this.#estimateFootOffset(root);
+    this.#attachMobWeapon(root, loaded.skeletons[0], definition, index);
     return { root, animationGroups: loaded.animationGroups, definition, footOffset };
   }
 
@@ -258,14 +259,17 @@ export class AssetManager {
   #estimateFootOffset(root) {
     let minY = Infinity;
     root.getChildMeshes(false).forEach((mesh) => {
+      const name = (mesh.name || "").toLowerCase();
+      if (name.includes("axe") || name.includes("club") || name.includes("weapon")) return;
       mesh.computeWorldMatrix(true);
+      try { mesh.refreshBoundingInfo?.(true); } catch (_) { /* ok */ }
       const bi = mesh.getBoundingInfo?.();
       if (!bi) return;
       minY = Math.min(minY, bi.boundingBox.minimumWorld.y);
     });
     if (!Number.isFinite(minY)) return 0;
-    // Lift so soles sit on terrain (negative minY means mesh hangs below root)
-    return -minY + 0.02;
+    // Only lift when mesh hangs below root — never sink (that buried mobs)
+    return BABYLON.Scalar.Clamp(-minY + 0.02, 0, 0.45);
   }
 
   async instantiateNpc(position, rotationY = 0) {

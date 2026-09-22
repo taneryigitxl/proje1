@@ -1,4 +1,4 @@
-import { GrassSystem } from "./GrassSystem.js?v=16";
+import { GrassSystem } from "./GrassSystem.js?v=17";
 
 /**
  * Dark medieval MMORPG test valley — Metin2-inspired atmosphere without rewriting gameplay systems.
@@ -487,19 +487,18 @@ export class TestMap {
       }));
     }
 
-    const foliage = Math.round(36 * this.profile.particles * mul);
+    const foliage = Math.round(12 * this.profile.particles * mul);
     for (let i = 0; i < foliage; i++) {
       const angle = random() * Math.PI * 2;
-      const radius = 8 + random() * 26;
+      const radius = 14 + random() * 20;
       const x = Math.cos(angle) * radius;
       const z = Math.sin(angle) * radius;
       if (!this.#detailAllowed(x, z)) continue;
-      const key = random() > 0.55 ? "bush" : "fern";
-      jobs.push(this.#place(key, `foliage-${i}`, x, z, random() * Math.PI * 2, 0.55 + random() * 0.45, {
+      // Only ferns far from roads — no cardboard bush blobs near player paths
+      jobs.push(this.#place("fern", `foliage-${i}`, x, z, random() * Math.PI * 2, 0.45 + random() * 0.35, {
         shadow: false,
-        sink: 0.06,
-        muteFoliage: 0.65,
-        sway: key === "bush",
+        sink: 0.08,
+        muteFoliage: 0.75,
       }));
     }
 
@@ -640,7 +639,6 @@ export class TestMap {
       this.#place("crate", "camp-crate", 17, -7.5, 0.4, 0.68, { obstacle: 0.45, sink: 0.04 }),
       this.#place("barrel", "camp-barrel", 17.3, -9.3, 0, 0.68, { obstacle: 0.42, sink: 0.04 }),
       this.#place("torch", "camp-torch", 12, -10, 0, 1),
-      this.#place("chest", "camp-chest", 16.2, -10.5, -0.5, 0.7, { obstacle: 0.4, metadata: { cursor: "loot", loot: true } }),
     ]);
     const light = new BABYLON.PointLight("camp-light", new BABYLON.Vector3(14.3, 2.1, -8.2), this.scene);
     light.diffuse = new BABYLON.Color3(1, 0.38, 0.12);
@@ -695,7 +693,6 @@ export class TestMap {
     jobs.push(this.#place("wagon", "broken-wagon", -6.5, 1.5, -0.9, 0.65, { collision: true, obstacle: 0.85, sink: 0.1 }));
     jobs.push(this.#place("wood-fence", "broken-fence-a", 7.2, 7.5, 0.8, 0.55, { obstacle: 0.3, sink: 0.08 }));
     jobs.push(this.#place("wood-fence", "broken-fence-b", 8.5, 7.8, 1.1, 0.5, { obstacle: 0.28, sink: 0.08 }));
-    jobs.push(this.#place("chest", "ruined-chest", -9.5, 5.5, 0.3, 0.6, { obstacle: 0.35, metadata: { cursor: "loot", loot: true } }));
     jobs.push(this.#place("torch", "trail-torch", 5.5, -18, 0, 0.9));
     // Small pebble clusters (tiny rocks) near the road edges
     for (let i = 0; i < 8; i++) {

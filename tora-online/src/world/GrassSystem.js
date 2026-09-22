@@ -1,8 +1,8 @@
 const QUALITY_ORDER = ["low", "medium", "high"];
 
 /**
- * Natural grass via thin-instances of merged leaf clusters.
- * No per-instance color buffers (those blackened blades on WebGL).
+ * Roadside grass carpet — low flat patches only beside the dirt road.
+ * No vertical cardboard tufts / bushy placeholders.
  */
 export class GrassSystem {
   constructor(scene, assets, navigation, heightAt) {
@@ -21,7 +21,7 @@ export class GrassSystem {
     this.phases = [];
     this.amps = [];
     this.windTime = 0;
-    this.budget = 160;
+    this.budget = 180;
     this.total = 0;
   }
 
@@ -31,60 +31,67 @@ export class GrassSystem {
     this.error = null;
     this.quality = quality;
     this.profile = profile;
-    this.budget = Math.max(60, Number(profile?.grass) || 160);
+    this.budget = Math.max(80, Number(profile?.grass) || 180);
 
-    const green = this.#buildClusterMesh("grass-green", [
-      new BABYLON.Color3(0.09, 0.14, 0.06),
-      new BABYLON.Color3(0.11, 0.17, 0.07),
-      new BABYLON.Color3(0.08, 0.13, 0.05),
-      new BABYLON.Color3(0.13, 0.18, 0.08),
-    ], 12);
-    const dry = this.#buildClusterMesh("grass-dry", [
-      new BABYLON.Color3(0.22, 0.18, 0.09),
-      new BABYLON.Color3(0.26, 0.2, 0.08),
-      new BABYLON.Color3(0.2, 0.17, 0.08),
-    ], 8);
-    const weed = this.#buildWeedMesh("grass-weed");
-    const shrub = this.#buildShrubMesh("grass-shrub");
+    const carpet = this.#buildCarpetMesh("grass-carpet", new BABYLON.Color3(0.16, 0.22, 0.1));
+    const edge = this.#buildCarpetMesh("grass-edge", new BABYLON.Color3(0.2, 0.24, 0.12));
 
     this.sources = [
-      { mesh: green, kind: "green", weight: 0.62 },
-      { mesh: dry, kind: "dry", weight: 0.2 },
-      { mesh: weed, kind: "weed", weight: 0.1 },
-      { mesh: shrub, kind: "shrub", weight: 0.08 },
+      { mesh: carpet, kind: "carpet", weight: 0.75 },
+      { mesh: edge, kind: "edge", weight: 0.25 },
     ];
 
-    const count = Math.min(320, this.budget + 80);
+    const count = Math.min(420, this.budget + 120);
     this.#plant(count);
-    console.info(`[Tora Grass] Natural thin-instance clusters: ${this.total} (budget ${this.budget}).`);
+    console.info(`[Tora Grass] Roadside carpet patches: ${this.total} (budget ${this.budget}).`);
   }
 
-  #buildClusterMesh(name, colors, blades) {
-    const parts = [];
-    const random = this.#random(name.length * 9973);
-    for (let i = 0; i < blades; i++) {
-      const color = colors[i % colors.length];
-      const mat = new BABYLON.StandardMaterial(`${name}-mat-${i}`, this.scene);
-      mat.disableLighting = false;
-      mat.diffuseColor = color;
-      mat.ambientColor = color.scale(0.45);
-      mat.emissiveColor = BABYLON.Color3.Black();
-      mat.specularColor = BABYLON.Color3.Black();
-      mat.backFaceCulling = false;
+  /** Flat low patch — reads as ground cover, not upright cardboard. */
+  #buildCarpetMesh(name, color) {
+    const mat = new BABYLON.StandardMaterial(`${name}-mat`, this.scene);
+    mat.disableLighting = false;
+    mat.diffuseColor = color;
+    mat.ambientColor = color.scale(0.55);
+    mat.emissiveColor = BABYLON.Color3.Black();
+    mat.specularColor = BABYLON.Color3.Black();
+    mat.backFaceCulling = false;
 
-      const height = 0.26 + random() * 0.22;
-      const width = 0.045 + random() * 0.03;
-      const blade = this.#leafBlade(`${name}-blade-${i}`, width, height, mat);
-      blade.position.set((random() - 0.5) * 0.16, 0, (random() - 0.5) * 0.16);
+    const parts = [];
+    const random = this.#random(name.length * 7919);
+    for (let i = 0; i < 5; i++) {
+      const w = 0.28 + random() * 0.22;
+      const d = 0.22 + random() * 0.18;
+      const patch = BABYLON.MeshBuilder.CreateGround(`${name}-p-${i}`, {
+        width: w,
+        height: d,
+        subdivisions: 1,
+      }, this.scene);
+      patch.material = mat;
+      patch.position.set((random() - 0.5) * 0.2, 0.01 + random() * 0.012, (random() - 0.5) * 0.2);
+      patch.rotation.y = random() * Math.PI * 2;
+      // Tiny tilt so patches catch light differently
+      patch.rotation.x = (random() - 0.5) * 0.08;
+      patch.rotation.z = (random() - 0.5) * 0.08;
+      patch.isPickable = false;
+      parts.push(patch);
+    }
+    // A few very short blades for micro detail (almost flush with ground)
+    for (let i = 0; i < 6; i++) {
+      const blade = BABYLON.MeshBuilder.CreateBox(`${name}-b-${i}`, {
+        width: 0.018,
+        height: 0.04 + random() * 0.03,
+        depth: 0.006,
+      }, this.scene);
+      blade.material = mat;
+      blade.position.set((random() - 0.5) * 0.25, 0.02, (random() - 0.5) * 0.25);
       blade.rotation.y = random() * Math.PI * 2;
-      blade.rotation.z = (random() - 0.5) * 0.35;
-      blade.rotation.x = (random() - 0.5) * 0.15;
+      blade.rotation.z = (random() - 0.5) * 0.25;
       blade.isPickable = false;
-      blade.receiveShadows = false;
       parts.push(blade);
     }
-    const merged = BABYLON.Mesh.MergeMeshes(parts, true, true, undefined, false, true);
-    if (!merged) throw new Error("Grass cluster merge failed");
+
+    const merged = BABYLON.Mesh.MergeMeshes(parts, true, true, undefined, false, false);
+    if (!merged) throw new Error("Grass carpet merge failed");
     merged.name = name;
     merged.isPickable = false;
     merged.alwaysSelectAsActiveMesh = false;
@@ -94,90 +101,6 @@ export class GrassSystem {
     return merged;
   }
 
-  #buildWeedMesh(name) {
-    const mat = new BABYLON.StandardMaterial(`${name}-mat`, this.scene);
-    mat.disableLighting = false;
-    mat.diffuseColor = new BABYLON.Color3(0.12, 0.18, 0.08);
-    mat.ambientColor = new BABYLON.Color3(0.1, 0.14, 0.07);
-    mat.emissiveColor = BABYLON.Color3.Black();
-    mat.specularColor = BABYLON.Color3.Black();
-    mat.backFaceCulling = false;
-    const parts = [];
-    for (let i = 0; i < 4; i++) {
-      const leaf = this.#leafBlade(`${name}-l-${i}`, 0.06, 0.18 + i * 0.03, mat);
-      leaf.position.set(Math.sin(i) * 0.05, 0, Math.cos(i) * 0.05);
-      leaf.rotation.y = i * 1.2;
-      leaf.rotation.z = 0.4;
-      leaf.isPickable = false;
-      parts.push(leaf);
-    }
-    const merged = BABYLON.Mesh.MergeMeshes(parts, true, true, undefined, false, true);
-    merged.name = name;
-    merged.isPickable = false;
-    merged.thinInstanceEnablePicking = false;
-    merged.isVisible = false;
-    return merged;
-  }
-
-  /** Compact low shrub — denser short blades for variety. */
-  #buildShrubMesh(name) {
-    const mats = [
-      new BABYLON.Color3(0.08, 0.13, 0.05),
-      new BABYLON.Color3(0.11, 0.16, 0.07),
-      new BABYLON.Color3(0.18, 0.15, 0.07),
-    ].map((color, i) => {
-      const mat = new BABYLON.StandardMaterial(`${name}-mat-${i}`, this.scene);
-      mat.disableLighting = false;
-      mat.diffuseColor = color;
-      mat.ambientColor = color.scale(0.45);
-      mat.emissiveColor = BABYLON.Color3.Black();
-      mat.specularColor = BABYLON.Color3.Black();
-      mat.backFaceCulling = false;
-      return mat;
-    });
-    const parts = [];
-    for (let i = 0; i < 9; i++) {
-      const mat = mats[i % mats.length];
-      const leaf = this.#leafBlade(`${name}-s-${i}`, 0.05, 0.12 + (i % 3) * 0.04, mat);
-      leaf.position.set(Math.sin(i * 1.4) * 0.08, 0, Math.cos(i * 1.4) * 0.08);
-      leaf.rotation.y = i * 0.7;
-      leaf.rotation.z = 0.25 + (i % 3) * 0.1;
-      leaf.isPickable = false;
-      parts.push(leaf);
-    }
-    const merged = BABYLON.Mesh.MergeMeshes(parts, true, true, undefined, false, true);
-    merged.name = name;
-    merged.isPickable = false;
-    merged.thinInstanceEnablePicking = false;
-    merged.isVisible = false;
-    return merged;
-  }
-
-  /** Narrow tapered leaf (two crossed ribbons) — reads as grass, not neon cards. */
-  #leafBlade(name, width, height, material) {
-    const path = [
-      new BABYLON.Vector3(0, 0, 0),
-      new BABYLON.Vector3(width * 0.15, height * 0.45, 0),
-      new BABYLON.Vector3(0, height, 0),
-    ];
-    const ribbon = BABYLON.MeshBuilder.CreateRibbon(name, {
-      pathArray: [
-        path.map((p) => p.add(new BABYLON.Vector3(-width * 0.5, 0, 0))),
-        path.map((p) => p.add(new BABYLON.Vector3(width * 0.5, 0, 0))),
-      ],
-      closeArray: false,
-      closePath: false,
-      updatable: false,
-    }, this.scene);
-    ribbon.material = material;
-    // Second plane crossed for volume
-    const cross = ribbon.clone(`${name}-x`);
-    cross.rotation.y = Math.PI / 2;
-    cross.material = material;
-    const merged = BABYLON.Mesh.MergeMeshes([ribbon, cross], true, true, undefined, false, true);
-    return merged || ribbon;
-  }
-
   #plant(count) {
     this.matrices = this.sources.map(() => []);
     this.phases = this.sources.map(() => []);
@@ -185,13 +108,17 @@ export class GrassSystem {
     const random = this.#random(0x47524153);
     let attempts = 0;
     this.total = 0;
-    while (this.total < count && attempts < count * 60) {
+    while (this.total < count && attempts < count * 80) {
       attempts++;
-      const angle = random() * Math.PI * 2;
-      const radius = 4.5 + Math.pow(random(), 1.1) * 31;
-      const x = Math.cos(angle) * radius;
-      const z = Math.sin(angle) * radius;
-      if (!this.#allowed(x, z)) continue;
+      // Sample along the road corridor, then offset to shoulders
+      const roadIndex = random() * 28;
+      const z = -35 + roadIndex * 2.65;
+      const roadX = Math.sin(roadIndex * 0.4) * 2.35;
+      const side = random() > 0.5 ? 1 : -1;
+      const shoulder = 3.4 + random() * 2.4; // outside road surface
+      const x = roadX + side * shoulder + (random() - 0.5) * 0.8;
+      const zz = z + (random() - 0.5) * 1.6;
+      if (!this.#allowed(x, zz, roadIndex)) continue;
 
       const roll = random();
       let sourceIndex = 0;
@@ -201,17 +128,17 @@ export class GrassSystem {
         if (roll <= acc) { sourceIndex = i; break; }
       }
 
-      const y = this.heightAt(x, z) - 0.015;
-      const scale = 0.85 + random() * 0.65;
+      const y = this.heightAt(x, zz) + 0.01;
+      const scale = 0.9 + random() * 0.7;
       const rotY = random() * Math.PI * 2;
       const matrix = BABYLON.Matrix.Compose(
-        new BABYLON.Vector3(scale * (0.85 + random() * 0.25), scale * (0.8 + random() * 0.45), scale * (0.85 + random() * 0.25)),
-        BABYLON.Quaternion.FromEulerAngles((random() - 0.5) * 0.1, rotY, (random() - 0.5) * 0.12),
-        new BABYLON.Vector3(x, y, z),
+        new BABYLON.Vector3(scale * (0.85 + random() * 0.3), scale * (0.7 + random() * 0.25), scale * (0.85 + random() * 0.3)),
+        BABYLON.Quaternion.FromEulerAngles(0, rotY, 0),
+        new BABYLON.Vector3(x, y, zz),
       );
       this.matrices[sourceIndex].push(matrix);
       this.phases[sourceIndex].push(random() * Math.PI * 2);
-      this.amps[sourceIndex].push(0.03 + random() * 0.05);
+      this.amps[sourceIndex].push(0.004 + random() * 0.006);
       this.total++;
     }
 
@@ -230,7 +157,7 @@ export class GrassSystem {
   applyQuality(profile, quality = "medium") {
     this.profile = profile;
     this.quality = quality;
-    this.budget = Math.max(40, Number(profile?.grass) || 120);
+    this.budget = Math.max(50, Number(profile?.grass) || 140);
     this.#applyBudget();
   }
 
@@ -238,11 +165,9 @@ export class GrassSystem {
     let remaining = this.disabled ? 0 : this.budget;
     for (const source of this.sources) {
       const mesh = source.mesh;
-      const available = mesh.thinInstanceCount || 0;
-      const use = Math.min(available, Math.max(0, remaining));
-      // Prefer reducing count via thinInstanceCount if buffer larger
       const max = this.matrices[this.sources.indexOf(source)]?.length || 0;
-      mesh.thinInstanceCount = Math.min(max, use);
+      const use = Math.min(max, Math.max(0, remaining));
+      mesh.thinInstanceCount = use;
       remaining -= use;
       mesh.isVisible = mesh.thinInstanceCount > 0 && !this.disabled;
     }
@@ -252,12 +177,11 @@ export class GrassSystem {
     if (!this.profile || this.disabled || !camera?.position) return;
     this.windTime += dt;
     this._frame = (this._frame || 0) + 1;
-    // Wind/cull every other frame to keep browser FPS stable
-    if (this._frame % 2 !== 0) return;
+    if (this._frame % 3 !== 0) return;
 
-    const maxDistance = this.profile.grassDistance || 26;
-    const maxD2 = (maxDistance + 5) ** 2;
-    const windD2 = 18 * 18;
+    const maxDistance = this.profile.grassDistance || 28;
+    const maxD2 = (maxDistance + 4) ** 2;
+    const windD2 = 14 * 14;
     const cam = camera.position;
     let remaining = this.budget;
 
@@ -275,8 +199,8 @@ export class GrassSystem {
         const d2 = dx * dx + dz * dz;
         if (d2 > maxD2) continue;
         if (d2 < windD2) {
-          const sway = Math.sin(this.windTime * 1.55 + this.phases[s][i]) * this.amps[s][i];
-          out.push(m.multiply(BABYLON.Matrix.RotationZ(sway)));
+          const sway = Math.sin(this.windTime * 1.2 + this.phases[s][i]) * this.amps[s][i];
+          out.push(m.multiply(BABYLON.Matrix.RotationY(sway)));
         } else {
           out.push(m);
         }
@@ -300,8 +224,8 @@ export class GrassSystem {
     if (index <= 0) { this.lowFpsTime = 0; return; }
     const next = QUALITY_ORDER[index - 1];
     const fallback = next === "low"
-      ? { ...this.profile, grass: 70, grassDistance: 16 }
-      : { ...this.profile, grass: 120, grassDistance: 22 };
+      ? { ...this.profile, grass: 80, grassDistance: 18 }
+      : { ...this.profile, grass: 140, grassDistance: 24 };
     console.warn(`[Tora Online] Sürekli düşük FPS: çim yoğunluğu ${this.quality} → ${next}.`);
     this.applyQuality(fallback, next);
     this.autoReduced = true;
@@ -340,18 +264,23 @@ export class GrassSystem {
     this.total = 0;
   }
 
-  #allowed(x, z) {
+  /** Only roadside shoulders — never on road, never open gray field, never camp/village. */
+  #allowed(x, z, roadIndexHint = null) {
     if (Math.abs(x) > 34 || Math.abs(z) > 34) return false;
     if (Math.hypot(x, z + 18) < 2.8) return false;
-    // Road exclusion (current road path formula)
-    const roadIndex = (z + 35) / 2.65;
-    if (roadIndex >= 0 && roadIndex <= 28 && Math.abs(x - Math.sin(roadIndex * 0.4) * 2.35) < 3.5) return false;
-    const streamIndex = (x + 28) / 2.4;
-    if (streamIndex >= 0 && streamIndex <= 25 && Math.abs(z - (6 + Math.sin(streamIndex * 0.46) * 3.4)) < 2.7) return false;
     if (x > -25 && x < -5 && z > -22 && z < -6) return false;
-    // Orc camp / ruins
     if (Math.hypot(x, z - 17) < 11) return false;
-    return this.navigation.canOccupy(new BABYLON.Vector3(x, 0, z), 0.18);
+
+    const roadIndex = roadIndexHint ?? (z + 35) / 2.65;
+    if (roadIndex < 0 || roadIndex > 28) return false;
+    const roadX = Math.sin(roadIndex * 0.4) * 2.35;
+    const dist = Math.abs(x - roadX);
+    // Shoulder band only (outside driving surface)
+    if (dist < 3.2 || dist > 6.2) return false;
+
+    const streamIndex = (x + 28) / 2.4;
+    if (streamIndex >= 0 && streamIndex <= 25 && Math.abs(z - (6 + Math.sin(streamIndex * 0.46) * 3.4)) < 2.4) return false;
+    return this.navigation.canOccupy(new BABYLON.Vector3(x, 0, z), 0.12);
   }
 
   #random(seed) {
