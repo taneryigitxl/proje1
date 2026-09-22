@@ -1,6 +1,10 @@
 /**
- * Stylized painted 3D face — one clear head mesh + bold painted UV features.
- * Hides Female_Ranger_Head_Hood and attaches to the Head bone.
+ * Stylized painted 3D face — hides the hood MESH (not just the empty socket)
+ * and attaches a painted head to the Head bone so features read in-game.
+ *
+ * Root cause of white mask: Female_Ranger_Head_Hood's skinned mesh is reparented
+ * to Armature as `node7` on import, so disabling the TransformNode alone left
+ * the hood (and its pale inner cavity) rendering over the face.
  */
 export class CharacterFace {
   static attach(scene, skeleton, skinnedMesh, root) {
@@ -15,26 +19,24 @@ export class CharacterFace {
     skinMat.diffuseTexture = faceTex;
     skinMat.emissiveTexture = faceTex;
     skinMat.diffuseColor = new BABYLON.Color3(1.05, 0.98, 0.94);
-    skinMat.emissiveColor = new BABYLON.Color3(0.28, 0.2, 0.16);
+    skinMat.emissiveColor = new BABYLON.Color3(0.32, 0.22, 0.18);
     skinMat.specularColor = new BABYLON.Color3(0.18, 0.12, 0.1);
     skinMat.ambientColor = new BABYLON.Color3(0.55, 0.42, 0.36);
 
-    // Primary head — features live on the painted texture so they read at distance
-    const head = BABYLON.MeshBuilder.CreateSphere("face-head", { diameter: 0.28, segments: 32 }, scene);
+    const head = BABYLON.MeshBuilder.CreateSphere("face-head", { diameter: 0.3, segments: 32 }, scene);
     head.material = skinMat;
     head.parent = faceRoot;
     head.position.set(0, 0.02, 0.02);
     head.scaling.set(0.92, 1.12, 1.02);
     head.isPickable = false;
 
-    const jaw = BABYLON.MeshBuilder.CreateSphere("face-jaw", { diameter: 0.18, segments: 18 }, scene);
+    const jaw = BABYLON.MeshBuilder.CreateSphere("face-jaw", { diameter: 0.19, segments: 18 }, scene);
     jaw.material = skinMat;
     jaw.parent = faceRoot;
     jaw.position.set(0, -0.06, 0.055);
     jaw.scaling.set(0.9, 0.62, 0.95);
     jaw.isPickable = false;
 
-    // Soft cheek volumes
     for (const side of [-1, 1]) {
       const cheek = BABYLON.MeshBuilder.CreateSphere(`face-cheek-${side}`, { diameter: 0.1, segments: 12 }, scene);
       cheek.material = skinMat;
@@ -44,10 +46,9 @@ export class CharacterFace {
       cheek.isPickable = false;
     }
 
-    // Sculpted nose that catches light
     const noseMat = new BABYLON.StandardMaterial("face-nose-mat", scene);
     noseMat.diffuseColor = new BABYLON.Color3(0.92, 0.72, 0.58);
-    noseMat.emissiveColor = new BABYLON.Color3(0.14, 0.08, 0.05);
+    noseMat.emissiveColor = new BABYLON.Color3(0.16, 0.1, 0.06);
     noseMat.specularColor = new BABYLON.Color3(0.22, 0.14, 0.1);
     const bridge = BABYLON.MeshBuilder.CreateSphere("face-nose-bridge", { diameter: 0.032, segments: 10 }, scene);
     bridge.material = noseMat;
@@ -79,7 +80,7 @@ export class CharacterFace {
 
     const lipMat = new BABYLON.StandardMaterial("face-lip-mat", scene);
     lipMat.diffuseColor = new BABYLON.Color3(0.78, 0.32, 0.38);
-    lipMat.emissiveColor = new BABYLON.Color3(0.16, 0.04, 0.05);
+    lipMat.emissiveColor = new BABYLON.Color3(0.18, 0.05, 0.06);
     lipMat.specularColor = new BABYLON.Color3(0.3, 0.12, 0.12);
     const upper = BABYLON.MeshBuilder.CreateSphere("face-lip-upper", { diameter: 0.055, segments: 10 }, scene);
     upper.material = lipMat;
@@ -94,12 +95,11 @@ export class CharacterFace {
     lower.scaling.set(1.3, 0.36, 0.58);
     lower.isPickable = false;
 
-    // Hair volume — dark brown, readable silhouette
     const hairMat = new BABYLON.StandardMaterial("face-hair-mat", scene);
     hairMat.diffuseColor = new BABYLON.Color3(0.18, 0.08, 0.04);
     hairMat.emissiveColor = new BABYLON.Color3(0.05, 0.02, 0.01);
     hairMat.specularColor = new BABYLON.Color3(0.08, 0.04, 0.02);
-    const scalp = BABYLON.MeshBuilder.CreateSphere("face-scalp", { diameter: 0.3, segments: 20 }, scene);
+    const scalp = BABYLON.MeshBuilder.CreateSphere("face-scalp", { diameter: 0.32, segments: 20 }, scene);
     scalp.material = hairMat;
     scalp.parent = faceRoot;
     scalp.position.set(0, 0.08, -0.01);
@@ -140,10 +140,10 @@ export class CharacterFace {
 
     if (headBone && skinnedMesh) {
       faceRoot.attachToBone(headBone, skinnedMesh);
-      faceRoot.position.set(0, 0.12, 0.06);
-      faceRoot.rotation.set(0.04, 0, 0);
-      faceRoot.scaling.setAll(1.12);
-      console.info(`[Tora Face] Boyalı yüz '${headBone.name}' kemiğine bağlandı.`);
+      faceRoot.position.set(0, 0.1, 0.08);
+      faceRoot.rotation.set(0.05, 0, 0);
+      faceRoot.scaling.setAll(1.18);
+      console.info(`[Tora Face] Boyalı yüz '${headBone.name}' kemiğine bağlandı (hood mesh gizlendi).`);
     } else {
       faceRoot.parent = root;
       faceRoot.position.set(0, 1.58, 0.08);
@@ -152,27 +152,38 @@ export class CharacterFace {
     return faceRoot;
   }
 
+  /**
+   * female-ranger.glb: Head_Hood socket owns mesh index 7, imported as `node7`
+   * and reparented under Armature — must hide the mesh itself.
+   */
   static #hideHood(root) {
+    const hide = (node) => {
+      if (!node) return;
+      if (typeof node.setEnabled === "function") node.setEnabled(false);
+      if ("isVisible" in node) node.isVisible = false;
+      if ("visibility" in node) node.visibility = 0;
+    };
+
     const visit = (node) => {
       const name = (node.name || "").toLowerCase();
       if (name.includes("hood") || name.includes("head_hood") || name.includes("helmet") || name.includes("mask")) {
-        if (typeof node.setEnabled === "function") node.setEnabled(false);
-        if ("isVisible" in node) node.isVisible = false;
-        console.info(`[Tora Face] Hood gizlendi: ${node.name}`);
+        hide(node);
+        console.info(`[Tora Face] Hood node gizlendi: ${node.name}`);
       }
       (node.getChildren?.() || []).forEach(visit);
     };
     visit(root);
+
+    // Explicit: glTF mesh 7 is Female_Ranger_Head_Hood geometry
     root.getChildMeshes?.(false)?.forEach((mesh) => {
       const name = (mesh.name || "").toLowerCase();
-      if (name.includes("hood") || name.includes("head_hood") || name.includes("helmet")) {
-        mesh.setEnabled(false);
-        mesh.isVisible = false;
+      if (name === "node7" || name.includes("hood") || name.includes("head_hood") || name.includes("helmet")) {
+        hide(mesh);
+        console.info(`[Tora Face] Hood mesh gizlendi: ${mesh.name} (verts=${mesh.getTotalVertices?.() || 0})`);
       }
     });
   }
 
-  /** Front-facing painted portrait on sphere UV (center of map ≈ face front). */
   static #paintFaceTexture(scene) {
     const size = 512;
     const tex = new BABYLON.DynamicTexture("face-paint", { width: size, height: size }, scene, false);
@@ -180,7 +191,6 @@ export class CharacterFace {
     const cx = size * 0.5;
     const cy = size * 0.48;
 
-    // Skin base
     const skin = ctx.createRadialGradient(cx, cy, 20, cx, cy + 20, 260);
     skin.addColorStop(0, "#f6d4b8");
     skin.addColorStop(0.45, "#e8b892");
@@ -189,50 +199,41 @@ export class CharacterFace {
     ctx.fillStyle = skin;
     ctx.fillRect(0, 0, size, size);
 
-    // Cheek blush
     ctx.fillStyle = "rgba(232, 110, 120, 0.38)";
     ctx.beginPath(); ctx.ellipse(cx - 70, cy + 55, 48, 28, 0, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.ellipse(cx + 70, cy + 55, 48, 28, 0, 0, Math.PI * 2); ctx.fill();
 
-    // Brows
     ctx.strokeStyle = "#2a160c";
     ctx.lineWidth = 7;
     ctx.lineCap = "round";
     ctx.beginPath(); ctx.moveTo(cx - 95, cy - 28); ctx.quadraticCurveTo(cx - 55, cy - 48, cx - 18, cy - 30); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(cx + 95, cy - 28); ctx.quadraticCurveTo(cx + 55, cy - 48, cx + 18, cy - 30); ctx.stroke();
 
-    // Eye whites
     for (const side of [-1, 1]) {
       const ex = cx + side * 52;
       const ey = cy - 2;
       ctx.fillStyle = "#f7f8fc";
       ctx.beginPath(); ctx.ellipse(ex, ey, 28, 18, 0, 0, Math.PI * 2); ctx.fill();
-      // Iris
       const iris = ctx.createRadialGradient(ex, ey, 2, ex, ey, 14);
       iris.addColorStop(0, "#7ec8e0");
       iris.addColorStop(0.55, "#2a6f88");
       iris.addColorStop(1, "#143848");
       ctx.fillStyle = iris;
       ctx.beginPath(); ctx.arc(ex, ey, 13, 0, Math.PI * 2); ctx.fill();
-      // Pupil
       ctx.fillStyle = "#0a0a0c";
       ctx.beginPath(); ctx.arc(ex, ey, 6, 0, Math.PI * 2); ctx.fill();
-      // Highlight
       ctx.fillStyle = "#ffffff";
       ctx.beginPath(); ctx.arc(ex - 4, ey - 4, 3.5, 0, Math.PI * 2); ctx.fill();
-      // Upper lid shadow
       ctx.strokeStyle = "rgba(60, 30, 20, 0.55)";
       ctx.lineWidth = 4;
       ctx.beginPath(); ctx.ellipse(ex, ey - 2, 28, 18, 0, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
     }
 
-    // Nose shade
     ctx.fillStyle = "rgba(160, 95, 70, 0.35)";
     ctx.beginPath(); ctx.ellipse(cx, cy + 28, 14, 22, 0, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = "rgba(255, 220, 200, 0.35)";
     ctx.beginPath(); ctx.ellipse(cx, cy + 18, 6, 10, 0, 0, Math.PI * 2); ctx.fill();
 
-    // Lips
     ctx.fillStyle = "#c45a68";
     ctx.beginPath(); ctx.ellipse(cx, cy + 78, 34, 10, 0, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = "#a84050";
@@ -241,13 +242,11 @@ export class CharacterFace {
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(cx - 30, cy + 82); ctx.quadraticCurveTo(cx, cy + 86, cx + 30, cy + 82); ctx.stroke();
 
-    // Freckles
     ctx.fillStyle = "rgba(140, 80, 50, 0.45)";
     for (const [x, y] of [[cx - 40, cy + 42], [cx - 28, cy + 52], [cx + 22, cy + 46], [cx + 38, cy + 54], [cx - 8, cy + 58], [cx + 10, cy + 50]]) {
       ctx.beginPath(); ctx.arc(x, y, 2.2, 0, Math.PI * 2); ctx.fill();
     }
 
-    // Soft hair edge at top of UV (helps sphere crown)
     const hair = ctx.createLinearGradient(0, 0, 0, 120);
     hair.addColorStop(0, "rgba(40, 18, 8, 0.85)");
     hair.addColorStop(1, "rgba(40, 18, 8, 0)");
@@ -262,41 +261,41 @@ export class CharacterFace {
   static #eye(scene, parent, side) {
     const whiteMat = new BABYLON.StandardMaterial(`face-sclera-${side}`, scene);
     whiteMat.diffuseColor = new BABYLON.Color3(0.98, 0.98, 1);
-    whiteMat.emissiveColor = new BABYLON.Color3(0.35, 0.35, 0.4);
+    whiteMat.emissiveColor = new BABYLON.Color3(0.4, 0.4, 0.45);
     whiteMat.specularColor = new BABYLON.Color3(0.5, 0.5, 0.55);
-    const sclera = BABYLON.MeshBuilder.CreateSphere(`face-sclera-${side}`, { diameter: 0.046, segments: 14 }, scene);
+    const sclera = BABYLON.MeshBuilder.CreateSphere(`face-sclera-${side}`, { diameter: 0.05, segments: 14 }, scene);
     sclera.material = whiteMat;
     sclera.parent = parent;
-    sclera.position.set(side * 0.048, 0.032, 0.138);
+    sclera.position.set(side * 0.048, 0.032, 0.142);
     sclera.scaling.set(1.15, 0.85, 0.7);
     sclera.isPickable = false;
 
     const irisMat = new BABYLON.StandardMaterial(`face-iris-${side}`, scene);
     irisMat.diffuseColor = new BABYLON.Color3(0.25, 0.55, 0.65);
-    irisMat.emissiveColor = new BABYLON.Color3(0.08, 0.18, 0.22);
-    const iris = BABYLON.MeshBuilder.CreateSphere(`face-iris-${side}`, { diameter: 0.026, segments: 12 }, scene);
+    irisMat.emissiveColor = new BABYLON.Color3(0.12, 0.22, 0.26);
+    const iris = BABYLON.MeshBuilder.CreateSphere(`face-iris-${side}`, { diameter: 0.028, segments: 12 }, scene);
     iris.material = irisMat;
     iris.parent = parent;
-    iris.position.set(side * 0.048, 0.032, 0.155);
+    iris.position.set(side * 0.048, 0.032, 0.16);
     iris.scaling.set(1, 1, 0.55);
     iris.isPickable = false;
 
     const pupilMat = new BABYLON.StandardMaterial(`face-pupil-${side}`, scene);
     pupilMat.diffuseColor = BABYLON.Color3.Black();
     pupilMat.emissiveColor = new BABYLON.Color3(0.02, 0.02, 0.02);
-    const pupil = BABYLON.MeshBuilder.CreateSphere(`face-pupil-${side}`, { diameter: 0.013, segments: 8 }, scene);
+    const pupil = BABYLON.MeshBuilder.CreateSphere(`face-pupil-${side}`, { diameter: 0.014, segments: 8 }, scene);
     pupil.material = pupilMat;
     pupil.parent = parent;
-    pupil.position.set(side * 0.048, 0.032, 0.162);
+    pupil.position.set(side * 0.048, 0.032, 0.168);
     pupil.isPickable = false;
 
     const hiMat = new BABYLON.StandardMaterial(`face-eye-hi-${side}`, scene);
     hiMat.diffuseColor = BABYLON.Color3.White();
     hiMat.emissiveColor = BABYLON.Color3.White();
-    const hi = BABYLON.MeshBuilder.CreateSphere(`face-eye-hi-${side}`, { diameter: 0.007, segments: 6 }, scene);
+    const hi = BABYLON.MeshBuilder.CreateSphere(`face-eye-hi-${side}`, { diameter: 0.008, segments: 6 }, scene);
     hi.material = hiMat;
     hi.parent = parent;
-    hi.position.set(side * 0.042, 0.038, 0.166);
+    hi.position.set(side * 0.042, 0.038, 0.172);
     hi.isPickable = false;
   }
 }

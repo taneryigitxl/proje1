@@ -1,5 +1,5 @@
-import { Entity } from "./Entity.js?v=22";
-import { DamageSystem } from "../combat/DamageSystem.js?v=22";
+import { Entity } from "./Entity.js?v=23";
+import { DamageSystem } from "../combat/DamageSystem.js?v=23";
 
 export class Mob extends Entity {
   constructor(scene, spawn, index, navigation, onDamage, visual) {
@@ -16,7 +16,8 @@ export class Mob extends Entity {
     this.patrol = Boolean(spawn.patrol);
     this.footOffset = Number.isFinite(visual.footOffset) ? visual.footOffset : 0;
     const free = this.#snapToGround(spawn.x, spawn.z, 0.55);
-    const y = navigation.heightAt(free.x, free.z) + this.footOffset;
+    let y = navigation.heightAt(free.x, free.z) + this.footOffset;
+    if (!Number.isFinite(y)) y = 0;
     this.spawn = new BABYLON.Vector3(free.x, y, free.z);
     this.root.position.copyFrom(this.spawn);
     this.position = this.root.position;

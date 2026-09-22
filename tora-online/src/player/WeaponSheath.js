@@ -29,12 +29,11 @@ export class WeaponSheath {
   sheath() {
     if (this.sheathed || !this.backBone) return;
     this.weaponRoot.attachToBone(this.backBone, this.skinnedMesh);
-    // female-ranger spine_02 / spine_03 local space:
-    // greatsword blade runs along +Y — lay it diagonally flush on the back
-    // (hilt up-left shoulder, tip down-right hip; small -Z so it does not stick out)
-    this.weaponRoot.position.set(-0.02, 0.1, -0.1);
-    this.weaponRoot.rotation.set(0.35, 2.35, 1.05);
-    this.weaponRoot.scaling.setAll((this.handPose.scale || 1.32) * 0.85);
+    // Empirically verified on female-ranger spine_02:
+    // blade (+Y) lays diagonally flush — hilt up-left, tip down-right, not lateral stick-out
+    this.weaponRoot.position.set(0.02, 0.14, -0.16);
+    this.weaponRoot.rotation.set(0.05, Math.PI * 0.5, Math.PI * 0.52);
+    this.weaponRoot.scaling.setAll((this.handPose.scale || 1.32) * 0.82);
     this.sheathed = true;
   }
 
@@ -48,7 +47,6 @@ export class WeaponSheath {
   }
 
   #findBackBone() {
-    // Prefer mid-back (spine_02) — spine_03 sits too high and exaggerated lateral local axes
     const preferred = [
       "spine_02", "Spine2", "spine2",
       "spine_03", "Spine3",

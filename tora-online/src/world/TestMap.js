@@ -1,4 +1,5 @@
-import { GrassSystem } from "./GrassSystem.js?v=22";
+// GrassSystem disabled — square blade patches removed
+// import { GrassSystem } from "./GrassSystem.js?v=23";
 
 /**
  * Dark medieval MMORPG test valley — Metin2-inspired atmosphere without rewriting gameplay systems.
@@ -44,14 +45,9 @@ export class TestMap {
   async buildOptional() {
     if (this.optionalBuilt) return;
     this.optionalBuilt = true;
-    console.info("[Tora Startup] 9/10 Opsiyonel çim ve efektler hazırlanıyor.");
-    this.grass = new GrassSystem(this.scene, this.assets, this.navigation, (x, z) => this.heightAt(x, z));
-    try {
-      await this.grass.build(this.profile, this.quality);
-    } catch (error) {
-      this.grass.disable(error);
-      console.error("[Tora Grass] Çim kurulamadı; oyun çimsiz devam ediyor.", error);
-    }
+    // Blade-cluster GrassSystem produced square neon patches — grass lives in terrain paint instead
+    console.info("[Tora Startup] 9/10 Opsiyonel efektler hazırlanıyor (kare çim yamaları kapalı).");
+    this.grass = null;
     this.#buildOptionalEffect("bloom", () => {
       if (!this.profile.bloom) return;
       const pipeline = new BABYLON.DefaultRenderingPipeline("tora-pipeline", true, this.scene, this.scene.cameras);
@@ -189,8 +185,8 @@ export class TestMap {
         const px = (x / steps) * size - size / 2;
         const pz = (z / steps) * size - size / 2;
         positions.push(px, this.heightAt(px, pz), pz);
-        // Irregular UV scale reduces obvious tiling
-        uvs.push((x / steps) * 7.3 + Math.sin(z * 0.17) * 0.08, (z / steps) * 7.3 + Math.cos(x * 0.14) * 0.08);
+        // World-space UVs — one continuous atlas, no chunk seams
+        uvs.push(x / steps, z / steps);
       }
     }
     for (let z = 0; z < steps; z++) {
@@ -210,66 +206,123 @@ export class TestMap {
     data.normals = normals;
     data.uvs = uvs;
     data.applyToMesh(ground);
-    // Full-coverage forest texture — never a gray/untextured plane
-    ground.material = this.#terrainMaterial("terrain-base", "forest", new BABYLON.Color3(0.48, 0.72, 0.32), false);
+    // Single continuous biome paint — no ribbon patches (those created gray/green rectangles)
+    ground.material = this.#worldTerrainMaterial();
     ground.receiveShadows = true;
     ground.checkCollisions = true;
     ground.isPickable = true;
     ground.metadata = { ground: true, cursor: "move" };
-
-    // Soft dirt/grass/rock ribbons — alpha-blended so edges never hard-cut into squares
-    this.#blendPatch("field-grass-w", [
-      new BABYLON.Vector3(-28, 0, -18), new BABYLON.Vector3(-20, 0, -6), new BABYLON.Vector3(-14, 0, 8), new BABYLON.Vector3(-20, 0, 22),
-    ], 18, "forest", new BABYLON.Color3(0.42, 0.68, 0.28));
-    this.#blendPatch("field-grass-e", [
-      new BABYLON.Vector3(8, 0, -20), new BABYLON.Vector3(16, 0, -6), new BABYLON.Vector3(20, 0, 8), new BABYLON.Vector3(14, 0, 22),
-    ], 18, "forest", new BABYLON.Color3(0.4, 0.66, 0.26));
-    this.#blendPatch("mid-valley-grass", [
-      new BABYLON.Vector3(-10, 0, -14), new BABYLON.Vector3(0, 0, -6), new BABYLON.Vector3(8, 0, 2), new BABYLON.Vector3(2, 0, 12), new BABYLON.Vector3(-6, 0, 10),
-    ], 16, "forest", new BABYLON.Color3(0.44, 0.7, 0.3));
-    this.#blendPatch("village-dirt", [
-      new BABYLON.Vector3(-24, 0, -22), new BABYLON.Vector3(-16, 0, -16), new BABYLON.Vector3(-10, 0, -10), new BABYLON.Vector3(-6, 0, -6),
-    ], 12, "mud", new BABYLON.Color3(0.55, 0.4, 0.24));
-    this.#blendPatch("south-dirt", [
-      new BABYLON.Vector3(-10, 0, -30), new BABYLON.Vector3(0, 0, -28), new BABYLON.Vector3(8, 0, -22), new BABYLON.Vector3(4, 0, -14),
-    ], 12, "mud", new BABYLON.Color3(0.52, 0.38, 0.22));
-    this.#blendPatch("camp-approach-dirt", [
-      new BABYLON.Vector3(-6, 0, 2), new BABYLON.Vector3(0, 0, 8), new BABYLON.Vector3(5, 0, 14),
-    ], 9, "mud", new BABYLON.Color3(0.5, 0.38, 0.22));
-    this.#blendPatch("stream-mud", [
-      new BABYLON.Vector3(-24, 0, 3), new BABYLON.Vector3(-14, 0, 6), new BABYLON.Vector3(-4, 0, 7), new BABYLON.Vector3(6, 0, 5), new BABYLON.Vector3(14, 0, 3),
-    ], 8, "mud", new BABYLON.Color3(0.48, 0.36, 0.22));
-    this.#blendPatch("edge-rock-n", [
-      new BABYLON.Vector3(-22, 0, 26), new BABYLON.Vector3(-6, 0, 30), new BABYLON.Vector3(10, 0, 29), new BABYLON.Vector3(22, 0, 26),
-    ], 14, "rock", new BABYLON.Color3(0.48, 0.46, 0.4));
-    this.#blendPatch("edge-rock-e", [
-      new BABYLON.Vector3(26, 0, -16), new BABYLON.Vector3(30, 0, 0), new BABYLON.Vector3(28, 0, 14), new BABYLON.Vector3(24, 0, 24),
-    ], 12, "rock", new BABYLON.Color3(0.46, 0.44, 0.38));
-    this.#blendPatch("edge-rock-w", [
-      new BABYLON.Vector3(-26, 0, -14), new BABYLON.Vector3(-30, 0, 0), new BABYLON.Vector3(-28, 0, 14), new BABYLON.Vector3(-22, 0, 24),
-    ], 12, "rock", new BABYLON.Color3(0.44, 0.42, 0.36));
   }
 
-  #blendPatch(name, points, width, kind, fallback) {
-    const alphas = [0, 0.25, 0.55, 0.75, 0.55, 0.25, 0];
-    const mesh = this.#ribbon(name, points, width, 7, alphas, 0.025);
-    mesh.material = this.#terrainMaterial(`terrain-${name}`, kind, fallback, true);
-    mesh.metadata = { ground: true, cursor: "move" };
-    mesh.isPickable = true;
-    mesh.receiveShadows = true;
+  /** Full-map DynamicTexture: grass / dirt / path / rock via noise + road distance. */
+  #worldTerrainMaterial() {
+    const material = new BABYLON.StandardMaterial("terrain-world", this.scene);
+    material.disableLighting = false;
+    material.diffuseColor = BABYLON.Color3.White();
+    material.ambientColor = new BABYLON.Color3(0.55, 0.58, 0.48);
+    material.specularColor = BABYLON.Color3.Black();
+    material.emissiveColor = new BABYLON.Color3(0.06, 0.09, 0.04);
+    material.diffuseTexture = this.#paintWorldBiome(1024);
+    material.diffuseTexture.level = 1.25;
+    material.diffuseTexture.wrapU = BABYLON.Texture.CLAMP_ADDRESSMODE;
+    material.diffuseTexture.wrapV = BABYLON.Texture.CLAMP_ADDRESSMODE;
+    return material;
+  }
+
+  #paintWorldBiome(size) {
+    const tex = new BABYLON.DynamicTexture("terrain-world-paint", { width: size, height: size }, this.scene, false);
+    const ctx = tex.getContext();
+    const half = 40; // mapHalfSize-ish world units
+    const roadDist = (wx, wz) => {
+      const roadIndex = (wz + 35) / 2.65;
+      if (roadIndex < 0 || roadIndex > 28) return 99;
+      const roadX = Math.sin(roadIndex * 0.4) * 2.35;
+      return Math.abs(wx - roadX);
+    };
+    const noise = (x, y) => {
+      const n = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+      return n - Math.floor(n);
+    };
+    const fbm = (x, y) => {
+      let v = 0, a = 0.5, f = 1;
+      for (let i = 0; i < 4; i++) {
+        v += a * noise(x * f, y * f);
+        f *= 2.05;
+        a *= 0.5;
+      }
+      return v;
+    };
+
+    const img = ctx.createImageData(size, size);
+    const data = img.data;
+    for (let py = 0; py < size; py++) {
+      for (let px = 0; px < size; px++) {
+        const wx = (px / (size - 1)) * (half * 2) - half;
+        const wz = (py / (size - 1)) * (half * 2) - half;
+        const n = fbm(wx * 0.08, wz * 0.08);
+        const edge = Math.max(Math.abs(wx), Math.abs(wz));
+        const rd = roadDist(wx, wz);
+        const streamIndex = (wx + 28) / 2.4;
+        const streamZ = 6 + Math.sin(streamIndex * 0.46) * 3.4;
+        const streamD = (streamIndex >= 0 && streamIndex <= 25) ? Math.abs(wz - streamZ) : 99;
+        const village = (wx > -25 && wx < -5 && wz > -22 && wz < -6);
+        const camp = Math.hypot(wx, wz - 17) < 11;
+
+        // biome weights — soft, no hard rectangles
+        let grass = 0.55 + n * 0.45;
+        let dirt = 0.15 + (1 - n) * 0.25;
+        let path = 0;
+        let rock = edge > 28 ? BABYLON.Scalar.Clamp((edge - 28) / 8, 0, 1) : 0;
+
+        if (rd < 5.5) path = BABYLON.Scalar.Clamp(1 - rd / 5.5, 0, 1);
+        if (streamD < 3.2) dirt = Math.max(dirt, BABYLON.Scalar.Clamp(1 - streamD / 3.2, 0, 1) * 0.9);
+        if (village || camp) {
+          dirt = Math.max(dirt, 0.7);
+          grass *= 0.35;
+        }
+        if (path > 0) {
+          grass *= 1 - path;
+          dirt = Math.max(dirt, path * 0.85);
+        }
+        grass *= 1 - rock * 0.85;
+
+        const sum = grass + dirt + path + rock + 0.001;
+        grass /= sum; dirt /= sum; path /= sum; rock /= sum;
+
+        // Readable dusk colors (no gray)
+        const gR = 70 + n * 40, gG = 130 + n * 50, gB = 45 + n * 25;
+        const dR = 140 + n * 30, dG = 100 + n * 20, dB = 55 + n * 15;
+        const pR = 160 + n * 25, pG = 120 + n * 18, pB = 70 + n * 12;
+        const rR = 110 + n * 25, rG = 105 + n * 20, rB = 95 + n * 15;
+
+        let r = gR * grass + dR * dirt + pR * path + rR * rock;
+        let g = gG * grass + dG * dirt + pG * path + rG * rock;
+        let b = gB * grass + dB * dirt + pB * path + rB * rock;
+
+        // Fine litter
+        const speck = noise(px * 0.7, py * 0.7);
+        r = BABYLON.Scalar.Clamp(r + (speck - 0.5) * 18, 0, 255);
+        g = BABYLON.Scalar.Clamp(g + (speck - 0.5) * 18, 0, 255);
+        b = BABYLON.Scalar.Clamp(b + (speck - 0.5) * 14, 0, 255);
+
+        const i = (py * size + px) * 4;
+        data[i] = r | 0;
+        data[i + 1] = g | 0;
+        data[i + 2] = b | 0;
+        data[i + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    tex.update();
+    console.info("[Tora Terrain] Dünya biome boyaması uygulandı (tek sürekli material).");
+    return tex;
   }
 
   #path() {
+    // Soft dirt road only — alpha-faded so no hard rectangular cut into the biome paint
     const points = Array.from({ length: 28 }, (_, i) => new BABYLON.Vector3(Math.sin(i * 0.4) * 2.35, 0, -35 + i * 2.65));
-    // Soft dirt shoulder under the road so edges never hard-cut into gray
-    const shoulder = this.#ribbon("village-road-shoulder", points, 11.5, 9, [0, 0.2, 0.45, 0.65, 0.75, 0.65, 0.45, 0.2, 0], 0.02);
-    shoulder.material = this.#terrainMaterial("terrain-shoulder", "mud", new BABYLON.Color3(0.42, 0.32, 0.2), true);
-    shoulder.metadata = { ground: true, cursor: "move" };
-    shoulder.isPickable = true;
-    shoulder.receiveShadows = true;
-    // Wider soft alpha edges — road fades into grass instead of hard cut
-    const path = this.#ribbon("village-road", points, 8.4, 9, [0, 0.18, 0.42, 0.72, 1, 0.72, 0.42, 0.18, 0], 0.045);
-    path.material = this.#terrainMaterial("terrain-mud", "mud", new BABYLON.Color3(0.48, 0.36, 0.22), true);
+    const path = this.#ribbon("village-road", points, 7.2, 9, [0, 0.12, 0.35, 0.65, 0.85, 0.65, 0.35, 0.12, 0], 0.04);
+    path.material = this.#terrainMaterial("terrain-mud", "mud", new BABYLON.Color3(0.55, 0.4, 0.24), true);
     path.metadata = { ground: true, cursor: "move" };
     path.isPickable = true;
     path.receiveShadows = true;
@@ -277,9 +330,8 @@ export class TestMap {
 
   #stream() {
     const points = Array.from({ length: 26 }, (_, i) => new BABYLON.Vector3(-28 + i * 2.4, 0, 6 + Math.sin(i * 0.46) * 3.4));
-    // Muddy bank blend under water
-    const bank = this.#ribbon("stream-bank", points, 6.2, 7, [0, 0.3, 0.55, 0.7, 0.55, 0.3, 0], 0.015);
-    bank.material = this.#terrainMaterial("terrain-stream-bank", "mud", new BABYLON.Color3(0.4, 0.3, 0.18), true);
+    const bank = this.#ribbon("stream-bank", points, 5.5, 7, [0, 0.25, 0.5, 0.65, 0.5, 0.25, 0], 0.015);
+    bank.material = this.#terrainMaterial("terrain-stream-bank", "mud", new BABYLON.Color3(0.48, 0.36, 0.22), true);
     bank.receiveShadows = true;
     bank.isPickable = true;
     bank.metadata = { ground: true, cursor: "move" };
