@@ -29,11 +29,11 @@ export class WeaponSheath {
   sheath() {
     if (this.sheathed || !this.backBone) return;
     this.weaponRoot.attachToBone(this.backBone, this.skinnedMesh);
-    // Female-ranger spine_03 local space: keep blade tight to the back plate
-    // (less -Z = less stick-out; rotation lays blade along the torso)
-    this.weaponRoot.position.set(0.02, 0.08, -0.03);
-    this.weaponRoot.rotation.set(-0.25, 1.55, 1.15);
-    this.weaponRoot.scaling.setAll((this.handPose.scale || 1.32) * 0.82);
+    // spine_03: blade flush along the back, hilt up toward left shoulder
+    // Empirically tuned for female-ranger.glb greatsword (blade along +Y)
+    this.weaponRoot.position.set(0.06, 0.12, 0.02);
+    this.weaponRoot.rotation.set(1.05, -0.15, 2.55);
+    this.weaponRoot.scaling.setAll((this.handPose.scale || 1.32) * 0.78);
     this.sheathed = true;
   }
 

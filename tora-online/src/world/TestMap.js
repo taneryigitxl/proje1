@@ -1,4 +1,4 @@
-import { GrassSystem } from "./GrassSystem.js?v=20";
+import { GrassSystem } from "./GrassSystem.js?v=21";
 
 /**
  * Dark medieval MMORPG test valley — Metin2-inspired atmosphere without rewriting gameplay systems.
@@ -210,22 +210,8 @@ export class TestMap {
     data.normals = normals;
     data.uvs = uvs;
     data.applyToMesh(ground);
-    // Painted base never goes gray if JPG decode fails; JPG packs layer on top as blends
-    ground.material = this.#paintedGround("terrain-base", "grass", new BABYLON.Color3(0.3, 0.4, 0.2));
-    // Soft forest albedo overlay (readable greens) with fail-safe
-    const forestOverlay = this.#terrainMaterial("terrain-forest-overlay", "forest", new BABYLON.Color3(0.34, 0.42, 0.24), true);
-    // Apply as a full-map soft veil via a second coplanar mesh
-    const overlay = ground.clone("tora-forest-veil");
-    overlay.material = forestOverlay;
-    overlay.position.y += 0.012;
-    overlay.isPickable = true;
-    overlay.receiveShadows = true;
-    overlay.metadata = { ground: true, cursor: "move" };
-    // Soften veil alpha so painted base always shows through if overlay is dark
-    if (overlay.material) {
-      overlay.material.alpha = 0.72;
-      overlay.material.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
-    }
+    // Painted grass/dirt base — never a gray plane
+    ground.material = this.#paintedGround("terrain-base", "grass", new BABYLON.Color3(0.28, 0.38, 0.18));
     ground.receiveShadows = true;
     ground.checkCollisions = true;
     ground.isPickable = true;
