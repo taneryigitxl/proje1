@@ -1,4 +1,4 @@
-import { GrassSystem } from "./GrassSystem.js?v=9";
+import { GrassSystem } from "./GrassSystem.js?v=10";
 
 export class TestMap {
   constructor(scene, navigation, profile, quality = "medium") {
@@ -171,41 +171,71 @@ export class TestMap {
   }
 
   #paintTerrainTexture(name, kind, baseColor) {
-    const size = 256;
+    const size = 512;
     const tex = new BABYLON.DynamicTexture(`${name}-paint`, { width: size, height: size }, this.scene, false);
     const ctx = tex.getContext();
-    const toHex = (c) => {
-      const r = Math.round(BABYLON.Scalar.Clamp(c.r, 0, 1) * 255);
-      const g = Math.round(BABYLON.Scalar.Clamp(c.g, 0, 1) * 255);
-      const b = Math.round(BABYLON.Scalar.Clamp(c.b, 0, 1) * 255);
+    const toHex = (c, lift = 0) => {
+      const r = Math.round(BABYLON.Scalar.Clamp(c.r + lift, 0, 1) * 255);
+      const g = Math.round(BABYLON.Scalar.Clamp(c.g + lift, 0, 1) * 255);
+      const b = Math.round(BABYLON.Scalar.Clamp(c.b + lift, 0, 1) * 255);
       return `rgb(${r},${g},${b})`;
     };
-    ctx.fillStyle = toHex(baseColor);
+    // Base fill — brighter so unlit ground never reads black
+    ctx.fillStyle = toHex(baseColor, 0.08);
     ctx.fillRect(0, 0, size, size);
-    // Soft mottling so the plane never reads as flat black
-    for (let i = 0; i < 900; i++) {
+
+    // Large soft patches
+    for (let i = 0; i < 48; i++) {
       const x = Math.random() * size;
       const y = Math.random() * size;
-      const radius = 2 + Math.random() * 10;
-      const lift = kind === "grass" ? 0.12 + Math.random() * 0.22 : 0.08 + Math.random() * 0.16;
-      const shade = kind === "grass"
-        ? `rgba(${40 + Math.random() * 50}, ${110 + Math.random() * 90}, ${30 + Math.random() * 40}, ${lift})`
-        : `rgba(${140 + Math.random() * 60}, ${90 + Math.random() * 40}, ${40 + Math.random() * 30}, ${lift})`;
-      ctx.fillStyle = shade;
+      const radius = 18 + Math.random() * 55;
+      const patch = ctx.createRadialGradient(x, y, 2, x, y, radius);
+      if (kind === "grass") {
+        const bright = Math.random() > 0.45;
+        patch.addColorStop(0, bright ? "rgba(120, 200, 70, 0.55)" : "rgba(45, 110, 40, 0.45)");
+        patch.addColorStop(1, "rgba(0,0,0,0)");
+      } else {
+        patch.addColorStop(0, Math.random() > 0.5 ? "rgba(190, 140, 80, 0.5)" : "rgba(120, 80, 45, 0.4)");
+        patch.addColorStop(1, "rgba(0,0,0,0)");
+      }
+      ctx.fillStyle = patch;
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.fill();
     }
+
+    // Fine grain / litter
+    for (let i = 0; i < 2200; i++) {
+      const x = Math.random() * size;
+      const y = Math.random() * size;
+      const a = 0.08 + Math.random() * 0.2;
+      if (kind === "grass") {
+        ctx.fillStyle = `rgba(${50 + Math.random() * 80}, ${120 + Math.random() * 100}, ${30 + Math.random() * 40}, ${a})`;
+      } else {
+        ctx.fillStyle = `rgba(${150 + Math.random() * 70}, ${100 + Math.random() * 50}, ${50 + Math.random() * 30}, ${a})`;
+      }
+      ctx.fillRect(x, y, 1 + Math.random() * 2, 1 + Math.random() * 2);
+    }
+
     if (kind === "grass") {
-      ctx.strokeStyle = "rgba(70, 150, 55, 0.35)";
+      // Tiny blade strokes for surface detail
+      ctx.strokeStyle = "rgba(90, 170, 55, 0.35)";
       ctx.lineWidth = 1.2;
-      for (let i = 0; i < 180; i++) {
+      for (let i = 0; i < 400; i++) {
         const x = Math.random() * size;
         const y = Math.random() * size;
         ctx.beginPath();
         ctx.moveTo(x, y);
-        ctx.lineTo(x + (Math.random() - 0.5) * 6, y - 6 - Math.random() * 10);
+        ctx.lineTo(x + (Math.random() - 0.5) * 5, y - 5 - Math.random() * 10);
         ctx.stroke();
+      }
+    } else {
+      // Dirt pebbles
+      for (let i = 0; i < 120; i++) {
+        ctx.fillStyle = `rgba(${80 + Math.random() * 60}, ${55 + Math.random() * 40}, ${30 + Math.random() * 25}, ${0.25 + Math.random() * 0.35})`;
+        ctx.beginPath();
+        ctx.arc(Math.random() * size, Math.random() * size, 1 + Math.random() * 3, 0, Math.PI * 2);
+        ctx.fill();
       }
     }
     tex.update();

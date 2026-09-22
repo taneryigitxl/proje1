@@ -49,8 +49,8 @@ export class GrassSystem {
         if (mesh.material) {
           mesh.material = mesh.material.clone(`${mesh.material.name}-${key}`);
           mesh.material.backFaceCulling = false;
-          if ("diffuseColor" in mesh.material) mesh.material.diffuseColor = new BABYLON.Color3(0.25, 0.62, 0.2);
-          if ("emissiveColor" in mesh.material) mesh.material.emissiveColor = new BABYLON.Color3(0.04, 0.1, 0.03);
+          if ("diffuseColor" in mesh.material && !mesh.material.diffuseTexture) mesh.material.diffuseColor = new BABYLON.Color3(0.25, 0.62, 0.2);
+          if ("emissiveColor" in mesh.material && !mesh.material.emissiveTexture) mesh.material.emissiveColor = new BABYLON.Color3(0.04, 0.1, 0.03);
         }
       }
       this.cells.set(key, {
@@ -80,15 +80,13 @@ export class GrassSystem {
       if (!tuft) continue;
       tuft.setEnabled(true);
       tuft.position.set(x, this.heightAt(x, z), z);
-      tuft.scaling.setAll(0.95 + Math.random() * 0.35);
+      tuft.scaling.setAll(1.05 + Math.random() * 0.4);
       tuft.rotation.y = Math.random() * Math.PI * 2;
       tuft.getChildMeshes(false).forEach((mesh) => {
         mesh.isPickable = false;
         if (mesh.material) {
           mesh.material = mesh.material.clone(`${mesh.material.name}-tuft`);
           mesh.material.backFaceCulling = false;
-          if ("diffuseColor" in mesh.material) mesh.material.diffuseColor = new BABYLON.Color3(0.3, 0.7, 0.22);
-          if ("emissiveColor" in mesh.material) mesh.material.emissiveColor = new BABYLON.Color3(0.06, 0.14, 0.04);
         }
       });
       this.tufts.push(tuft);
@@ -96,18 +94,21 @@ export class GrassSystem {
   }
 
   async #makeLocalGrassTemplate() {
+    // Prefer AssetManager blade texture path when available
+    if (this.assets.createProceduralGrass) return this.assets.createProceduralGrass();
     const root = new BABYLON.TransformNode("local-grass-template", this.scene);
     const material = new BABYLON.StandardMaterial("local-grass-mat", this.scene);
-    material.diffuseColor = new BABYLON.Color3(0.26, 0.55, 0.18);
-    material.emissiveColor = new BABYLON.Color3(0.05, 0.12, 0.03);
+    material.disableLighting = true;
+    material.emissiveColor = new BABYLON.Color3(0.45, 0.75, 0.28);
+    material.diffuseColor = material.emissiveColor;
     material.specularColor = BABYLON.Color3.Black();
     material.backFaceCulling = false;
-    for (let i = 0; i < 5; i++) {
-      const blade = BABYLON.MeshBuilder.CreateBox(`blade-${i}`, { width: 0.045, height: 0.32, depth: 0.012 }, this.scene);
+    for (let i = 0; i < 6; i++) {
+      const blade = BABYLON.MeshBuilder.CreatePlane(`blade-${i}`, { width: 0.16, height: 0.4 }, this.scene);
       blade.material = material;
       blade.parent = root;
-      blade.rotation.y = (i / 5) * Math.PI * 2;
-      blade.position.set(Math.sin(i) * 0.05, 0.16, Math.cos(i) * 0.05);
+      blade.rotation.y = (i / 6) * Math.PI * 2;
+      blade.position.set(Math.sin(i * 1.7) * 0.05, 0.2, Math.cos(i * 1.7) * 0.05);
       blade.isPickable = false;
     }
     root.setEnabled(false);

@@ -1,4 +1,4 @@
-import { CharacterFace } from "../player/CharacterFace.js?v=9";
+import { CharacterFace } from "../player/CharacterFace.js?v=10";
 
 export class AssetManager {
   constructor(scene, config, onProgress = () => {}) {
@@ -174,25 +174,63 @@ export class AssetManager {
 
   #createProceduralGrassTemplate() {
     const root = new BABYLON.TransformNode("template-grass", this.scene);
+    const bladeTex = this.#paintGrassBladeTexture();
     const material = new BABYLON.StandardMaterial("procedural-grass-mat", this.scene);
-    material.diffuseColor = new BABYLON.Color3(0.26, 0.55, 0.18);
-    material.emissiveColor = new BABYLON.Color3(0.05, 0.12, 0.03);
+    material.disableLighting = true;
+    material.diffuseTexture = bladeTex;
+    material.emissiveTexture = bladeTex;
+    material.opacityTexture = bladeTex;
+    material.diffuseColor = BABYLON.Color3.White();
+    material.emissiveColor = new BABYLON.Color3(0.55, 0.85, 0.4);
     material.specularColor = BABYLON.Color3.Black();
     material.backFaceCulling = false;
-    material.useVertexColors = true;
-    // Slim tapered cards — look like tufts, not giant billboards
-    for (let i = 0; i < 5; i++) {
-      const blade = BABYLON.MeshBuilder.CreateBox(`grass-blade-${i}`, { width: 0.045, height: 0.32, depth: 0.012 }, this.scene);
+    material.useAlphaFromDiffuseTexture = true;
+    material.transparencyMode = BABYLON.Material.MATERIAL_ALPHATEST;
+    material.alphaCutOff = 0.35;
+    // Cluster of soft alpha blades — reads as tufts, not neon boxes
+    for (let i = 0; i < 6; i++) {
+      const blade = BABYLON.MeshBuilder.CreatePlane(`grass-blade-${i}`, { width: 0.18, height: 0.42 }, this.scene);
       blade.material = material;
       blade.parent = root;
-      blade.rotation.y = (i / 5) * Math.PI * 2;
-      blade.rotation.z = (i % 2 === 0 ? -0.12 : 0.12);
-      blade.position.set(Math.sin(i) * 0.05, 0.16, Math.cos(i) * 0.05);
+      blade.rotation.y = (i / 6) * Math.PI * 2;
+      blade.rotation.z = ((i % 3) - 1) * 0.18;
+      blade.position.set(Math.sin(i * 1.7) * 0.06, 0.2, Math.cos(i * 1.7) * 0.06);
       blade.isPickable = false;
       blade.receiveShadows = false;
     }
     root.setEnabled(false);
     return root;
+  }
+
+  #paintGrassBladeTexture() {
+    const size = 64;
+    const tex = new BABYLON.DynamicTexture("grass-blade-tex", { width: size, height: size }, this.scene, false);
+    tex.hasAlpha = true;
+    const ctx = tex.getContext();
+    ctx.clearRect(0, 0, size, size);
+    // Tapered leaf silhouette
+    const grad = ctx.createLinearGradient(0, 0, 0, size);
+    grad.addColorStop(0, "rgba(170, 230, 110, 0)");
+    grad.addColorStop(0.12, "rgba(140, 210, 80, 0.95)");
+    grad.addColorStop(0.55, "rgba(70, 155, 45, 1)");
+    grad.addColorStop(1, "rgba(40, 100, 30, 0.15)");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(size * 0.5, 2);
+    ctx.quadraticCurveTo(size * 0.72, size * 0.35, size * 0.62, size - 2);
+    ctx.lineTo(size * 0.38, size - 2);
+    ctx.quadraticCurveTo(size * 0.28, size * 0.35, size * 0.5, 2);
+    ctx.closePath();
+    ctx.fill();
+    // Center vein
+    ctx.strokeStyle = "rgba(30, 80, 25, 0.45)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(size * 0.5, 6);
+    ctx.lineTo(size * 0.5, size - 6);
+    ctx.stroke();
+    tex.update();
+    return tex;
   }
 
   createProceduralGrass() {
