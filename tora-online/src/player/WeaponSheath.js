@@ -29,10 +29,10 @@ export class WeaponSheath {
   sheath() {
     if (this.sheathed || !this.backBone) return;
     this.weaponRoot.attachToBone(this.backBone, this.skinnedMesh);
-    // Flat across the upper back — hilt over left shoulder, blade down-right
-    this.weaponRoot.position.set(-0.04, 0.16, -0.15);
-    this.weaponRoot.rotation.set(0.08, 1.62, -1.05);
-    this.weaponRoot.scaling.setAll(this.handPose.scale || 1.32);
+    // Seat flush on upper back — blade along spine, slight left-shoulder tilt
+    this.weaponRoot.position.set(0.05, 0.14, -0.2);
+    this.weaponRoot.rotation.set(1.42, 0.08, 1.95);
+    this.weaponRoot.scaling.setAll((this.handPose.scale || 1.32) * 0.98);
     this.sheathed = true;
   }
 

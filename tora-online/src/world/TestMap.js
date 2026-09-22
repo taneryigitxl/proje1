@@ -1,4 +1,4 @@
-import { GrassSystem } from "./GrassSystem.js?v=17";
+import { GrassSystem } from "./GrassSystem.js?v=18";
 
 /**
  * Dark medieval MMORPG test valley — Metin2-inspired atmosphere without rewriting gameplay systems.
@@ -585,7 +585,7 @@ export class TestMap {
     jobs.push(this.#place("crate", "orc-crate-b", 4.1, 14.8, -0.3, 0.52, { obstacle: 0.35, sink: 0.05 }));
     jobs.push(this.#place("barrel", "orc-barrel-a", -3.8, 14.5, 0.2, 0.58, { obstacle: 0.38, sink: 0.05 }));
     jobs.push(this.#place("barrel", "orc-barrel-b", -4.4, 15.2, 0.8, 0.55, { obstacle: 0.35, sink: 0.05 }));
-    jobs.push(this.#place("chest", "orc-chest", 6.5, 15.5, -0.4, 0.65, { obstacle: 0.4, metadata: { cursor: "loot", loot: true } }));
+    // No free-standing loot chest in the open — supplies only
     jobs.push(this.#place("weapon-stand", "orc-totem-a", -6.8, 14.0, 0.5, 0.85, { obstacle: 0.4 }));
     jobs.push(this.#place("weapon-stand", "orc-totem-b", 7.2, 18.8, -1.0, 0.85, { obstacle: 0.4 }));
     jobs.push(this.#place("wagon", "orc-warwagon", -2.5, 12.2, 0.8, 0.72, { collision: true, obstacle: 0.95, sink: 0.08 }));
@@ -649,23 +649,19 @@ export class TestMap {
   async #buildWorldDetails() {
     const jobs = [];
     jobs.push(this.#place("wagon", "road-wagon", 4.5, -22, 1.1, 0.7, { obstacle: 0.9, sink: 0.08, collision: true }));
-    jobs.push(this.#place("crate", "road-crate-a", 5.8, -21.2, 0.3, 0.55, { obstacle: 0.35, sink: 0.04 }));
     jobs.push(this.#place("barrel", "road-barrel", 3.2, -21.5, 0.6, 0.58, { obstacle: 0.35, sink: 0.04 }));
     jobs.push(this.#place("weapon-stand", "road-sign", 1.8, -28, 0.2, 0.7, { obstacle: 0.35 }));
     jobs.push(this.#place("torch", "road-torch", 0.5, -27.5, 0, 0.95));
-    jobs.push(this.#place("crate", "stream-crate", -16, 4.5, 0.4, 0.55, { obstacle: 0.35, sink: 0.05 }));
     jobs.push(this.#place("barrel", "stream-barrel", -15.2, 5.2, -0.3, 0.55, { obstacle: 0.35, sink: 0.05 }));
     jobs.push(this.#place("rock-b", "field-rock-a", 8, 2, 0.7, 0.32, { obstacle: 0.3, sink: 0.14 }));
     jobs.push(this.#place("rock-a", "field-rock-b", -10, 3, 1.2, 0.28, { obstacle: 0.28, sink: 0.12 }));
     // Mid-road waystone / resting spot
     jobs.push(this.#place("rock-a", "waystone", -1.2, -5.5, 0.2, 0.4, { obstacle: 0.35, sink: 0.16, shadow: true }));
     jobs.push(this.#place("barrel", "way-barrel", 0.4, -6.2, 0.5, 0.5, { obstacle: 0.3, sink: 0.04 }));
-    jobs.push(this.#place("crate", "way-crate", 1.0, -5.4, -0.2, 0.48, { obstacle: 0.3, sink: 0.04 }));
     jobs.push(this.#place("torch", "way-torch", -2.4, -6.0, 0, 0.9));
     // Abandoned campsite near stream bend
     jobs.push(this.#place("rock-b", "stream-camp-a", -20, 7.5, 0.4, 0.2, { sink: 0.08 }));
     jobs.push(this.#place("rock-a", "stream-camp-b", -19.3, 8.0, 1.1, 0.18, { sink: 0.08 }));
-    jobs.push(this.#place("crate", "stream-camp-crate", -18.5, 7.2, 0.3, 0.5, { obstacle: 0.3, sink: 0.04 }));
     // Broken fence along approach to orc camp
     for (let i = 0; i < 4; i++) {
       jobs.push(this.#place("wood-fence", `approach-fence-${i}`, -3.5 + i * 2.1, 6.8 + (i % 2) * 0.3, 0.1, 0.65, {

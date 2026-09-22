@@ -1,4 +1,4 @@
-import { Mob } from "./Mob.js?v=17";
+import { Mob } from "./Mob.js?v=18";
 
 export class EntityManager {
   constructor(scene, navigation, spawns, onDamage, visuals) { this.scene=scene; this.navigation=navigation; this.mobs=spawns.map((spawn,index)=>new Mob(scene,spawn,index,navigation,onDamage,visuals[index])); this.selected=null; this.slowAccumulator=0; }

@@ -33,8 +33,8 @@ export class GrassSystem {
     this.profile = profile;
     this.budget = Math.max(80, Number(profile?.grass) || 180);
 
-    const carpet = this.#buildCarpetMesh("grass-carpet", new BABYLON.Color3(0.16, 0.22, 0.1));
-    const edge = this.#buildCarpetMesh("grass-edge", new BABYLON.Color3(0.2, 0.24, 0.12));
+    const carpet = this.#buildCarpetMesh("grass-carpet", new BABYLON.Color3(0.11, 0.15, 0.08));
+    const edge = this.#buildCarpetMesh("grass-edge", new BABYLON.Color3(0.14, 0.17, 0.09));
 
     this.sources = [
       { mesh: carpet, kind: "carpet", weight: 0.75 },
