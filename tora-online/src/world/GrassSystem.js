@@ -98,16 +98,16 @@ export class GrassSystem {
   async #makeLocalGrassTemplate() {
     const root = new BABYLON.TransformNode("local-grass-template", this.scene);
     const material = new BABYLON.StandardMaterial("local-grass-mat", this.scene);
-    material.diffuseColor = new BABYLON.Color3(0.28, 0.58, 0.2);
-    material.emissiveColor = new BABYLON.Color3(0.06, 0.14, 0.04);
+    material.diffuseColor = new BABYLON.Color3(0.26, 0.55, 0.18);
+    material.emissiveColor = new BABYLON.Color3(0.05, 0.12, 0.03);
     material.specularColor = BABYLON.Color3.Black();
     material.backFaceCulling = false;
-    for (let i = 0; i < 3; i++) {
-      const blade = BABYLON.MeshBuilder.CreatePlane(`blade-${i}`, { width: 0.12, height: 0.38 }, this.scene);
+    for (let i = 0; i < 5; i++) {
+      const blade = BABYLON.MeshBuilder.CreateBox(`blade-${i}`, { width: 0.045, height: 0.32, depth: 0.012 }, this.scene);
       blade.material = material;
       blade.parent = root;
-      blade.rotation.y = (i / 3) * Math.PI;
-      blade.position.y = 0.19;
+      blade.rotation.y = (i / 5) * Math.PI * 2;
+      blade.position.set(Math.sin(i) * 0.05, 0.16, Math.cos(i) * 0.05);
       blade.isPickable = false;
     }
     root.setEnabled(false);
