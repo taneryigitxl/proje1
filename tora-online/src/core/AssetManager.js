@@ -38,11 +38,20 @@ export class AssetManager {
     root.metadata = { assetType: "rigged-gltf" };
     const skeleton = loaded.skeletons[0];
     console.info(`[Tora Animations] Oyuncu iskeleti: ${skeleton.name || "isimsiz"}, ${skeleton.bones.length} kemik.`);
+    // glTF skinning is driven by each Bone's linked TransformNode. Prefer that
+    // node when retargeting — writing Bone.rotationQuaternion alone leaves the
+    // mesh stuck in bind/T-pose even while AnimationGroups report isPlaying.
     const targetByName = new Map();
-    [...loaded.meshes, ...loaded.transformNodes, ...skeleton.bones].forEach((target) => {
+    const register = (target) => {
       if (!target?.name) return;
       targetByName.set(target.name, target);
       targetByName.set(target.name.toLowerCase(), target);
+    };
+    loaded.meshes.forEach(register);
+    loaded.transformNodes.forEach(register);
+    skeleton.bones.forEach((bone) => {
+      const linked = typeof bone.getTransformNode === "function" ? bone.getTransformNode() : bone._linkedTransformNode;
+      register(linked || bone);
     });
 
     this.onProgress(57, "Skeletal animasyonlar bağlanıyor…");
@@ -56,7 +65,13 @@ export class AssetManager {
         for (const group of source.animationGroups) {
           const clone = group.clone(`tora-${libraryIndex}-${group.name}`, (target) => {
             const name = target?.name;
-            return name ? targetByName.get(name) || targetByName.get(name.toLowerCase()) || null : null;
+            if (!name) return null;
+            const hit = targetByName.get(name) || targetByName.get(name.toLowerCase());
+            if (hit) return hit;
+            const bone = skeleton.bones.find((candidate) => candidate.name === name || candidate.name.toLowerCase() === name.toLowerCase());
+            if (!bone) return null;
+            const linked = typeof bone.getTransformNode === "function" ? bone.getTransformNode() : bone._linkedTransformNode;
+            return linked || bone;
           });
           if (clone?.targetedAnimations?.length) { animationGroups.push(clone); cloned++; }
           else clone?.dispose?.();
@@ -160,18 +175,20 @@ export class AssetManager {
   #createProceduralGrassTemplate() {
     const root = new BABYLON.TransformNode("template-grass", this.scene);
     const material = new BABYLON.StandardMaterial("procedural-grass-mat", this.scene);
-    material.diffuseColor = new BABYLON.Color3(0.34, 0.72, 0.24);
-    material.emissiveColor = new BABYLON.Color3(0.08, 0.16, 0.04);
-    material.specularColor = new BABYLON.Color3(0.02, 0.03, 0.01);
+    material.diffuseColor = new BABYLON.Color3(0.28, 0.58, 0.2);
+    material.emissiveColor = new BABYLON.Color3(0.06, 0.14, 0.04);
+    material.specularColor = BABYLON.Color3.Black();
     material.backFaceCulling = false;
     material.useVertexColors = true;
-    for (let i = 0; i < 4; i++) {
-      const blade = BABYLON.MeshBuilder.CreatePlane(`grass-blade-${i}`, { width: 0.5, height: 0.85 }, this.scene);
+    // Thin crossed blades — readable tufts, not giant neon billboards
+    for (let i = 0; i < 3; i++) {
+      const blade = BABYLON.MeshBuilder.CreatePlane(`grass-blade-${i}`, { width: 0.12, height: 0.38 }, this.scene);
       blade.material = material;
       blade.parent = root;
-      blade.rotation.y = (i / 4) * Math.PI;
-      blade.position.y = 0.42;
-      blade.position.x = (i % 2 === 0 ? 0.05 : -0.05) * (i + 1) * 0.15;
+      blade.rotation.y = (i / 3) * Math.PI;
+      blade.rotation.x = (Math.random() * 0.15) - 0.05;
+      blade.position.y = 0.19;
+      blade.position.x = (i - 1) * 0.04;
       blade.isPickable = false;
       blade.receiveShadows = false;
     }

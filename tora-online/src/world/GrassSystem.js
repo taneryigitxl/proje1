@@ -80,7 +80,7 @@ export class GrassSystem {
       if (!tuft) continue;
       tuft.setEnabled(true);
       tuft.position.set(x, this.heightAt(x, z), z);
-      tuft.scaling.setAll(1.35 + Math.random() * 0.4);
+      tuft.scaling.setAll(0.95 + Math.random() * 0.35);
       tuft.rotation.y = Math.random() * Math.PI * 2;
       tuft.getChildMeshes(false).forEach((mesh) => {
         mesh.isPickable = false;
@@ -98,16 +98,16 @@ export class GrassSystem {
   async #makeLocalGrassTemplate() {
     const root = new BABYLON.TransformNode("local-grass-template", this.scene);
     const material = new BABYLON.StandardMaterial("local-grass-mat", this.scene);
-    material.diffuseColor = new BABYLON.Color3(0.3, 0.65, 0.22);
-    material.emissiveColor = new BABYLON.Color3(0.05, 0.12, 0.03);
+    material.diffuseColor = new BABYLON.Color3(0.28, 0.58, 0.2);
+    material.emissiveColor = new BABYLON.Color3(0.06, 0.14, 0.04);
     material.specularColor = BABYLON.Color3.Black();
     material.backFaceCulling = false;
     for (let i = 0; i < 3; i++) {
-      const blade = BABYLON.MeshBuilder.CreatePlane(`blade-${i}`, { width: 0.45, height: 0.7 }, this.scene);
+      const blade = BABYLON.MeshBuilder.CreatePlane(`blade-${i}`, { width: 0.12, height: 0.38 }, this.scene);
       blade.material = material;
       blade.parent = root;
       blade.rotation.y = (i / 3) * Math.PI;
-      blade.position.y = 0.35;
+      blade.position.y = 0.19;
       blade.isPickable = false;
     }
     root.setEnabled(false);
@@ -209,11 +209,11 @@ export class GrassSystem {
       const x = center.x + Math.cos(angle) * radius;
       const z = center.z + Math.sin(angle) * radius;
       if (!this.#allowed(x, z)) continue;
-      const scale = 1.05 + random() * .55;
+      const scale = 0.85 + random() * .45;
       const matrix = BABYLON.Matrix.Compose(
-        new BABYLON.Vector3(scale * (.9 + random() * .2), scale * 1.15, scale * (.9 + random() * .2)),
+        new BABYLON.Vector3(scale * (.85 + random() * .25), scale * (0.9 + random() * .35), scale * (.85 + random() * .25)),
         BABYLON.Quaternion.FromEulerAngles(0, random() * Math.PI * 2, 0),
-        new BABYLON.Vector3(x, this.heightAt(x, z) + .02, z)
+        new BABYLON.Vector3(x, this.heightAt(x, z) + .01, z)
       );
       const tint = .88 + random() * .18;
       const gridX = Math.floor((x + 36) / CELL_SIZE);

@@ -79,22 +79,23 @@ export class TestMap {
   }
 
   #atmosphere() {
-    this.scene.clearColor = new BABYLON.Color4(.12, .18, .14, 1);
-    this.scene.ambientColor = new BABYLON.Color3(.55, .58, .5);
+    this.scene.clearColor = new BABYLON.Color4(.22, .32, .24, 1);
+    this.scene.ambientColor = new BABYLON.Color3(.7, .75, .65);
     this.scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
-    this.scene.fogDensity = .0045;
-    this.scene.fogColor = new BABYLON.Color3(.28, .34, .3);
+    this.scene.fogDensity = .0032;
+    this.scene.fogColor = new BABYLON.Color3(.4, .48, .42);
     const hemi = new BABYLON.HemisphericLight("dusk-fill", new BABYLON.Vector3(-.25, 1, .15), this.scene);
-    hemi.intensity = 1.35; hemi.diffuse = new BABYLON.Color3(.95, .98, .9); hemi.groundColor = new BABYLON.Color3(.35, .42, .25);
+    hemi.intensity = 1.6; hemi.diffuse = new BABYLON.Color3(1, 1, .95); hemi.groundColor = new BABYLON.Color3(.45, .55, .32);
     const sun = new BABYLON.DirectionalLight("late-sun", new BABYLON.Vector3(-.55, -1, .35), this.scene);
-    sun.position.set(24, 42, -28); sun.intensity = 1.85; sun.diffuse = new BABYLON.Color3(1, .95, .82);
+    sun.position.set(24, 42, -28); sun.intensity = 2.1; sun.diffuse = new BABYLON.Color3(1, .97, .88);
     this.shadowGenerator = new BABYLON.ShadowGenerator(this.profile.shadows, sun);
     this.shadowGenerator.usePercentageCloserFiltering = true;
     this.shadowGenerator.filteringQuality = this.profile.shadows > 1024 ? BABYLON.ShadowGenerator.QUALITY_HIGH : BABYLON.ShadowGenerator.QUALITY_MEDIUM;
+    this.shadowGenerator.darkness = 0.35;
     this.scene.imageProcessingConfiguration.toneMappingEnabled = true;
     this.scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
-    this.scene.imageProcessingConfiguration.exposure = 1.45;
-    this.scene.imageProcessingConfiguration.contrast = 1.08;
+    this.scene.imageProcessingConfiguration.exposure = 1.55;
+    this.scene.imageProcessingConfiguration.contrast = 1.05;
   }
 
   #terrain() {
@@ -152,11 +153,14 @@ export class TestMap {
 
   #paintedGround(name, kind, baseColor, alphaBlend = false) {
     const material = new BABYLON.StandardMaterial(name, this.scene);
+    // Unlit bright ground — never crushed by shadows/fog/PBR
+    material.disableLighting = true;
     material.diffuseColor = BABYLON.Color3.White();
-    material.ambientColor = baseColor.scale(0.85);
-    material.specularColor = new BABYLON.Color3(0.04, 0.04, 0.03);
-    material.emissiveColor = baseColor.scale(0.18);
-    material.diffuseTexture = this.#paintTerrainTexture(name, kind, baseColor);
+    material.ambientColor = BABYLON.Color3.White();
+    material.specularColor = BABYLON.Color3.Black();
+    material.emissiveColor = BABYLON.Color3.White();
+    material.emissiveTexture = this.#paintTerrainTexture(name, kind, baseColor);
+    material.diffuseTexture = material.emissiveTexture;
     material.diffuseTexture.uScale = 1;
     material.diffuseTexture.vScale = 1;
     if (alphaBlend) {
