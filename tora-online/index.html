@@ -8,11 +8,11 @@
     <title>Tora Online</title>
     <link rel="icon" type="image/svg+xml" href="assets/tora-symbol.svg" />
     <link rel="preload" href="assets/tora-symbol.svg" as="image" />
-    <link rel="stylesheet" href="styles.css?v=3" />
+    <link rel="stylesheet" href="styles.css?v=4" />
     <script src="vendor/babylon.js" defer></script>
     <script src="vendor/babylonjs.loaders.min.js" defer></script>
-    <script src="menu.js?v=3" defer></script>
-    <script type="module" src="src/main.js?v=4"></script>
+    <script src="menu.js?v=4" defer></script>
+    <script type="module" src="src/main.js?v=5"></script>
   </head>
   <body data-quality="medium">
     <canvas id="game-canvas" aria-label="Tora Online oyun alanı"></canvas>
@@ -46,12 +46,15 @@
       <div class="player-frame panel"><div class="portrait" id="player-portrait" aria-hidden="true"><svg viewBox="0 0 64 64" width="48" height="48" aria-hidden="true"><circle cx="32" cy="30" r="18" fill="#e0b48e"/><circle cx="25" cy="28" r="2.4" fill="#1c2430"/><circle cx="39" cy="28" r="2.4" fill="#1c2430"/><path d="M24 38c3 4 13 4 16 0" stroke="#8a3d45" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M18 18c4-8 24-8 28 0" fill="#3a2418"/></svg></div><div class="player-data"><div><strong>Tora Savaşçısı</strong><small>SEVİYE <b id="player-level">1</b></small></div><div class="meter hp"><i id="player-hp-bar"></i><span id="player-hp-text">160 / 160</span></div><div class="meter mana"><i id="player-mana-bar"></i><span id="player-mana-text">94 / 94</span></div><div class="xp"><i id="player-xp-bar"></i><span id="player-xp-text">0 / 150 XP</span></div></div></div>
       <div id="target-frame" class="target-frame panel" hidden><div><strong id="target-name">—</strong><small>SEVİYE <b id="target-level">1</b></small></div><div class="meter hp"><i id="target-hp-bar"></i><span id="target-hp-text">0 / 0</span></div></div>
       <div class="quest-panel panel"><small>İLK SINAV</small><strong>Bozkır Yaratıkları</strong><span id="quest-status">Yaratıkları yen: 0 / 5</span></div>
+      <div id="buff-bar" class="buff-bar" hidden aria-label="Aktif bufflar"></div>
       <output id="progress-toast" class="progress-toast" role="status" aria-live="polite" hidden></output>
       <aside class="minimap panel" aria-label="Bölge haritası"><div class="minimap-map"><i id="minimap-player" aria-label="Oyuncu"></i><div id="minimap-mobs"></div></div><strong>AYAZ VADİSİ</strong><span>Kadim Sınır</span></aside>
       <section id="inventory-panel" class="game-panel inventory-panel panel" hidden aria-label="Envanter">
         <header><small>TORBA</small><strong>ENVANTER <kbd>I</kbd></strong><button type="button" class="panel-close" data-close="inventory" aria-label="Kapat">✕</button></header>
+        <p id="equip-summary" class="equip-summary">Silah: — · Zırh: —</p>
         <div id="inventory-grid" class="inventory-grid"></div>
-        <p id="inventory-hint" class="panel-hint">Boş slota tıkla veya eşya seç.</p>
+        <div class="inventory-actions"><button type="button" id="inventory-use" disabled>KULLAN</button></div>
+        <p id="inventory-hint" class="panel-hint">Eşya seç, sonra Kullan.</p>
       </section>
       <section id="stats-panel" class="game-panel stats-panel panel" hidden aria-label="Karakter özellikleri">
         <header><small>KARAKTER</small><strong>STATLAR <kbd>C</kbd></strong><button type="button" class="panel-close" data-close="stats" aria-label="Kapat">✕</button></header>

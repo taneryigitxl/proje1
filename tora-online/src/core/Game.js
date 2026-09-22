@@ -14,6 +14,7 @@ import { HUD } from "../ui/HUD.js";
 import { ProgressionSystem } from "../progression/ProgressionSystem.js";
 import { StatsSystem } from "../progression/StatsSystem.js";
 import { InventorySystem } from "../progression/InventorySystem.js";
+import { LootSystem } from "../progression/LootSystem.js";
 
 export class Game {
   constructor(runtime, onProgress = () => {}, onFatal = () => {}) {
@@ -72,7 +73,7 @@ export class Game {
       this.player.position.copyFrom(world.spawn);
       this.stats = new StatsSystem(this.player);
       this.inventory = new InventorySystem(this.player, this.stats);
-      this.progression = new ProgressionSystem(this.player, this.stats);
+      this.progression = new ProgressionSystem(this.player, this.stats, this.inventory);
       this.camera = new ThirdPersonCamera(this.scene, this.canvas, this.player, GAME_CONFIG.camera);
 
       console.info("[Tora Startup] 7/10 Animasyon ve combat hazırlanıyor.");
@@ -83,6 +84,7 @@ export class Game {
         onKill: (mob) => this.#onMobDefeated(mob),
         onStatus: (message) => this.hud?.setStatus(message),
       }, this.stats);
+      this.loot = new LootSystem(this.scene, this.inventory, (message) => this.hud?.setStatus(message));
 
       console.info("[Tora Startup] 8/10 HUD ve cursor bağlanıyor.");
       this.hud = new HUD(this.scene, this.engine, this.player, this.entities, this.combat.skills, this.progression, (slot) => this.#useSkill(slot), this.stats, this.inventory);
@@ -168,6 +170,7 @@ export class Game {
     this.input?.dispose();
     this.hud?.dispose();
     this.map?.dispose();
+    this.loot?.dispose();
     this.scene?.dispose();
     if (window.__TORA_DEBUG__?.map === this.map) delete window.__TORA_DEBUG__;
     console.info("[Tora Startup] Başarısız/sonlandırılmış oyun instance kaynakları temizlendi.");
@@ -194,16 +197,29 @@ export class Game {
     this.pointerObserver = this.scene.onPointerObservable.add((info) => {
       if (!this.running || this.paused || info.type !== BABYLON.PointerEventTypes.POINTERDOWN || info.event.button !== 0) return;
       if (this.hud?.openPanel) this.hud.closePanels();
-      const actionPick = this.scene.pick(this.scene.pointerX, this.scene.pointerY, (mesh) => Boolean(mesh.metadata?.mob || mesh.metadata?.npc || mesh.metadata?.loot || mesh.metadata?.interactive));
+      const actionPick = this.scene.pick(this.scene.pointerX, this.scene.pointerY, (mesh) => Boolean(mesh.metadata?.mob || mesh.metadata?.npc || mesh.metadata?.loot || mesh.metadata?.interactive || mesh.metadata?.lootPickup));
       if (actionPick?.hit) {
         const data = actionPick.pickedMesh.metadata;
+        if (data.lootPickup) {
+          if (this.loot.tryPickup(actionPick.pickedMesh)) {
+            this.hud.refreshInventory();
+            const collector = this.progression.syncCollectorQuest();
+            if (collector) this.hud.announceProgress({ ...collector, questCompleted: true });
+          }
+          return;
+        }
         if (data.mob) {
           const mob = this.entities.getById(data.entityId);
           this.entities.select(mob);
           this.combat.basicAttack(mob, this.camera.forwardOnGround());
-        } else if (data.npc) this.hud.addChat("Demirci Ayame", "Kuzeydeki harabelerde iblis izleri gördüm. Kılıcını keskin tut.");
-        else if (data.loot) this.hud.setStatus("Sandık mühürlü. Anahtar harabe muhafızında olabilir.");
-        else this.hud.setStatus("Demirci tezgâhı: ekipman geliştirme yakında.");
+        } else if (data.npc) {
+          this.hud.addChat("Demirci Ayame", "İksir için örse dokun. 3 Kurt Dişi getirirsen Demir Kılıç veririm.");
+          this.hud.setStatus("Demirci: örse tıkla.");
+        } else if (data.loot) {
+          this.hud.setStatus("Sandık mühürlü. Önce görevleri tamamla.");
+        } else if (data.interactive) {
+          this.#useBlacksmith();
+        } else this.hud.setStatus("Demirci tezgâhı.");
         return;
       }
       const groundPick = this.scene.pick(this.scene.pointerX, this.scene.pointerY, (mesh) => Boolean(mesh.metadata?.ground));
@@ -233,6 +249,24 @@ export class Game {
     this.exitButton?.removeEventListener("click", this.onExit);
   }
 
+  #useBlacksmith() {
+    let given = [];
+    if (this.inventory.buy("health-potion")) given.push("Can İksiri");
+    if (this.inventory.buy("mana-potion")) given.push("Mana İksiri");
+    if (this.inventory.countItem("wolf-fang") >= 3 && !this.inventory.slots.includes("iron-blade")) {
+      if (this.inventory.buy("iron-blade")) given.push("Demir Kılıç");
+    }
+    this.hud.refreshInventory();
+    if (!given.length) {
+      this.hud.setStatus("Envanter dolu veya ödül yok.");
+      return;
+    }
+    this.hud.setStatus(`Demirci verdi: ${given.join(", ")}`);
+    this.hud.addChat("Demirci Ayame", given.includes("Demir Kılıç")
+      ? "Dişlerini aldım. Demir Kılıç senin — I ile kuşanan."
+      : "İksirlerin hazır. Diş toplarsan daha iyi silah veririm.");
+  }
+
   #useSkill(slot) {
     if (!this.running || this.paused) return;
     this.combat.useSkill(slot, this.entities.selected, this.camera.forwardOnGround());
@@ -240,10 +274,14 @@ export class Game {
 
   #onMobDefeated(mob) {
     const result = this.progression.recordDefeat(mob);
-    if (!result) return;
-    this.hud.announceProgress(result);
-    if (result.questCompleted) this.hud.setStatus("İlk Sınav tamamlandı. Bozkır seni artık tanıyor.");
-    else this.hud.setStatus(`${mob.name} yenildi • +${result.killXp} XP`);
+    const dropId = this.loot.rollFor(mob);
+    if (dropId) this.loot.spawnDrop(mob, dropId);
+    const collector = this.progression.syncCollectorQuest();
+    if (!result && !collector) return;
+    if (result) this.hud.announceProgress(result);
+    if (collector) this.hud.announceProgress({ ...collector, questCompleted: true });
+    if (result?.questCompleted) this.hud.setStatus("İlk Sınav tamamlandı. Yeni görev: 3 Kurt Dişi topla.");
+    else if (result) this.hud.setStatus(`${mob.name} yenildi • +${result.killXp} XP`);
   }
 
   #frame() {
@@ -259,6 +297,7 @@ export class Game {
       this.camera.update(dt);
       this.map.update(dt, this.camera.camera, this.engine.getFps());
       this.entities.update(dt, this.player);
+      this.loot?.update(dt);
       if (this.player.alive) this.player.mana = Math.min(this.player.maxMana, this.player.mana + 4 * dt);
       this.snapshotTimer += dt;
       if (this.snapshotTimer > .25) {

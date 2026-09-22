@@ -1,6 +1,10 @@
 import { SkillBar } from "./SkillBar.js";
 import { TargetFrame } from "./TargetFrame.js";
-import { STAT_DEFS } from "../progression/StatsSystem.js";
+import { ITEM_DEFS } from "../progression/InventorySystem.js";
+
+function itemName(id) {
+  return ITEM_DEFS[id]?.name || id || "—";
+}
 
 export class HUD {
   constructor(scene, engine, player, entities, skillSystem, progression, onSkill, stats, inventory) {
@@ -46,6 +50,9 @@ export class HUD {
     this.statsList = document.getElementById("stats-list");
     this.statPoints = document.getElementById("stat-points");
     this.statsSummary = document.getElementById("stats-summary");
+    this.buffBar = document.getElementById("buff-bar");
+    this.equipSummary = document.getElementById("equip-summary");
+    this.useItemButton = document.getElementById("inventory-use");
     this.openPanel = null;
 
     for (const mob of entities.mobs) {
@@ -94,6 +101,14 @@ export class HUD {
           this.#renderStats();
           this.setStatus(`${allocate.dataset.statId} artırıldı.`);
         }
+        return;
+      }
+      if (event.target.closest("#inventory-use")) {
+        const result = this.inventory.useSelected();
+        this.inventoryHint.textContent = result.message;
+        if (result.ok) this.setStatus(result.message);
+        this.#renderInventory();
+        this.#renderStats();
       }
     };
 
@@ -176,6 +191,10 @@ export class HUD {
     }
   }
 
+  refreshInventory() {
+    this.#renderInventory();
+  }
+
   closePanels() {
     this.openPanel = null;
     if (this.inventoryPanel) this.inventoryPanel.hidden = true;
@@ -185,7 +204,6 @@ export class HUD {
   update() {
     const p = this.player;
     const progress = this.progression.snapshot();
-    const quest = progress.quest;
     this.hpBar.style.width = `${Math.max(0, p.health / p.maxHealth) * 100}%`;
     this.hpText.textContent = `${Math.ceil(p.health)} / ${p.maxHealth}`;
     this.manaBar.style.width = `${Math.max(0, p.mana / p.maxMana) * 100}%`;
@@ -193,14 +211,13 @@ export class HUD {
     this.level.textContent = progress.level;
     this.xpBar.style.width = `${Math.min(100, progress.xp / progress.nextLevelXp * 100)}%`;
     this.xpText.textContent = `${progress.xp} / ${progress.nextLevelXp} XP`;
-    const questText = quest.completed
-      ? `Tamamlandı • +${quest.rewardXp} XP`
-      : `Yaratıkları yen: ${quest.progress} / ${quest.goal}`;
+    const questText = this.#questText(progress);
     this.quest.textContent = performance.now() < this.statusUntil ? this.statusMessage : questText;
-    this.questPanel.classList.toggle("is-complete", quest.completed);
+    this.questPanel.classList.toggle("is-complete", progress.quest.completed && (!progress.secondQuest.unlocked || progress.secondQuest.completed));
     this.targetFrame.update(this.entities.selected);
     this.skillBar.update(this.skillSystem, p);
     this.fps.textContent = `${this.engine.getFps().toFixed(0)} FPS`;
+    this.#updateBuffs();
     this.#minimapPosition(this.minimapPlayer, p.position, p.rotation, true);
     for (const mob of this.entities.mobs) {
       const node = this.labels.get(mob.id);
@@ -234,6 +251,24 @@ export class HUD {
     this.root.hidden = true;
   }
 
+  #questText(progress) {
+    const q = progress.quest;
+    const s = progress.secondQuest;
+    if (!q.completed) return `Yaratıkları yen: ${q.progress} / ${q.goal}`;
+    if (s?.unlocked && !s.completed) return `Kurt Dişi topla: ${s.progress} / ${s.goal}`;
+    if (s?.completed) return `Görevler tamam • +${q.rewardXp + s.rewardXp} XP`;
+    return `Tamamlandı • +${q.rewardXp} XP`;
+  }
+
+  #updateBuffs() {
+    if (!this.buffBar) return;
+    const buffs = [];
+    if (this.player.buffs?.guard > 0) buffs.push(`<span class="buff guard">Savunma ${this.player.buffs.guard.toFixed(0)}s</span>`);
+    if (this.player.buffs?.rage > 0) buffs.push(`<span class="buff rage">Öfke ${this.player.buffs.rage.toFixed(0)}s</span>`);
+    this.buffBar.innerHTML = buffs.join("") || "";
+    this.buffBar.hidden = buffs.length === 0;
+  }
+
   #renderInventory() {
     if (!this.inventoryGrid) return;
     const snap = this.inventory.snapshot();
@@ -241,7 +276,8 @@ export class HUD {
     snap.slots.forEach((item, index) => {
       const button = document.createElement("button");
       button.type = "button";
-      button.className = `inv-slot${item ? "" : " empty"}${snap.selected === index ? " selected" : ""}`;
+      const equipped = item && (snap.equipped.weapon === item.id || snap.equipped.armor === item.id);
+      button.className = `inv-slot${item ? "" : " empty"}${snap.selected === index ? " selected" : ""}${equipped ? " equipped" : ""}`;
       button.dataset.invSlot = String(index);
       if (item) {
         button.innerHTML = `<span class="inv-icon">${item.icon}</span><span class="inv-name">${item.name}</span>`;
@@ -254,8 +290,12 @@ export class HUD {
     });
     const selected = snap.selected >= 0 ? snap.slots[snap.selected] : null;
     this.inventoryHint.textContent = selected
-      ? `${selected.name} — çift tıkla kullan / incele`
-      : "Eşya seç (çift tık: kullan).";
+      ? `${selected.name} — Kullan ile iksir/ekipman`
+      : "Eşya seç, sonra Kullan.";
+    if (this.equipSummary) {
+      this.equipSummary.textContent = `Silah: ${itemName(snap.equipped.weapon)} · Zırh: ${itemName(snap.equipped.armor)}`;
+    }
+    if (this.useItemButton) this.useItemButton.disabled = snap.selected < 0;
   }
 
   #renderStats() {
@@ -263,16 +303,17 @@ export class HUD {
     const snap = this.stats.snapshot();
     this.statPoints.textContent = String(snap.unspent);
     this.statsList.replaceChildren();
-    for (const def of STAT_DEFS) {
+    for (const def of snap.defs) {
       const row = document.createElement("li");
+      const gear = snap.gearBonus[def.id] || 0;
       row.innerHTML = `
-        <div><strong>${def.label}</strong><small>${def.description}</small></div>
-        <b>${snap.values[def.id]}</b>
+        <div><strong>${def.label}</strong><small>${def.description}${gear ? ` · ekipman +${gear}` : ""}</small></div>
+        <b>${snap.total[def.id]}</b>
         <button type="button" data-stat-id="${def.id}" ${snap.unspent <= 0 ? "disabled" : ""}>+</button>
       `;
       this.statsList.append(row);
     }
-    this.statsSummary.textContent = `Hasar bonus: +${snap.damageBonus.toFixed(0)} • Kritik: %${(snap.critChance * 100).toFixed(0)} • ${snap.unspent} puan bekliyor`;
+    this.statsSummary.textContent = `Hasar bonus: +${snap.damageBonus.toFixed(0)} • Kritik: %${(snap.critChance * 100).toFixed(0)} • ${snap.unspent} puan`;
   }
 
   #minimapPosition(node, position, rotation, isPlayer) {
