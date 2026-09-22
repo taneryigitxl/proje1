@@ -140,9 +140,9 @@ export class CharacterFace {
 
     if (headBone && skinnedMesh) {
       faceRoot.attachToBone(headBone, skinnedMesh);
-      faceRoot.position.set(0, 0.12, 0.06);
-      faceRoot.rotation.set(0.04, 0, 0);
-      faceRoot.scaling.setAll(1.12);
+      faceRoot.position.set(0, 0.125, 0.08);
+      faceRoot.rotation.set(0.02, 0, 0);
+      faceRoot.scaling.setAll(1.22);
       console.info(`[Tora Face] Boyalı yüz '${headBone.name}' kemiğine bağlandı.`);
     } else {
       faceRoot.parent = root;
