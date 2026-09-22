@@ -1,5 +1,5 @@
-import { CharacterFace } from "../player/CharacterFace.js?v=21";
-import { WeaponSheath } from "../player/WeaponSheath.js?v=21";
+import { CharacterFace } from "../player/CharacterFace.js?v=22";
+import { WeaponSheath } from "../player/WeaponSheath.js?v=22";
 
 export class AssetManager {
   constructor(scene, config, onProgress = () => {}) {
@@ -177,16 +177,16 @@ export class AssetManager {
       const pick = meshIndex % 3 === 0 ? palette.skin : meshIndex % 3 === 1 ? palette.cloth : palette.armor;
       try {
         const mat = mesh.material.clone(`${mesh.name}-mob-${index}`);
-        // Dim existing albedo rather than replacing with flat plastic colors
+        // Light tint only — heavy lerp was washing GLB textures into dark silhouettes
         if (mat.albedoColor) {
-          mat.albedoColor = BABYLON.Color3.Lerp(mat.albedoColor, pick, 0.55);
-          mat.emissiveColor = pick.scale(0.03);
+          mat.albedoColor = BABYLON.Color3.Lerp(mat.albedoColor, pick, 0.18);
+          mat.emissiveColor = pick.scale(0.02);
           mat.metallic = Math.min(mat.metallic ?? 0.1, 0.15);
-          mat.roughness = Math.max(mat.roughness ?? 0.7, 0.65);
+          mat.roughness = Math.max(mat.roughness ?? 0.7, 0.6);
         } else if (mat.diffuseColor) {
-          mat.diffuseColor = BABYLON.Color3.Lerp(mat.diffuseColor, pick, 0.6);
-          mat.ambientColor = pick.scale(0.5);
-          mat.emissiveColor = pick.scale(0.03);
+          mat.diffuseColor = BABYLON.Color3.Lerp(mat.diffuseColor, pick, 0.22);
+          mat.ambientColor = BABYLON.Color3.Lerp(mat.ambientColor || BABYLON.Color3.White(), pick, 0.25);
+          mat.emissiveColor = pick.scale(0.02);
           mat.specularColor = new BABYLON.Color3(0.08, 0.07, 0.06);
         }
         mesh.material = mat;

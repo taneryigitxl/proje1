@@ -1,4 +1,4 @@
-import { SKILLS } from "../core/Config.js?v=21";
+import { SKILLS } from "../core/Config.js?v=22";
 
 const ICONS = {
   slash: `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 40 L36 8" stroke="#f2e6c4" stroke-width="5" stroke-linecap="round"/><path d="M12 36 L40 8" stroke="#c45a3a" stroke-width="2.5" stroke-linecap="round" opacity=".85"/><circle cx="38" cy="10" r="3.2" fill="#ead7a8"/></svg>`,

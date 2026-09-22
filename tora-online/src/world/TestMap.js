@@ -1,4 +1,4 @@
-import { GrassSystem } from "./GrassSystem.js?v=21";
+import { GrassSystem } from "./GrassSystem.js?v=22";
 
 /**
  * Dark medieval MMORPG test valley — Metin2-inspired atmosphere without rewriting gameplay systems.
@@ -135,23 +135,23 @@ export class TestMap {
   }
 
   #atmosphere() {
-    // Dark classical MMORPG dusk — muted greens, warm sun, soft fog depth
-    this.scene.clearColor = new BABYLON.Color4(0.2, 0.22, 0.18, 1);
-    this.scene.ambientColor = new BABYLON.Color3(0.46, 0.48, 0.42);
+    // Readable dusk — warm sun, soft fog, no gray washout on ground
+    this.scene.clearColor = new BABYLON.Color4(0.28, 0.34, 0.26, 1);
+    this.scene.ambientColor = new BABYLON.Color3(0.55, 0.58, 0.48);
     this.scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
-    this.scene.fogDensity = 0.0034;
-    this.scene.fogColor = new BABYLON.Color3(0.38, 0.42, 0.34);
+    this.scene.fogDensity = 0.0026;
+    this.scene.fogColor = new BABYLON.Color3(0.46, 0.52, 0.4);
 
     const hemi = new BABYLON.HemisphericLight("valley-fill", new BABYLON.Vector3(-0.2, 1, 0.2), this.scene);
-    hemi.intensity = 1.2;
-    hemi.diffuse = new BABYLON.Color3(0.97, 0.95, 0.88);
-    hemi.groundColor = new BABYLON.Color3(0.32, 0.38, 0.26);
+    hemi.intensity = 1.35;
+    hemi.diffuse = new BABYLON.Color3(0.98, 0.96, 0.9);
+    hemi.groundColor = new BABYLON.Color3(0.38, 0.46, 0.3);
     hemi.specular = BABYLON.Color3.Black();
 
     const sun = new BABYLON.DirectionalLight("late-sun", new BABYLON.Vector3(-0.62, -1.05, 0.28), this.scene);
     sun.position.set(28, 48, -22);
-    sun.intensity = 1.95;
-    sun.diffuse = new BABYLON.Color3(1, 0.95, 0.82);
+    sun.intensity = 2.15;
+    sun.diffuse = new BABYLON.Color3(1, 0.96, 0.84);
     sun.specular = new BABYLON.Color3(0.28, 0.26, 0.22);
     this.sun = sun;
 
@@ -160,7 +160,7 @@ export class TestMap {
     this.shadowGenerator.filteringQuality = this.profile.shadows > 1024
       ? BABYLON.ShadowGenerator.QUALITY_HIGH
       : BABYLON.ShadowGenerator.QUALITY_MEDIUM;
-    this.shadowGenerator.darkness = 0.48;
+    this.shadowGenerator.darkness = 0.42;
     this.shadowGenerator.bias = 0.0003;
     this.shadowGenerator.normalBias = 0.03;
     sun.shadowMaxZ = 95;
@@ -170,10 +170,10 @@ export class TestMap {
 
     this.scene.imageProcessingConfiguration.toneMappingEnabled = true;
     this.scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
-    this.scene.imageProcessingConfiguration.exposure = 1.28;
-    this.scene.imageProcessingConfiguration.contrast = 1.1;
+    this.scene.imageProcessingConfiguration.exposure = 1.35;
+    this.scene.imageProcessingConfiguration.contrast = 1.08;
     this.scene.imageProcessingConfiguration.vignetteEnabled = true;
-    this.scene.imageProcessingConfiguration.vignetteWeight = 1.4;
+    this.scene.imageProcessingConfiguration.vignetteWeight = 1.1;
     this.scene.imageProcessingConfiguration.vignetteColor = new BABYLON.Color4(0.05, 0.06, 0.04, 1);
   }
 
@@ -210,44 +210,44 @@ export class TestMap {
     data.normals = normals;
     data.uvs = uvs;
     data.applyToMesh(ground);
-    // Painted grass/dirt base — never a gray plane
-    ground.material = this.#paintedGround("terrain-base", "grass", new BABYLON.Color3(0.28, 0.38, 0.18));
+    // Full-coverage forest texture — never a gray/untextured plane
+    ground.material = this.#terrainMaterial("terrain-base", "forest", new BABYLON.Color3(0.48, 0.72, 0.32), false);
     ground.receiveShadows = true;
     ground.checkCollisions = true;
     ground.isPickable = true;
     ground.metadata = { ground: true, cursor: "move" };
 
-    // Cover the valley — no bare gray plane. Soft dirt/grass/rock/mud blends.
+    // Soft dirt/grass/rock ribbons — alpha-blended so edges never hard-cut into squares
     this.#blendPatch("field-grass-w", [
-      new BABYLON.Vector3(-22, 0, -8), new BABYLON.Vector3(-14, 0, 0), new BABYLON.Vector3(-10, 0, 10), new BABYLON.Vector3(-16, 0, 18),
-    ], 14, "forest", new BABYLON.Color3(0.32, 0.42, 0.22));
+      new BABYLON.Vector3(-28, 0, -18), new BABYLON.Vector3(-20, 0, -6), new BABYLON.Vector3(-14, 0, 8), new BABYLON.Vector3(-20, 0, 22),
+    ], 18, "forest", new BABYLON.Color3(0.42, 0.68, 0.28));
     this.#blendPatch("field-grass-e", [
-      new BABYLON.Vector3(10, 0, -12), new BABYLON.Vector3(16, 0, -2), new BABYLON.Vector3(18, 0, 10), new BABYLON.Vector3(12, 0, 18),
-    ], 13, "forest", new BABYLON.Color3(0.3, 0.4, 0.2));
-    this.#blendPatch("village-dirt", [
-      new BABYLON.Vector3(-22, 0, -20), new BABYLON.Vector3(-14, 0, -16), new BABYLON.Vector3(-8, 0, -12), new BABYLON.Vector3(-6, 0, -8),
-    ], 10, "mud", new BABYLON.Color3(0.46, 0.34, 0.2));
-    this.#blendPatch("south-dirt", [
-      new BABYLON.Vector3(-8, 0, -28), new BABYLON.Vector3(0, 0, -26), new BABYLON.Vector3(6, 0, -22), new BABYLON.Vector3(4, 0, -16),
-    ], 9, "mud", new BABYLON.Color3(0.44, 0.33, 0.2));
-    this.#blendPatch("edge-rock-n", [
-      new BABYLON.Vector3(-18, 0, 28), new BABYLON.Vector3(-6, 0, 30), new BABYLON.Vector3(8, 0, 29), new BABYLON.Vector3(18, 0, 27),
-    ], 12, "rock", new BABYLON.Color3(0.4, 0.38, 0.32));
-    this.#blendPatch("edge-rock-e", [
-      new BABYLON.Vector3(26, 0, -12), new BABYLON.Vector3(28, 0, 0), new BABYLON.Vector3(27, 0, 12), new BABYLON.Vector3(24, 0, 20),
-    ], 10, "rock", new BABYLON.Color3(0.38, 0.36, 0.3));
-    this.#blendPatch("edge-rock-w", [
-      new BABYLON.Vector3(-26, 0, -10), new BABYLON.Vector3(-28, 0, 2), new BABYLON.Vector3(-27, 0, 14), new BABYLON.Vector3(-22, 0, 22),
-    ], 9, "rock", new BABYLON.Color3(0.36, 0.34, 0.28));
-    this.#blendPatch("stream-mud", [
-      new BABYLON.Vector3(-22, 0, 4), new BABYLON.Vector3(-14, 0, 6), new BABYLON.Vector3(-6, 0, 7), new BABYLON.Vector3(2, 0, 5), new BABYLON.Vector3(10, 0, 4),
-    ], 6.5, "mud", new BABYLON.Color3(0.42, 0.32, 0.2));
-    this.#blendPatch("camp-approach-dirt", [
-      new BABYLON.Vector3(-4, 0, 4), new BABYLON.Vector3(0, 0, 7.5), new BABYLON.Vector3(3, 0, 10.5),
-    ], 6, "mud", new BABYLON.Color3(0.45, 0.34, 0.22));
+      new BABYLON.Vector3(8, 0, -20), new BABYLON.Vector3(16, 0, -6), new BABYLON.Vector3(20, 0, 8), new BABYLON.Vector3(14, 0, 22),
+    ], 18, "forest", new BABYLON.Color3(0.4, 0.66, 0.26));
     this.#blendPatch("mid-valley-grass", [
-      new BABYLON.Vector3(-6, 0, -4), new BABYLON.Vector3(2, 0, 0), new BABYLON.Vector3(8, 0, 4), new BABYLON.Vector3(4, 0, 8),
-    ], 11, "forest", new BABYLON.Color3(0.33, 0.42, 0.22));
+      new BABYLON.Vector3(-10, 0, -14), new BABYLON.Vector3(0, 0, -6), new BABYLON.Vector3(8, 0, 2), new BABYLON.Vector3(2, 0, 12), new BABYLON.Vector3(-6, 0, 10),
+    ], 16, "forest", new BABYLON.Color3(0.44, 0.7, 0.3));
+    this.#blendPatch("village-dirt", [
+      new BABYLON.Vector3(-24, 0, -22), new BABYLON.Vector3(-16, 0, -16), new BABYLON.Vector3(-10, 0, -10), new BABYLON.Vector3(-6, 0, -6),
+    ], 12, "mud", new BABYLON.Color3(0.55, 0.4, 0.24));
+    this.#blendPatch("south-dirt", [
+      new BABYLON.Vector3(-10, 0, -30), new BABYLON.Vector3(0, 0, -28), new BABYLON.Vector3(8, 0, -22), new BABYLON.Vector3(4, 0, -14),
+    ], 12, "mud", new BABYLON.Color3(0.52, 0.38, 0.22));
+    this.#blendPatch("camp-approach-dirt", [
+      new BABYLON.Vector3(-6, 0, 2), new BABYLON.Vector3(0, 0, 8), new BABYLON.Vector3(5, 0, 14),
+    ], 9, "mud", new BABYLON.Color3(0.5, 0.38, 0.22));
+    this.#blendPatch("stream-mud", [
+      new BABYLON.Vector3(-24, 0, 3), new BABYLON.Vector3(-14, 0, 6), new BABYLON.Vector3(-4, 0, 7), new BABYLON.Vector3(6, 0, 5), new BABYLON.Vector3(14, 0, 3),
+    ], 8, "mud", new BABYLON.Color3(0.48, 0.36, 0.22));
+    this.#blendPatch("edge-rock-n", [
+      new BABYLON.Vector3(-22, 0, 26), new BABYLON.Vector3(-6, 0, 30), new BABYLON.Vector3(10, 0, 29), new BABYLON.Vector3(22, 0, 26),
+    ], 14, "rock", new BABYLON.Color3(0.48, 0.46, 0.4));
+    this.#blendPatch("edge-rock-e", [
+      new BABYLON.Vector3(26, 0, -16), new BABYLON.Vector3(30, 0, 0), new BABYLON.Vector3(28, 0, 14), new BABYLON.Vector3(24, 0, 24),
+    ], 12, "rock", new BABYLON.Color3(0.46, 0.44, 0.38));
+    this.#blendPatch("edge-rock-w", [
+      new BABYLON.Vector3(-26, 0, -14), new BABYLON.Vector3(-30, 0, 0), new BABYLON.Vector3(-28, 0, 14), new BABYLON.Vector3(-22, 0, 24),
+    ], 12, "rock", new BABYLON.Color3(0.44, 0.42, 0.36));
   }
 
   #blendPatch(name, points, width, kind, fallback) {
@@ -343,37 +343,41 @@ export class TestMap {
     if (pack?.albedo) {
       const material = new BABYLON.StandardMaterial(name, this.scene);
       material.disableLighting = false;
-      // Lift dark Polyhaven packs into readable dusk greens/browns/rocks
+      // Lift dark Polyhaven packs into readable greens/browns/rocks
       material.diffuseColor = kind === "mud"
-        ? new BABYLON.Color3(1.2, 1.05, 0.88)
+        ? new BABYLON.Color3(1.35, 1.15, 0.92)
         : kind === "rock"
-          ? new BABYLON.Color3(1.05, 1.02, 0.95)
-          : new BABYLON.Color3(1.15, 1.28, 0.92);
-      material.ambientColor = new BABYLON.Color3(0.5, 0.52, 0.44);
+          ? new BABYLON.Color3(1.2, 1.15, 1.05)
+          : new BABYLON.Color3(1.25, 1.45, 0.95);
+      material.ambientColor = new BABYLON.Color3(0.58, 0.6, 0.5);
       material.specularColor = BABYLON.Color3.Black();
       material.emissiveColor = kind === "mud"
-        ? new BABYLON.Color3(0.1, 0.07, 0.04)
+        ? new BABYLON.Color3(0.12, 0.08, 0.04)
         : kind === "rock"
-          ? new BABYLON.Color3(0.07, 0.07, 0.06)
-          : new BABYLON.Color3(0.09, 0.13, 0.05);
+          ? new BABYLON.Color3(0.08, 0.08, 0.07)
+          : new BABYLON.Color3(0.1, 0.16, 0.06);
       const paintedKind = kind === "mud" ? "mud" : kind === "rock" ? "rock" : "grass";
       const albedo = new BABYLON.Texture(pack.albedo, this.scene, false, true, undefined, undefined, () => {
         console.warn(`[Tora Terrain] ${pack.albedo} yüklenemedi; boyalı zemin kullanılıyor.`);
         material.diffuseTexture = this.#paintTerrainTexture(name, paintedKind, fallbackColor);
       });
-      // Irregular UV scale reduces tiling / "kare" appearance
-      const uv = kind === "mud" ? 3.6 : kind === "rock" ? 3.1 : 4.2;
-      albedo.uScale = uv + (name.length % 5) * 0.17;
-      albedo.vScale = uv + (name.length % 3) * 0.23;
-      albedo.uOffset = (name.length % 7) * 0.11;
-      albedo.vOffset = (name.length % 5) * 0.09;
-      albedo.level = 1.35;
+      // World-space-ish tiling — irregular scale reduces obvious repeats / hard squares
+      const uv = kind === "mud" ? 5.2 : kind === "rock" ? 4.4 : 6.0;
+      albedo.uScale = uv + (name.length % 5) * 0.21;
+      albedo.vScale = uv + (name.length % 3) * 0.27;
+      albedo.uOffset = (name.length % 7) * 0.13;
+      albedo.vOffset = (name.length % 5) * 0.11;
+      albedo.level = 1.55;
+      albedo.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE;
+      albedo.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
       material.diffuseTexture = albedo;
       if (pack.normal) {
         material.bumpTexture = new BABYLON.Texture(pack.normal, this.scene, false, true);
-        material.bumpTexture.level = kind === "rock" ? 0.5 : 0.4;
+        material.bumpTexture.level = kind === "rock" ? 0.55 : 0.42;
         material.bumpTexture.uScale = albedo.uScale;
         material.bumpTexture.vScale = albedo.vScale;
+        material.bumpTexture.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE;
+        material.bumpTexture.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
       }
       if (alphaBlend) {
         material.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
@@ -388,11 +392,11 @@ export class TestMap {
     const material = new BABYLON.StandardMaterial(name, this.scene);
     material.disableLighting = false;
     material.diffuseColor = BABYLON.Color3.White();
-    material.ambientColor = new BABYLON.Color3(0.48, 0.5, 0.42);
+    material.ambientColor = new BABYLON.Color3(0.55, 0.58, 0.48);
     material.specularColor = BABYLON.Color3.Black();
-    material.emissiveColor = new BABYLON.Color3(0.08, 0.1, 0.05);
+    material.emissiveColor = new BABYLON.Color3(0.1, 0.14, 0.06);
     material.diffuseTexture = this.#paintTerrainTexture(name, kind, baseColor);
-    material.diffuseTexture.level = 1.2;
+    material.diffuseTexture.level = 1.35;
     if (alphaBlend) {
       material.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
       material.useVertexAlpha = true;
@@ -410,21 +414,22 @@ export class TestMap {
       const b = Math.round(BABYLON.Scalar.Clamp(c.b + lift, 0, 1) * 255);
       return `rgb(${r},${g},${b})`;
     };
-    ctx.fillStyle = toHex(baseColor, -0.05);
+    // Brighter base so ground never reads gray/black under dusk lighting
+    ctx.fillStyle = toHex(baseColor, 0.1);
     ctx.fillRect(0, 0, size, size);
-    for (let i = 0; i < 70; i++) {
+    for (let i = 0; i < 80; i++) {
       const x = Math.random() * size;
       const y = Math.random() * size;
-      const radius = 22 + Math.random() * 70;
+      const radius = 28 + Math.random() * 90;
       const patch = ctx.createRadialGradient(x, y, 2, x, y, radius);
-    if (kind === "grass") {
-        patch.addColorStop(0, Math.random() > 0.5 ? "rgba(70, 95, 40, 0.5)" : "rgba(40, 70, 30, 0.45)");
+      if (kind === "grass") {
+        patch.addColorStop(0, Math.random() > 0.5 ? "rgba(110, 185, 65, 0.55)" : "rgba(55, 120, 40, 0.45)");
         patch.addColorStop(1, "rgba(0,0,0,0)");
       } else if (kind === "rock") {
-        patch.addColorStop(0, Math.random() > 0.5 ? "rgba(90, 85, 75, 0.5)" : "rgba(55, 52, 45, 0.45)");
+        patch.addColorStop(0, Math.random() > 0.5 ? "rgba(120, 115, 100, 0.5)" : "rgba(75, 70, 60, 0.45)");
         patch.addColorStop(1, "rgba(0,0,0,0)");
       } else {
-        patch.addColorStop(0, Math.random() > 0.5 ? "rgba(120, 90, 55, 0.45)" : "rgba(70, 50, 30, 0.4)");
+        patch.addColorStop(0, Math.random() > 0.5 ? "rgba(170, 125, 70, 0.5)" : "rgba(110, 75, 40, 0.42)");
         patch.addColorStop(1, "rgba(0,0,0,0)");
       }
       ctx.fillStyle = patch;
@@ -432,16 +437,27 @@ export class TestMap {
       ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.fill();
     }
-    for (let i = 0; i < 2800; i++) {
-      const a = 0.06 + Math.random() * 0.18;
+    for (let i = 0; i < 3000; i++) {
+      const a = 0.07 + Math.random() * 0.2;
       ctx.fillStyle = kind === "grass"
-        ? `rgba(${40 + Math.random() * 50}, ${70 + Math.random() * 60}, ${20 + Math.random() * 30}, ${a})`
+        ? `rgba(${55 + Math.random() * 70}, ${110 + Math.random() * 90}, ${30 + Math.random() * 40}, ${a})`
         : kind === "rock"
-          ? `rgba(${70 + Math.random() * 50}, ${65 + Math.random() * 40}, ${55 + Math.random() * 30}, ${a})`
-          : `rgba(${90 + Math.random() * 60}, ${65 + Math.random() * 40}, ${35 + Math.random() * 25}, ${a})`;
+          ? `rgba(${90 + Math.random() * 55}, ${85 + Math.random() * 45}, ${70 + Math.random() * 35}, ${a})`
+          : `rgba(${120 + Math.random() * 70}, ${85 + Math.random() * 45}, ${45 + Math.random() * 30}, ${a})`;
       ctx.fillRect(Math.random() * size, Math.random() * size, 1 + Math.random() * 2, 1 + Math.random() * 2);
     }
-    if (kind !== "grass") {
+    if (kind === "grass") {
+      ctx.strokeStyle = "rgba(90, 170, 55, 0.3)";
+      ctx.lineWidth = 1.2;
+      for (let i = 0; i < 500; i++) {
+        const x = Math.random() * size;
+        const y = Math.random() * size;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + (Math.random() - 0.5) * 5, y - 5 - Math.random() * 10);
+        ctx.stroke();
+      }
+    } else {
       for (let i = 0; i < 160; i++) {
         ctx.fillStyle = kind === "rock"
           ? `rgba(${50 + Math.random() * 40}, ${48 + Math.random() * 30}, ${42 + Math.random() * 25}, ${0.2 + Math.random() * 0.35})`
@@ -452,6 +468,8 @@ export class TestMap {
       }
     }
     tex.update();
+    tex.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE;
+    tex.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
     return tex;
   }
 

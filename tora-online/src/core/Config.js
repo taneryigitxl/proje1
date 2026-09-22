@@ -42,14 +42,17 @@ export const SKILLS = Object.freeze([
   { slot: 9, name: "Nihai Darbe", icon: "ultimate", description: "Uzun bekleme süreli ezici saldırı.", mana: 45, cooldown: 30, range: 3.5, damage: 78, impact: [0.82], duration: 1.35, target: "enemy", animation: "skill9", trail: true, color: "#d4ad5e" },
 ]);
 
-/** Outer ring around orc camp — clear of wall/tent obstacles. */
+/**
+ * Near-spawn + mid-road packs so mobs are visible from player start (0, -18).
+ * Avoids village west block and orc-camp tent center; snapToGround handles obstacles.
+ */
 export const MOB_SPAWNS = Object.freeze([
-  { x: 11.3, z: 19.1, patrol: true },
-  { x: 6.4, z: 25.8, patrol: true },
-  { x: -2.3, z: 27.4, patrol: true },
-  { x: -9.6, z: 22.8, patrol: true },
-  { x: -11.3, z: 14.9, patrol: true },
-  { x: -6.4, z: 8.2, patrol: true },
-  { x: 2.4, z: 6.0, patrol: true },
-  { x: 9.6, z: 11.2, patrol: true },
+  { x: 4.2, z: -10.5, patrol: true },
+  { x: -3.8, z: -7.2, patrol: true },
+  { x: 7.5, z: -2.0, patrol: true },
+  { x: -6.2, z: 1.5, patrol: true },
+  { x: 5.8, z: 6.4, patrol: true },
+  { x: -4.5, z: 9.8, patrol: true },
+  { x: 9.2, z: 12.5, patrol: true },
+  { x: -8.0, z: 14.2, patrol: true },
 ]);

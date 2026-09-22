@@ -29,11 +29,12 @@ export class WeaponSheath {
   sheath() {
     if (this.sheathed || !this.backBone) return;
     this.weaponRoot.attachToBone(this.backBone, this.skinnedMesh);
-    // spine_03: blade flush along the back, hilt up toward left shoulder
-    // Empirically tuned for female-ranger.glb greatsword (blade along +Y)
-    this.weaponRoot.position.set(0.06, 0.12, 0.02);
-    this.weaponRoot.rotation.set(1.05, -0.15, 2.55);
-    this.weaponRoot.scaling.setAll((this.handPose.scale || 1.32) * 0.78);
+    // female-ranger spine_02 / spine_03 local space:
+    // greatsword blade runs along +Y — lay it diagonally flush on the back
+    // (hilt up-left shoulder, tip down-right hip; small -Z so it does not stick out)
+    this.weaponRoot.position.set(-0.02, 0.1, -0.1);
+    this.weaponRoot.rotation.set(0.35, 2.35, 1.05);
+    this.weaponRoot.scaling.setAll((this.handPose.scale || 1.32) * 0.85);
     this.sheathed = true;
   }
 
@@ -47,8 +48,10 @@ export class WeaponSheath {
   }
 
   #findBackBone() {
+    // Prefer mid-back (spine_02) — spine_03 sits too high and exaggerated lateral local axes
     const preferred = [
-      "spine_03", "Spine3", "spine_02", "Spine2", "spine2",
+      "spine_02", "Spine2", "spine2",
+      "spine_03", "Spine3",
       "Chest", "chest", "UpperChest", "upperchest",
       "spine_01", "Spine1", "spine1", "Spine", "spine",
     ];
@@ -61,9 +64,10 @@ export class WeaponSheath {
     }
     const spines = this.skeleton.bones.filter((b) => /spine|chest|torso/i.test(b.name));
     if (spines.length) {
-      spines.sort((a, b) => b.name.localeCompare(a.name, undefined, { numeric: true }));
-      console.info(`[Tora Weapon] Kılıf fallback: ${spines[0].name}`);
-      return spines[0];
+      spines.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+      const mid = spines[Math.min(spines.length - 1, Math.floor(spines.length / 2))];
+      console.info(`[Tora Weapon] Kılıf fallback: ${mid.name}`);
+      return mid;
     }
     console.warn("[Tora Weapon] Sırt kemiği bulunamadı; kılıç elde kalacak.");
     return null;
