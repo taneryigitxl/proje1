@@ -1,11 +1,15 @@
+import { GrassSystem } from "./GrassSystem.js";
+
 export class TestMap {
-  constructor(scene, navigation, profile) {
+  constructor(scene, navigation, profile, quality = "medium") {
     this.scene = scene;
     this.navigation = navigation;
     this.profile = profile;
+    this.quality = quality;
     this.shadowGenerator = null;
     this.assets = null;
     this.staticRoots = [];
+    this.grass = null;
   }
 
   async build(assets) {
@@ -24,8 +28,14 @@ export class TestMap {
     await this.#buildCamp();
     await this.#buildBridge();
     await this.#buildMountains();
+    this.grass = new GrassSystem(this.scene, this.assets, this.navigation, (x, z) => this.heightAt(x, z));
+    await this.grass.build(this.profile, this.quality);
     return { spawn: new BABYLON.Vector3(0, this.heightAt(0, -18), -18), shadowGenerator: this.shadowGenerator };
   }
+
+  applyQuality(profile, quality) { this.profile = profile; this.quality = quality; this.grass?.applyQuality(profile, quality); }
+  update(dt, camera, fps) { this.grass?.update(dt, camera, fps); }
+  getGrassStats() { return this.grass?.getStats() || { quality: this.quality, instances: 0, cells: 0, autoReduced: false }; }
 
   heightAt(x, z) {
     const radius = Math.hypot(x, z);
@@ -126,7 +136,14 @@ export class TestMap {
 
   async #place(key, name, x, z, rotation = 0, scale = 1, options = {}) {
     const root = await this.assets.instantiateStatic(key, name, new BABYLON.Vector3(x, this.heightAt(x, z) + (options.y || 0), z), rotation, scale, options.metadata || null);
-    root.getChildMeshes(false).forEach((mesh) => { mesh.receiveShadows = true; mesh.checkCollisions = Boolean(options.collision); if (options.shadow !== false) this.shadowGenerator.addShadowCaster(mesh); });
+    root.getChildMeshes(false).forEach((mesh) => {
+      const cameraBlocker = Boolean(options.cameraBlocker ?? options.collision ?? options.obstacle);
+      mesh.receiveShadows = true;
+      mesh.checkCollisions = Boolean(options.collision);
+      mesh.metadata = { ...(mesh.metadata || {}), cameraBlocker };
+      mesh.isPickable = mesh.isPickable || cameraBlocker;
+      if (options.shadow !== false) this.shadowGenerator.addShadowCaster(mesh);
+    });
     if (options.obstacle) this.navigation.addObstacle(x, z, options.obstacle);
     this.staticRoots.push(root); return root;
   }
@@ -140,7 +157,7 @@ export class TestMap {
     const groundDetail = Math.round(34 * this.profile.particles);
     for (let i = 0; i < groundDetail; i++) {
       const angle = i * 2.17, radius = 12 + (i % 9) * 2.45, x = Math.cos(angle) * radius, z = Math.sin(angle) * radius;
-      jobs.push(this.#place(["bush", "grass", "fern"][i % 3], `foliage-${i}`, x, z, angle, .7 + (i % 4) * .13, { shadow: false }));
+      jobs.push(this.#place(i % 2 ? "bush" : "fern", `foliage-${i}`, x, z, angle, .7 + (i % 4) * .13, { shadow: false }));
     }
     for (let i = 0; i < Math.round(16 * this.profile.lod); i++) {
       const angle = i * 2.73, radius = 15 + (i % 7) * 3.1, x = Math.cos(angle) * radius, z = Math.sin(angle) * radius;

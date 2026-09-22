@@ -8,6 +8,7 @@ export class InputManager {
     this.onTab = null;
     this.onSkill = null;
     this.enabled = true;
+    this.onBlur = () => this.reset();
     this.#bind();
   }
   #bind() {
@@ -22,6 +23,8 @@ export class InputManager {
       if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(code)) event.preventDefault();
     }, { passive: false });
     addEventListener("keyup", (event) => this.keys.delete(event.code));
+    addEventListener("blur", this.onBlur);
+    document.addEventListener("visibilitychange", () => { if (document.hidden) this.reset(); });
     this.canvas.addEventListener("contextmenu", (event) => event.preventDefault());
   }
   axis() {
@@ -31,4 +34,5 @@ export class InputManager {
   }
   consume(code) { const hit = this.justPressed.has(code); this.justPressed.delete(code); return hit; }
   endFrame() { this.justPressed.clear(); }
+  reset() { this.keys.clear(); this.justPressed.clear(); }
 }
