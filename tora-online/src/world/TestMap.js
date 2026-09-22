@@ -436,6 +436,7 @@ export class TestMap {
       mesh.metadata = { ...(mesh.metadata || {}), cameraBlocker };
       mesh.isPickable = mesh.isPickable || cameraBlocker;
       if (options.shadow !== false) this.shadowGenerator.addShadowCaster(mesh);
+      if (options.muteFoliage) this.#muteFoliageMaterial(mesh, options.muteFoliage);
     });
     if (options.obstacle) this.navigation.addObstacle(x, z, options.obstacle);
     if (options.sway) {
@@ -449,6 +450,18 @@ export class TestMap {
     }
     this.staticRoots.push(root);
     return root;
+  }
+
+  #muteFoliageMaterial(mesh, strength = 0.55) {
+    const src = mesh.material;
+    if (!src) return;
+    const mat = src.clone?.(`${mesh.name}-muted`) || src;
+    const tone = new BABYLON.Color3(0.14, 0.2, 0.1);
+    if (mat.diffuseColor) mat.diffuseColor = BABYLON.Color3.Lerp(mat.diffuseColor, tone, strength);
+    if (mat.albedoColor) mat.albedoColor = BABYLON.Color3.Lerp(mat.albedoColor, tone, strength);
+    if (mat.emissiveColor) mat.emissiveColor = mat.emissiveColor.scale(0.15);
+    if (mat.ambientColor) mat.ambientColor = tone.scale(0.5);
+    mesh.material = mat;
   }
 
   async #populateNature() {
@@ -468,8 +481,9 @@ export class TestMap {
       jobs.push(this.#place(key, `tree-${i}`, x, z, random() * Math.PI * 2, scale, {
         obstacle: 0.65 + random() * 0.2,
         shadow: i % 2 === 0,
-        sink: 0.05,
+        sink: 0.12,
         sway: true,
+        muteFoliage: 0.4,
       }));
     }
 
@@ -483,7 +497,9 @@ export class TestMap {
       const key = random() > 0.55 ? "bush" : "fern";
       jobs.push(this.#place(key, `foliage-${i}`, x, z, random() * Math.PI * 2, 0.55 + random() * 0.45, {
         shadow: false,
-        sink: 0.02,
+        sink: 0.06,
+        muteFoliage: 0.65,
+        sway: key === "bush",
       }));
     }
 
@@ -499,7 +515,7 @@ export class TestMap {
       jobs.push(this.#place(key, `rock-${i}`, x, z, random() * Math.PI * 2, scale, {
         obstacle: 0.25 + scale * 0.4,
         shadow: scale > 0.4,
-        sink: 0.12 + scale * 0.15,
+        sink: 0.22 + scale * 0.35,
       }));
     }
     await Promise.all(jobs);
@@ -668,7 +684,7 @@ export class TestMap {
     rocks.forEach(([x, z, s], i) => {
       jobs.push(this.#place(i % 2 ? "rock-a" : "rock-b", `guide-rock-${i}`, x, z, i, s, {
         obstacle: 0.22 + s,
-        sink: 0.12 + s * 0.2,
+        sink: 0.2 + s * 0.35,
         shadow: s > 0.3,
       }));
     });
@@ -832,7 +848,7 @@ export class TestMap {
       jobs.push(this.#place(i % 2 ? "rock-a" : "rock-b", `mountain-${i}`, x, z, a, scale, {
         obstacle: 2.0,
         shadow: false,
-        sink: 1.4 + scale * 0.15,
+        sink: 2.2 + scale * 0.35,
       }));
     }
     await Promise.all(jobs);
