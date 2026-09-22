@@ -34,15 +34,15 @@ export class GrassSystem {
     this.budget = Math.max(60, Number(profile?.grass) || 160);
 
     const green = this.#buildClusterMesh("grass-green", [
-      new BABYLON.Color3(0.14, 0.24, 0.09),
-      new BABYLON.Color3(0.18, 0.28, 0.1),
-      new BABYLON.Color3(0.12, 0.22, 0.08),
-      new BABYLON.Color3(0.2, 0.3, 0.11),
+      new BABYLON.Color3(0.09, 0.14, 0.06),
+      new BABYLON.Color3(0.11, 0.17, 0.07),
+      new BABYLON.Color3(0.08, 0.13, 0.05),
+      new BABYLON.Color3(0.13, 0.18, 0.08),
     ], 12);
     const dry = this.#buildClusterMesh("grass-dry", [
-      new BABYLON.Color3(0.36, 0.3, 0.14),
-      new BABYLON.Color3(0.4, 0.32, 0.13),
-      new BABYLON.Color3(0.32, 0.28, 0.12),
+      new BABYLON.Color3(0.22, 0.18, 0.09),
+      new BABYLON.Color3(0.26, 0.2, 0.08),
+      new BABYLON.Color3(0.2, 0.17, 0.08),
     ], 8);
     const weed = this.#buildWeedMesh("grass-weed");
     const shrub = this.#buildShrubMesh("grass-shrub");
@@ -67,13 +67,13 @@ export class GrassSystem {
       const mat = new BABYLON.StandardMaterial(`${name}-mat-${i}`, this.scene);
       mat.disableLighting = false;
       mat.diffuseColor = color;
-      mat.ambientColor = color.scale(0.65);
-      mat.emissiveColor = color.scale(0.08);
+      mat.ambientColor = color.scale(0.45);
+      mat.emissiveColor = BABYLON.Color3.Black();
       mat.specularColor = BABYLON.Color3.Black();
       mat.backFaceCulling = false;
 
-      const height = 0.22 + random() * 0.2;
-      const width = 0.035 + random() * 0.025;
+      const height = 0.26 + random() * 0.22;
+      const width = 0.045 + random() * 0.03;
       const blade = this.#leafBlade(`${name}-blade-${i}`, width, height, mat);
       blade.position.set((random() - 0.5) * 0.16, 0, (random() - 0.5) * 0.16);
       blade.rotation.y = random() * Math.PI * 2;
@@ -97,14 +97,14 @@ export class GrassSystem {
   #buildWeedMesh(name) {
     const mat = new BABYLON.StandardMaterial(`${name}-mat`, this.scene);
     mat.disableLighting = false;
-    mat.diffuseColor = new BABYLON.Color3(0.2, 0.3, 0.12);
-    mat.ambientColor = new BABYLON.Color3(0.16, 0.24, 0.1);
-    mat.emissiveColor = new BABYLON.Color3(0.03, 0.05, 0.02);
+    mat.diffuseColor = new BABYLON.Color3(0.12, 0.18, 0.08);
+    mat.ambientColor = new BABYLON.Color3(0.1, 0.14, 0.07);
+    mat.emissiveColor = BABYLON.Color3.Black();
     mat.specularColor = BABYLON.Color3.Black();
     mat.backFaceCulling = false;
     const parts = [];
     for (let i = 0; i < 4; i++) {
-      const leaf = this.#leafBlade(`${name}-l-${i}`, 0.055, 0.16 + i * 0.03, mat);
+      const leaf = this.#leafBlade(`${name}-l-${i}`, 0.06, 0.18 + i * 0.03, mat);
       leaf.position.set(Math.sin(i) * 0.05, 0, Math.cos(i) * 0.05);
       leaf.rotation.y = i * 1.2;
       leaf.rotation.z = 0.4;
@@ -122,15 +122,15 @@ export class GrassSystem {
   /** Compact low shrub — denser short blades for variety. */
   #buildShrubMesh(name) {
     const mats = [
-      new BABYLON.Color3(0.12, 0.2, 0.08),
-      new BABYLON.Color3(0.18, 0.26, 0.1),
-      new BABYLON.Color3(0.28, 0.24, 0.1),
+      new BABYLON.Color3(0.08, 0.13, 0.05),
+      new BABYLON.Color3(0.11, 0.16, 0.07),
+      new BABYLON.Color3(0.18, 0.15, 0.07),
     ].map((color, i) => {
       const mat = new BABYLON.StandardMaterial(`${name}-mat-${i}`, this.scene);
       mat.disableLighting = false;
       mat.diffuseColor = color;
-      mat.ambientColor = color.scale(0.6);
-      mat.emissiveColor = color.scale(0.06);
+      mat.ambientColor = color.scale(0.45);
+      mat.emissiveColor = BABYLON.Color3.Black();
       mat.specularColor = BABYLON.Color3.Black();
       mat.backFaceCulling = false;
       return mat;
@@ -294,8 +294,8 @@ export class GrassSystem {
       remaining -= out.length;
     }
 
-    this.lowFpsTime = fps > 0 && fps < 35 ? this.lowFpsTime + dt * 2 : Math.max(0, this.lowFpsTime - dt * 2);
-    if (this.lowFpsTime < 5) return;
+    this.lowFpsTime = fps > 0 && fps < 28 ? this.lowFpsTime + dt * 2 : Math.max(0, this.lowFpsTime - dt * 2);
+    if (this.lowFpsTime < 8) return;
     const index = QUALITY_ORDER.indexOf(this.quality);
     if (index <= 0) { this.lowFpsTime = 0; return; }
     const next = QUALITY_ORDER[index - 1];

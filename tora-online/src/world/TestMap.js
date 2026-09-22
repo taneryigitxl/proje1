@@ -136,22 +136,22 @@ export class TestMap {
 
   #atmosphere() {
     // Dark classical MMORPG dusk — muted greens, warm sun, soft fog depth
-    this.scene.clearColor = new BABYLON.Color4(0.16, 0.18, 0.16, 1);
-    this.scene.ambientColor = new BABYLON.Color3(0.38, 0.4, 0.36);
+    this.scene.clearColor = new BABYLON.Color4(0.18, 0.2, 0.17, 1);
+    this.scene.ambientColor = new BABYLON.Color3(0.42, 0.44, 0.38);
     this.scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
-    this.scene.fogDensity = 0.0048;
-    this.scene.fogColor = new BABYLON.Color3(0.32, 0.36, 0.3);
+    this.scene.fogDensity = 0.0038;
+    this.scene.fogColor = new BABYLON.Color3(0.36, 0.4, 0.33);
 
     const hemi = new BABYLON.HemisphericLight("valley-fill", new BABYLON.Vector3(-0.2, 1, 0.2), this.scene);
-    hemi.intensity = 1.05;
-    hemi.diffuse = new BABYLON.Color3(0.95, 0.93, 0.86);
-    hemi.groundColor = new BABYLON.Color3(0.28, 0.34, 0.22);
+    hemi.intensity = 1.12;
+    hemi.diffuse = new BABYLON.Color3(0.96, 0.94, 0.88);
+    hemi.groundColor = new BABYLON.Color3(0.3, 0.36, 0.24);
     hemi.specular = BABYLON.Color3.Black();
 
     const sun = new BABYLON.DirectionalLight("late-sun", new BABYLON.Vector3(-0.62, -1.05, 0.28), this.scene);
     sun.position.set(28, 48, -22);
-    sun.intensity = 1.75;
-    sun.diffuse = new BABYLON.Color3(1, 0.94, 0.8);
+    sun.intensity = 1.85;
+    sun.diffuse = new BABYLON.Color3(1, 0.95, 0.82);
     sun.specular = new BABYLON.Color3(0.28, 0.26, 0.22);
     this.sun = sun;
 
