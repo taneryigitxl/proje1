@@ -114,10 +114,10 @@ export class CharacterFace {
 
     if (headBone && skinnedMesh) {
       faceRoot.attachToBone(headBone, skinnedMesh);
-      // Nested into the hood cavity — small and forward enough to read
-      faceRoot.position.set(0, 0.02, 0.06);
-      faceRoot.rotation.set(-0.08, 0, 0);
-      faceRoot.scaling.setAll(0.78);
+      // Nested into the hood cavity — readable from camera, not oversized
+      faceRoot.position.set(0, 0.04, 0.085);
+      faceRoot.rotation.set(-0.1, 0, 0);
+      faceRoot.scaling.setAll(0.88);
       console.info(`[Tora Face] Küçük yüz '${headBone.name}' içinde, kapüşona oturtuldu.`);
     } else {
       faceRoot.parent = root;

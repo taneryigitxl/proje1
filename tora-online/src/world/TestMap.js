@@ -91,11 +91,13 @@ export class TestMap {
     this.shadowGenerator = new BABYLON.ShadowGenerator(this.profile.shadows, sun);
     this.shadowGenerator.usePercentageCloserFiltering = true;
     this.shadowGenerator.filteringQuality = this.profile.shadows > 1024 ? BABYLON.ShadowGenerator.QUALITY_HIGH : BABYLON.ShadowGenerator.QUALITY_MEDIUM;
-    this.shadowGenerator.darkness = 0.22;
-    this.shadowGenerator.bias = 0.0005;
-    this.shadowGenerator.normalBias = 0.02;
-    sun.shadowMaxZ = 80;
-    sun.shadowMinZ = 1;
+    this.shadowGenerator.darkness = 0.45;
+    this.shadowGenerator.bias = 0.00035;
+    this.shadowGenerator.normalBias = 0.025;
+    sun.shadowMaxZ = 90;
+    sun.shadowMinZ = 0.5;
+    sun.autoUpdateExtends = true;
+    sun.shadowOrthoScale = 1.2;
     this.scene.imageProcessingConfiguration.toneMappingEnabled = true;
     this.scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
     this.scene.imageProcessingConfiguration.exposure = 1.55;
@@ -162,13 +164,12 @@ export class TestMap {
     material.diffuseColor = BABYLON.Color3.White();
     material.ambientColor = new BABYLON.Color3(0.55, 0.6, 0.48);
     material.specularColor = BABYLON.Color3.Black();
-    // Mild emissive keeps forest greens readable under dusk light
-    material.emissiveColor = new BABYLON.Color3(0.28, 0.34, 0.2);
+    // Mild emissive keeps forest greens readable while still showing shadows
+    material.emissiveColor = new BABYLON.Color3(0.12, 0.16, 0.08);
     const paint = this.#paintTerrainTexture(name, kind, baseColor);
     material.diffuseTexture = paint;
-    material.emissiveTexture = paint;
-    material.diffuseTexture.uScale = 1;
-    material.diffuseTexture.vScale = 1;
+    // Do not use emissiveTexture — it washes out directional shadows
+    material.ambientColor = new BABYLON.Color3(0.42, 0.48, 0.36);
     if (alphaBlend) {
       material.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
       material.useVertexAlpha = true;
