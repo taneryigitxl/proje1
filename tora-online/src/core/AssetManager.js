@@ -172,15 +172,24 @@ export class AssetManager {
         ];
     const palette = palettes[index % palettes.length];
     root.getChildMeshes(false).forEach((mesh, meshIndex) => {
-      const mat = mesh.material?.clone?.(`${mesh.name}-mob-${index}`) || new BABYLON.StandardMaterial(`mob-mat-${index}-${meshIndex}`, this.scene);
+      if (!mesh.material) return;
       const pick = meshIndex % 3 === 0 ? palette.skin : meshIndex % 3 === 1 ? palette.cloth : palette.armor;
-      if (mat.diffuseColor) mat.diffuseColor = pick;
-      if (mat.albedoColor) mat.albedoColor = pick;
-      mat.ambientColor = pick.scale(0.55);
-      mat.emissiveColor = pick.scale(0.04);
-      mat.specularColor = new BABYLON.Color3(0.08, 0.07, 0.06);
-      mat.specularPower = 32;
-      mesh.material = mat;
+      try {
+        const mat = mesh.material.clone(`${mesh.name}-mob-${index}`);
+        // Dim existing albedo rather than replacing with flat plastic colors
+        if (mat.albedoColor) {
+          mat.albedoColor = BABYLON.Color3.Lerp(mat.albedoColor, pick, 0.55);
+          mat.emissiveColor = pick.scale(0.03);
+          mat.metallic = Math.min(mat.metallic ?? 0.1, 0.15);
+          mat.roughness = Math.max(mat.roughness ?? 0.7, 0.65);
+        } else if (mat.diffuseColor) {
+          mat.diffuseColor = BABYLON.Color3.Lerp(mat.diffuseColor, pick, 0.6);
+          mat.ambientColor = pick.scale(0.5);
+          mat.emissiveColor = pick.scale(0.03);
+          mat.specularColor = new BABYLON.Color3(0.08, 0.07, 0.06);
+        }
+        mesh.material = mat;
+      } catch (_) { /* keep original material */ }
       mesh.receiveShadows = true;
     });
   }

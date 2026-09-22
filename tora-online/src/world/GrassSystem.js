@@ -201,8 +201,8 @@ export class GrassSystem {
         if (roll <= acc) { sourceIndex = i; break; }
       }
 
-      const y = this.heightAt(x, z) - 0.02;
-      const scale = 0.75 + random() * 0.7;
+      const y = this.heightAt(x, z) - 0.015;
+      const scale = 0.85 + random() * 0.65;
       const rotY = random() * Math.PI * 2;
       const matrix = BABYLON.Matrix.Compose(
         new BABYLON.Vector3(scale * (0.85 + random() * 0.25), scale * (0.8 + random() * 0.45), scale * (0.85 + random() * 0.25)),
@@ -345,7 +345,7 @@ export class GrassSystem {
     if (Math.hypot(x, z + 18) < 2.8) return false;
     // Road exclusion (current road path formula)
     const roadIndex = (z + 35) / 2.65;
-    if (roadIndex >= 0 && roadIndex <= 28 && Math.abs(x - Math.sin(roadIndex * 0.4) * 2.35) < 4.3) return false;
+    if (roadIndex >= 0 && roadIndex <= 28 && Math.abs(x - Math.sin(roadIndex * 0.4) * 2.35) < 3.5) return false;
     const streamIndex = (x + 28) / 2.4;
     if (streamIndex >= 0 && streamIndex <= 25 && Math.abs(z - (6 + Math.sin(streamIndex * 0.46) * 3.4)) < 2.7) return false;
     if (x > -25 && x < -5 && z > -22 && z < -6) return false;
