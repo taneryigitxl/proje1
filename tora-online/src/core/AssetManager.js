@@ -1,4 +1,4 @@
-import { CharacterFace } from "../player/CharacterFace.js?v=10";
+import { CharacterFace } from "../player/CharacterFace.js?v=11";
 
 export class AssetManager {
   constructor(scene, config, onProgress = () => {}) {
@@ -179,14 +179,13 @@ export class AssetManager {
     material.disableLighting = true;
     material.diffuseTexture = bladeTex;
     material.emissiveTexture = bladeTex;
-    material.opacityTexture = bladeTex;
     material.diffuseColor = BABYLON.Color3.White();
     material.emissiveColor = new BABYLON.Color3(0.55, 0.85, 0.4);
     material.specularColor = BABYLON.Color3.Black();
     material.backFaceCulling = false;
     material.useAlphaFromDiffuseTexture = true;
     material.transparencyMode = BABYLON.Material.MATERIAL_ALPHATEST;
-    material.alphaCutOff = 0.35;
+    if ("alphaCutOff" in material) material.alphaCutOff = 0.35;
     // Cluster of soft alpha blades — reads as tufts, not neon boxes
     for (let i = 0; i < 6; i++) {
       const blade = BABYLON.MeshBuilder.CreatePlane(`grass-blade-${i}`, { width: 0.18, height: 0.42 }, this.scene);

@@ -1,4 +1,4 @@
-import { GrassSystem } from "./GrassSystem.js?v=10";
+import { GrassSystem } from "./GrassSystem.js?v=11";
 
 export class TestMap {
   constructor(scene, navigation, profile, quality = "medium") {

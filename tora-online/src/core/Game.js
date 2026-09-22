@@ -1,20 +1,20 @@
-import { GAME_CONFIG, MOB_SPAWNS } from "./Config.js?v=10";
-import { AssetManager } from "./AssetManager.js?v=10";
-import { Navigation } from "../world/Navigation.js?v=10";
-import { TestMap } from "../world/TestMap.js?v=10";
-import { InputManager } from "../input/InputManager.js?v=10";
-import { CursorManager } from "../input/CursorManager.js?v=10";
-import { ThirdPersonCamera } from "../camera/ThirdPersonCamera.js?v=10";
-import { PlayerController } from "../player/PlayerController.js?v=10";
-import { PlayerAnimator } from "../player/PlayerAnimator.js?v=10";
-import { EntityManager } from "../entities/EntityManager.js?v=10";
-import { CombatSystem } from "../combat/CombatSystem.js?v=10";
-import { NetworkAdapter } from "../network/NetworkAdapter.js?v=10";
-import { HUD } from "../ui/HUD.js?v=10";
-import { ProgressionSystem } from "../progression/ProgressionSystem.js?v=10";
-import { StatsSystem } from "../progression/StatsSystem.js?v=10";
-import { InventorySystem } from "../progression/InventorySystem.js?v=10";
-import { LootSystem } from "../progression/LootSystem.js?v=10";
+import { GAME_CONFIG, MOB_SPAWNS } from "./Config.js?v=11";
+import { AssetManager } from "./AssetManager.js?v=11";
+import { Navigation } from "../world/Navigation.js?v=11";
+import { TestMap } from "../world/TestMap.js?v=11";
+import { InputManager } from "../input/InputManager.js?v=11";
+import { CursorManager } from "../input/CursorManager.js?v=11";
+import { ThirdPersonCamera } from "../camera/ThirdPersonCamera.js?v=11";
+import { PlayerController } from "../player/PlayerController.js?v=11";
+import { PlayerAnimator } from "../player/PlayerAnimator.js?v=11";
+import { EntityManager } from "../entities/EntityManager.js?v=11";
+import { CombatSystem } from "../combat/CombatSystem.js?v=11";
+import { NetworkAdapter } from "../network/NetworkAdapter.js?v=11";
+import { HUD } from "../ui/HUD.js?v=11";
+import { ProgressionSystem } from "../progression/ProgressionSystem.js?v=11";
+import { StatsSystem } from "../progression/StatsSystem.js?v=11";
+import { InventorySystem } from "../progression/InventorySystem.js?v=11";
+import { LootSystem } from "../progression/LootSystem.js?v=11";
 
 export class Game {
   constructor(runtime, onProgress = () => {}, onFatal = () => {}) {
@@ -106,10 +106,15 @@ export class Game {
 
       this.onProgress(92, "Opsiyonel çevre ayrıntıları hazırlanıyor…");
       await this.map.buildOptional();
-      await Promise.race([
-        this.scene.whenReadyAsync(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error("Scene hazırlığı zaman aşımına uğradı.")), GAME_CONFIG.assetTimeoutMs)),
-      ]);
+      // Soft wait — DynamicTextures / alpha grass must not block world entry
+      try {
+        await Promise.race([
+          this.scene.whenReadyAsync(),
+          new Promise((resolve) => setTimeout(resolve, 8000)),
+        ]);
+      } catch (error) {
+        console.warn("[Tora Startup] Scene whenReady atlandı; oyun devam ediyor.", error);
+      }
 
       console.info("[Tora Startup] 10/10 Render loop başlatılıyor.");
       this.runtime.run(this.renderFrame);
