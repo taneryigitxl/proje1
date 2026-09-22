@@ -34,7 +34,9 @@ export class PlayerController extends Entity {
     const nextX = this.position.add(new BABYLON.Vector3(horizontal.x, 0, 0)); if (this.navigation.canOccupy(nextX)) this.position.x = nextX.x; else this.velocity.x = 0;
     const nextZ = this.position.add(new BABYLON.Vector3(0, 0, horizontal.z)); if (this.navigation.canOccupy(nextZ)) this.position.z = nextZ.z; else this.velocity.z = 0;
     if (this.input.consume("Space") && this.grounded) { this.verticalVelocity = 7.1; this.grounded = false; this.state = "jump"; }
-    if (!this.grounded) { this.verticalVelocity -= 18.5 * dt; this.position.y += this.verticalVelocity * dt; if (this.position.y <= 0) { this.position.y = 0; this.verticalVelocity = 0; this.grounded = true; this.state = "land"; } else if (this.verticalVelocity < 0) this.state = "fall"; }
+    const groundY = this.navigation.heightAt(this.position.x, this.position.z);
+    if (!this.grounded) { this.verticalVelocity -= 18.5 * dt; this.position.y += this.verticalVelocity * dt; if (this.position.y <= groundY) { this.position.y = groundY; this.verticalVelocity = 0; this.grounded = true; this.state = "land"; } else if (this.verticalVelocity < 0) this.state = "fall"; }
+    else this.position.y = groundY;
     const speed = Math.hypot(this.velocity.x, this.velocity.z); this.speedRatio = speed / 6.4;
     if (this.grounded && !["attack1", "attack2", "heavy", "skill", "hit", "dead"].includes(this.state)) this.state = speed > .3 ? (running ? "run" : "walk") : "idle";
     if (speed > .15 && !["attack1", "attack2", "heavy", "skill"].includes(this.state)) { const desiredRotation = Math.atan2(this.velocity.x, this.velocity.z); this.root.rotation.y = this.#lerpAngle(this.root.rotation.y, desiredRotation, 1 - Math.exp(-12 * dt)); this.rotation = this.root.rotation.y; }

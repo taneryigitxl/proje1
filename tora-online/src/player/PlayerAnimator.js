@@ -1,45 +1,51 @@
 const CLIP_ALIASES = {
-  idle: ["idle"], walk: ["walk"], run: ["run"], jump: ["jump", "jumpstart"], fall: ["jumploop", "fall"],
-  land: ["land"], attack1: ["attack1", "slash"], attack2: ["attack2", "combo"], heavy: ["heavy"], skill: ["skill"], hit: ["hit"], dead: ["death", "dead"],
+  idle: ["sword_idle", "idle_loop", "idle"],
+  walk: ["walk_carry_loop", "walk_loop", "walk"],
+  run: ["sprint_loop", "jog_fwd_loop", "run"],
+  jump: ["jump_start", "ninjajump_start"],
+  fall: ["jump_loop", "ninjajump_idle_loop"],
+  land: ["jump_land", "ninjajump_land"],
+  attack1: ["sword_regular_a", "sword_attack"],
+  attack2: ["sword_regular_combo", "sword_regular_b"],
+  heavy: ["sword_heavy_combo"],
+  skill: ["sword_dash", "sword_regular_c"],
+  hit: ["hit_knockback", "hit_chest", "hitreact"],
+  dead: ["death01", "death"]
 };
 
 export class PlayerAnimator {
   constructor(visual) {
-    this.visual = visual;
-    this.rig = visual.rig;
-    this.groups = visual.animationGroups || [];
-    this.state = "idle"; this.time = 0; this.activeGroup = null;
+    if (!visual.animationGroups?.length) throw new Error("Rig üzerinde animasyon klipleri bulunamadı.");
+    this.groups = visual.animationGroups;
+    this.state = "";
+    this.activeGroup = null;
+    this.previousGroup = null;
+    this.blend = 1;
+    this.setState("idle", true);
   }
-  setState(next) {
-    if (next === this.state) return;
-    this.state = next; this.time = 0;
-    if (!this.groups.length) return;
-    this.activeGroup?.stop();
+  setState(next, force = false) {
+    if (!force && next === this.state) return;
     const aliases = CLIP_ALIASES[next] || [next];
-    this.activeGroup = this.groups.find((group) => aliases.some((alias) => group.name.toLowerCase().includes(alias))) || null;
-    this.activeGroup?.start(["idle", "walk", "run", "fall"].includes(next), 1);
+    const clipName = (candidate) => candidate.name.toLowerCase().replace(/^tora-\d+-/, "");
+    const group = aliases.map((alias) => this.groups.find((candidate) => clipName(candidate) === alias)).find(Boolean)
+      || this.groups.find((candidate) => aliases.some((alias) => clipName(candidate).includes(alias)));
+    if (!group) throw new Error(`Zorunlu animasyon klibi eşleşmedi: ${next}`);
+    this.previousGroup = this.activeGroup;
+    this.activeGroup = group;
+    this.state = next;
+    this.blend = 0;
+    group.stop();
+    group.start(["idle", "walk", "run", "fall"].includes(next), 1, group.from, group.to, false);
+    group.setWeightForAllAnimatables?.(0);
   }
   update(dt, speedRatio = 0) {
-    this.time += dt;
-    if (!this.rig) return;
-    const { hips, leftLeg, rightLeg, leftArm, rightArm, swordPivot } = this.rig;
-    const phase = this.time * (this.state === "run" ? 11 : 7);
-    const locomotion = this.state === "walk" || this.state === "run";
-    const swing = locomotion ? Math.sin(phase) * (this.state === "run" ? .55 : .34) * Math.max(.4, speedRatio) : 0;
-    leftLeg.rotation.x = BABYLON.Scalar.Lerp(leftLeg.rotation.x, swing, .22);
-    rightLeg.rotation.x = BABYLON.Scalar.Lerp(rightLeg.rotation.x, -swing, .22);
-    hips.position.y = .88 + (locomotion ? Math.abs(Math.sin(phase)) * .035 : Math.sin(this.time * 2.3) * .012);
-    let swordX = -.42, swordZ = -.1;
-    if (["attack1", "attack2", "heavy", "skill"].includes(this.state)) {
-      const duration = this.state === "heavy" ? 1.05 : .78;
-      const t = Math.min(1, this.time / duration);
-      swordX = -1.1 + Math.sin(t * Math.PI) * 2.3;
-      swordZ = -.8 + t * 1.65;
-      hips.rotation.y = Math.sin(t * Math.PI) * .22;
-    } else hips.rotation.y = BABYLON.Scalar.Lerp(hips.rotation.y, 0, .16);
-    swordPivot.rotation.x = BABYLON.Scalar.Lerp(swordPivot.rotation.x, swordX, .3);
-    swordPivot.rotation.z = BABYLON.Scalar.Lerp(swordPivot.rotation.z, swordZ, .3);
-    leftArm.rotation.x = BABYLON.Scalar.Lerp(leftArm.rotation.x, swordX - .25, .28);
-    rightArm.rotation.x = BABYLON.Scalar.Lerp(rightArm.rotation.x, swordX - .35, .28);
+    if (!this.activeGroup) return;
+    this.blend = Math.min(1, this.blend + dt / 0.16);
+    this.activeGroup.setWeightForAllAnimatables?.(this.blend);
+    if (this.previousGroup) {
+      this.previousGroup.setWeightForAllAnimatables?.(1 - this.blend);
+      if (this.blend >= 1) { this.previousGroup.stop(); this.previousGroup = null; }
+    }
+    if (["walk", "run"].includes(this.state)) this.activeGroup.speedRatio = BABYLON.Scalar.Clamp(0.75 + speedRatio * 0.55, 0.75, 1.35);
   }
 }

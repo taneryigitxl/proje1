@@ -1,26 +1,203 @@
 export class TestMap {
   constructor(scene, navigation, profile) {
-    this.scene = scene; this.navigation = navigation; this.profile = profile; this.materials = new Map(); this.shadowGenerator = null;
+    this.scene = scene;
+    this.navigation = navigation;
+    this.profile = profile;
+    this.shadowGenerator = null;
+    this.assets = null;
+    this.staticRoots = [];
   }
-  build() {
-    this.scene.clearColor = new BABYLON.Color4(0.055, 0.065, 0.08, 1);
-    this.scene.ambientColor = new BABYLON.Color3(0.23, 0.2, 0.3);
-    this.scene.fogMode = BABYLON.Scene.FOGMODE_EXP2; this.scene.fogDensity = 0.011; this.scene.fogColor = new BABYLON.Color3(0.09, 0.1, 0.13);
-    const hemi = new BABYLON.HemisphericLight("moon-fill", new BABYLON.Vector3(-0.3, 1, 0.2), this.scene); hemi.intensity = 0.85; hemi.diffuse = new BABYLON.Color3(0.56, 0.61, 0.78); hemi.groundColor = new BABYLON.Color3(0.12, 0.08, 0.15);
-    const sun = new BABYLON.DirectionalLight("dusk-light", new BABYLON.Vector3(-0.55, -1, 0.42), this.scene); sun.position.set(18, 34, -22); sun.intensity = 1.35; sun.diffuse = new BABYLON.Color3(0.83, 0.7, 0.94);
-    this.shadowGenerator = new BABYLON.ShadowGenerator(this.profile.shadows, sun); this.shadowGenerator.useBlurExponentialShadowMap = this.profile.shadows > 512; this.shadowGenerator.blurKernel = 18;
 
-    const ground = BABYLON.MeshBuilder.CreateGround("tora-ground", { width: 80, height: 80, subdivisions: 2 }, this.scene); ground.material = this.#mat("moss-ground", "#283428", 0, .98); ground.receiveShadows = true; ground.checkCollisions = true; ground.metadata = { ground: true };
-    for (let i = 0; i < 15; i++) { const path = BABYLON.MeshBuilder.CreateGround(`path-${i}`, { width: 7.4, height: 5.2 }, this.scene); path.position.set(Math.sin(i * .38) * 2.2, .012, -27 + i * 4.2); path.rotation.y = Math.sin(i * .7) * .09; path.material = this.#mat("earth-path", "#4b3b32", 0, 1); path.metadata = { ground: true }; }
-    this.#buildRuins(); this.#buildCamp(); this.#buildForest(); this.#buildArena(); this.#buildBounds();
-    return { spawn: new BABYLON.Vector3(0, 0, -18), shadowGenerator: this.shadowGenerator };
+  async build(assets) {
+    this.assets = assets;
+    this.navigation.setHeightProvider((x, z) => this.heightAt(x, z));
+    this.#atmosphere();
+    this.#terrain();
+    this.#path();
+    this.#stream();
+    const required = Object.keys(assets.manifest.environment);
+    await assets.preloadStatics(required);
+    await this.#populateNature();
+    await this.#buildVillage();
+    await this.#buildNpc();
+    await this.#buildRuins();
+    await this.#buildCamp();
+    await this.#buildBridge();
+    await this.#buildMountains();
+    return { spawn: new BABYLON.Vector3(0, this.heightAt(0, -18), -18), shadowGenerator: this.shadowGenerator };
   }
-  addShadowCaster(mesh) { if (mesh?.getChildMeshes) mesh.getChildMeshes(false).forEach((child) => { if (child instanceof BABYLON.AbstractMesh) this.shadowGenerator.addShadowCaster(child); }); }
-  #mat(name, color, metallic = 0, roughness = .82, emissive = null) { if (this.materials.has(name)) return this.materials.get(name); const m = new BABYLON.PBRMaterial(name, this.scene); m.albedoColor = BABYLON.Color3.FromHexString(color); m.metallic = metallic; m.roughness = roughness; if (emissive) m.emissiveColor = BABYLON.Color3.FromHexString(emissive); this.materials.set(name, m); return m; }
-  #stone(name, x, z, sx, sy, sz, rotation = 0) { const mesh = BABYLON.MeshBuilder.CreateBox(name, { size: 1 }, this.scene); mesh.position.set(x, sy / 2, z); mesh.scaling.set(sx, sy, sz); mesh.rotation.y = rotation; mesh.material = this.#mat("ancient-stone", "#4a4b54", .05, .94); mesh.checkCollisions = true; mesh.receiveShadows = true; this.shadowGenerator.addShadowCaster(mesh); this.navigation.addObstacle(x, z, Math.max(sx, sz) * .55); return mesh; }
-  #buildRuins() { this.#stone("ruin-wall-a", -16, -3, 8, 3.4, .8, .18); this.#stone("ruin-wall-b", -19, 1, .8, 3, 7, -.12); this.#stone("ruin-arch-left", -9, 6, 1.1, 4.2, 1.2); this.#stone("ruin-arch-right", -4.6, 6, 1.1, 4.2, 1.2); this.#stone("ruin-arch-top", -6.8, 6, 5.2, .8, 1.15); }
-  #buildCamp() { const fireMat = this.#mat("campfire", "#ff6a35", .05, .35, "#ff401c"); for (let i = 0; i < 7; i++) { const rock = BABYLON.MeshBuilder.CreatePolyhedron(`fire-ring-${i}`, { type: 1, size: .32 }, this.scene); const a = i / 7 * Math.PI * 2; rock.position.set(13 + Math.cos(a), .2, -8 + Math.sin(a)); rock.material = this.#mat("rock", "#373840", 0, 1); } const flame = BABYLON.MeshBuilder.CreatePolyhedron("campfire-flame", { type: 2, size: .7 }, this.scene); flame.position.set(13, .65, -8); flame.scaling.y = 1.5; flame.material = fireMat; const light = new BABYLON.PointLight("camp-light", new BABYLON.Vector3(13, 2, -8), this.scene); light.diffuse = new BABYLON.Color3(1, .36, .12); light.intensity = 2.2; light.range = 13; this.#stone("camp-crate", 16, -7, 1.3, 1.1, 1.3, .3); }
-  #buildForest() { const trunkMat = this.#mat("tree-bark", "#29231f", 0, 1); const crownMat = this.#mat("dark-leaves", "#1c3228", 0, .95); const trunk = BABYLON.MeshBuilder.CreateCylinder("tree-trunk-source", { height: 3.8, diameterTop: .45, diameterBottom: .75, tessellation: 7 }, this.scene); trunk.material = trunkMat; const crown = BABYLON.MeshBuilder.CreatePolyhedron("tree-crown-source", { type: 2, size: 2.3 }, this.scene); crown.material = crownMat; const spots = [[-28,-19],[-23,-27],[-30,-4],[27,-20],[30,-8],[23,1],[-27,17],[-21,26],[27,23],[20,29]]; spots.forEach(([x,z], i) => { const t = i === 0 ? trunk : trunk.createInstance(`tree-trunk-${i}`); const c = i === 0 ? crown : crown.createInstance(`tree-crown-${i}`); t.position.set(x,1.9,z); c.position.set(x,4.6,z); const s=.85+(i%3)*.14; t.scaling.set(s,s,s); c.scaling.set(s,s,s); t.checkCollisions=true; this.navigation.addObstacle(x,z,.75*s); }); for (let i=0;i<22;i++){ const a=i*2.399; const r=17+(i%5)*4; const x=Math.cos(a)*r,z=Math.sin(a)*r; if(Math.abs(x)<6&&z<24)continue; const rock=BABYLON.MeshBuilder.CreatePolyhedron(`field-rock-${i}`,{type:1,size:.55+(i%4)*.12},this.scene); rock.position.set(x,.35,z); rock.scaling.y=.65; rock.rotation.y=a; rock.material=this.#mat("rock","#373840",0,1); this.navigation.addObstacle(x,z,.45); } }
-  #buildArena() { const mat=this.#mat("column-stone","#55515d",.03,.9); for(let i=0;i<6;i++){const a=(i/6)*Math.PI*2;const x=Math.cos(a)*8,z=14+Math.sin(a)*8;const h=i%2?2.2:3.8;const col=BABYLON.MeshBuilder.CreateCylinder(`broken-column-${i}`,{height:h,diameter:1.1,tessellation:10},this.scene);col.position.set(x,h/2,z);col.rotation.z=(i-2.5)*.025;col.material=mat;col.checkCollisions=true;col.receiveShadows=true;this.shadowGenerator.addShadowCaster(col);this.navigation.addObstacle(x,z,.65);} const marker=BABYLON.MeshBuilder.CreateTorus("training-ring",{diameter:13,thickness:.12,tessellation:48},this.scene);marker.position.set(0,.05,14);marker.rotation.x=Math.PI/2;marker.material=this.#mat("arena-rune","#742fb0",.1,.6,"#32105a"); }
-  #buildBounds() { for(let i=0;i<24;i++){const a=i/24*Math.PI*2,x=Math.cos(a)*39,z=Math.sin(a)*39;const monolith=BABYLON.MeshBuilder.CreatePolyhedron(`boundary-${i}`,{type:1,size:1.4},this.scene);monolith.position.set(x,.7,z);monolith.scaling.set(.7,1.6,.7);monolith.material=this.#mat("boundary-stone","#292631",.05,.9);monolith.freezeWorldMatrix();} }
+
+  heightAt(x, z) {
+    const radius = Math.hypot(x, z);
+    const edge = BABYLON.Scalar.Clamp((radius - 27) / 11, 0, 1);
+    const edgeHill = edge * edge * (3 - 2 * edge) * (3.2 + Math.sin(x * .17) * .75 + Math.cos(z * .21) * .6);
+    return edgeHill + Math.sin(x * .13) * Math.cos(z * .11) * .12;
+  }
+
+  addShadowCaster(root) {
+    root?.getChildMeshes?.(false).forEach((mesh) => this.shadowGenerator?.addShadowCaster(mesh));
+  }
+
+  #atmosphere() {
+    this.scene.clearColor = new BABYLON.Color4(.025, .032, .045, 1);
+    this.scene.ambientColor = new BABYLON.Color3(.2, .18, .24);
+    this.scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
+    this.scene.fogDensity = .0095;
+    this.scene.fogColor = new BABYLON.Color3(.09, .105, .12);
+    const hemi = new BABYLON.HemisphericLight("dusk-fill", new BABYLON.Vector3(-.25, 1, .15), this.scene);
+    hemi.intensity = .72; hemi.diffuse = new BABYLON.Color3(.5, .58, .67); hemi.groundColor = new BABYLON.Color3(.1, .075, .09);
+    const sun = new BABYLON.DirectionalLight("late-sun", new BABYLON.Vector3(-.6, -1, .38), this.scene);
+    sun.position.set(24, 38, -28); sun.intensity = 1.35; sun.diffuse = new BABYLON.Color3(.96, .72, .55);
+    this.shadowGenerator = new BABYLON.ShadowGenerator(this.profile.shadows, sun);
+    this.shadowGenerator.usePercentageCloserFiltering = true;
+    this.shadowGenerator.filteringQuality = this.profile.shadows > 1024 ? BABYLON.ShadowGenerator.QUALITY_HIGH : BABYLON.ShadowGenerator.QUALITY_MEDIUM;
+    this.scene.imageProcessingConfiguration.toneMappingEnabled = true;
+    this.scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
+    this.scene.imageProcessingConfiguration.exposure = 1.12;
+    this.scene.imageProcessingConfiguration.contrast = 1.18;
+    if (this.profile.bloom) {
+      const pipeline = new BABYLON.DefaultRenderingPipeline("tora-pipeline", true, this.scene, this.scene.cameras);
+      pipeline.bloomEnabled = true; pipeline.bloomThreshold = .82; pipeline.bloomWeight = .18; pipeline.fxaaEnabled = true;
+    }
+  }
+
+  #terrain() {
+    const size = 80, steps = 64, positions = [], normals = [], uvs = [], indices = [];
+    for (let z = 0; z <= steps; z++) for (let x = 0; x <= steps; x++) {
+      const px = x / steps * size - size / 2, pz = z / steps * size - size / 2;
+      positions.push(px, this.heightAt(px, pz), pz); uvs.push(x / steps * 9, z / steps * 9);
+    }
+    for (let z = 0; z < steps; z++) for (let x = 0; x < steps; x++) {
+      const a = z * (steps + 1) + x, b = a + 1, c = a + steps + 1, d = c + 1;
+      indices.push(a, c, b, b, c, d);
+    }
+    BABYLON.VertexData.ComputeNormals(positions, indices, normals);
+    const ground = new BABYLON.Mesh("tora-heightfield", this.scene);
+    const data = new BABYLON.VertexData(); data.positions = positions; data.indices = indices; data.normals = normals; data.uvs = uvs; data.applyToMesh(ground);
+    ground.material = this.#pbr("terrain-forest", this.assets.manifest.terrain.forest, 1);
+    ground.receiveShadows = true; ground.checkCollisions = true; ground.isPickable = true; ground.metadata = { ground: true, cursor: "move" };
+  }
+
+  #path() {
+    const points = Array.from({ length: 25 }, (_, i) => new BABYLON.Vector3(Math.sin(i * .43) * 2.4, 0, -34 + i * 2.9));
+    const path = this.#ribbon("village-road", points, 6.4, 5, [0, .62, 1, .62, 0], .045);
+    path.material = this.#pbr("terrain-mud", this.assets.manifest.terrain.mud, .96, true);
+    path.metadata = { ground: true, cursor: "move" }; path.isPickable = true; path.receiveShadows = true;
+  }
+
+  #stream() {
+    const points = Array.from({ length: 24 }, (_, i) => new BABYLON.Vector3(-27 + i * 2.55, 0, 6 + Math.sin(i * .48) * 3.5));
+    const water = this.#ribbon("silver-stream", points, 3.6, 3, [.1, .75, .1], .08);
+    const material = new BABYLON.PBRMaterial("stream-water", this.scene);
+    material.albedoColor = new BABYLON.Color3(.08, .25, .25); material.metallic = .15; material.roughness = .18; material.alpha = .68;
+    material.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND; water.material = material; water.isPickable = false;
+  }
+
+  #ribbon(name, points, width, columns, alpha, lift) {
+    const positions = [], normals = [], uvs = [], colors = [], indices = [];
+    points.forEach((point, row) => {
+      const prev = points[Math.max(0, row - 1)], next = points[Math.min(points.length - 1, row + 1)];
+      const tangent = next.subtract(prev).normalize(), side = new BABYLON.Vector3(-tangent.z, 0, tangent.x);
+      for (let column = 0; column < columns; column++) {
+        const across = column / (columns - 1), pos = point.add(side.scale((across - .5) * width));
+        pos.y = this.heightAt(pos.x, pos.z) + lift;
+        positions.push(pos.x, pos.y, pos.z); uvs.push(across * 2, row * .62); colors.push(1, 1, 1, alpha[column] ?? 1);
+      }
+    });
+    for (let row = 0; row < points.length - 1; row++) for (let column = 0; column < columns - 1; column++) {
+      const a = row * columns + column, b = a + 1, c = a + columns, d = c + 1; indices.push(a, c, b, b, c, d);
+    }
+    BABYLON.VertexData.ComputeNormals(positions, indices, normals);
+    const mesh = new BABYLON.Mesh(name, this.scene), data = new BABYLON.VertexData();
+    data.positions = positions; data.indices = indices; data.normals = normals; data.uvs = uvs; data.colors = colors; data.applyToMesh(mesh); mesh.hasVertexAlpha = true;
+    return mesh;
+  }
+
+  #pbr(name, textures, roughness = 1, alphaBlend = false) {
+    const material = new BABYLON.PBRMaterial(name, this.scene);
+    material.albedoTexture = new BABYLON.Texture(textures.albedo, this.scene);
+    material.bumpTexture = new BABYLON.Texture(textures.normal, this.scene); material.bumpTexture.level = .7;
+    material.metallicTexture = new BABYLON.Texture(textures.roughness, this.scene);
+    material.useRoughnessFromMetallicTextureGreen = true; material.useMetallnessFromMetallicTextureBlue = false;
+    material.metallic = 0; material.roughness = roughness;
+    if (alphaBlend) { material.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND; material.useVertexAlpha = true; }
+    return material;
+  }
+
+  async #place(key, name, x, z, rotation = 0, scale = 1, options = {}) {
+    const root = await this.assets.instantiateStatic(key, name, new BABYLON.Vector3(x, this.heightAt(x, z) + (options.y || 0), z), rotation, scale, options.metadata || null);
+    root.getChildMeshes(false).forEach((mesh) => { mesh.receiveShadows = true; mesh.checkCollisions = Boolean(options.collision); if (options.shadow !== false) this.shadowGenerator.addShadowCaster(mesh); });
+    if (options.obstacle) this.navigation.addObstacle(x, z, options.obstacle);
+    this.staticRoots.push(root); return root;
+  }
+
+  async #populateNature() {
+    const count = Math.round(24 * this.profile.lod), jobs = [];
+    for (let i = 0; i < count; i++) {
+      const angle = i * 2.399, radius = 20 + (i % 6) * 3.05, x = Math.cos(angle) * radius, z = Math.sin(angle) * radius;
+      jobs.push(this.#place(i % 3 ? "common-tree" : "pine", `tree-${i}`, x, z, angle, .78 + (i % 5) * .08, { obstacle: .72, shadow: this.profile.lod > .8 }));
+    }
+    const groundDetail = Math.round(34 * this.profile.particles);
+    for (let i = 0; i < groundDetail; i++) {
+      const angle = i * 2.17, radius = 12 + (i % 9) * 2.45, x = Math.cos(angle) * radius, z = Math.sin(angle) * radius;
+      jobs.push(this.#place(["bush", "grass", "fern"][i % 3], `foliage-${i}`, x, z, angle, .7 + (i % 4) * .13, { shadow: false }));
+    }
+    for (let i = 0; i < Math.round(16 * this.profile.lod); i++) {
+      const angle = i * 2.73, radius = 15 + (i % 7) * 3.1, x = Math.cos(angle) * radius, z = Math.sin(angle) * radius;
+      jobs.push(this.#place(i % 2 ? "rock-a" : "rock-b", `rock-${i}`, x, z, angle, .38 + (i % 3) * .12, { obstacle: .35, shadow: false }));
+    }
+    await Promise.all(jobs);
+  }
+
+  async #buildVillage() {
+    const jobs = [
+      ["round-door-wall", "smith-door", -18, -13, 0, .92], ["window-wall", "smith-window", -18, -18, Math.PI, .92],
+      ["plaster-wall", "smith-side-a", -20.5, -15.5, Math.PI / 2, .92], ["plaster-wall", "smith-side-b", -15.5, -15.5, -Math.PI / 2, .92],
+      ["tile-roof", "smith-roof", -18, -15.5, 0, .92], ["stone-stairs", "smith-steps", -18, -11.5, Math.PI, .8],
+      ["market-stall", "market-stall", -9, -10, .2, .9], ["wagon", "village-wagon", -7, -15, -.7, .82],
+      ["anvil", "smith-anvil", -15, -11, .35, .8], ["workbench", "smith-workbench", -20, -11.8, -.2, .84],
+      ["weapon-stand", "smith-weapons", -14.2, -14, -1.2, .82], ["barrel", "barrel-a", -11.5, -13, 0, .78],
+      ["crate", "crate-a", -10.5, -13.5, .3, .72], ["chest", "loot-chest", -21, -12, .2, .75]
+    ].map(([key, name, x, z, r, s]) => this.#place(key, name, x, z, r, s, { collision: true, obstacle: key.includes("wall") || key.includes("roof") ? 2.2 : .55, metadata: key === "chest" ? { cursor: "loot", loot: true } : key === "anvil" ? { cursor: "interact", interactive: true } : null }));
+    for (let i = 0; i < 8; i++) jobs.push(this.#place("wood-fence", `fence-${i}`, -23 + i * 2.1, -7.5 + Math.sin(i) * .4, 0, .8, { collision: true, obstacle: .55 }));
+    await Promise.all(jobs);
+  }
+
+  async #buildRuins() {
+    const jobs = [];
+    for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2, x = Math.cos(a) * 8, z = 17 + Math.sin(a) * 7; jobs.push(this.#place(i % 2 ? "ruin-wall" : "stone-arch", `ruin-${i}`, x, z, -a + Math.PI / 2, i % 2 ? .7 : .78, { collision: true, obstacle: 1.1 })); }
+    jobs.push(this.#place("stone-stairs", "ruin-stairs", 0, 10, 0, .85, { collision: true, obstacle: 1.2 }));
+    await Promise.all(jobs);
+  }
+
+  async #buildNpc() {
+    const x = -14.2, z = -10.2;
+    const npc = await this.assets.instantiateNpc(new BABYLON.Vector3(x, this.heightAt(x, z), z), 2.45);
+    this.addShadowCaster(npc); this.staticRoots.push(npc); this.navigation.addObstacle(x, z, .45);
+  }
+
+  async #buildCamp() {
+    await Promise.all([
+      this.#place("rock-a", "fire-rock-a", 14, -7.6, 0, .28), this.#place("rock-b", "fire-rock-b", 14.8, -8.1, 1, .25),
+      this.#place("rock-a", "fire-rock-c", 13.8, -8.8, 2, .25), this.#place("crate", "camp-crate", 17, -7.5, .4, .7, { obstacle: .45 }),
+      this.#place("barrel", "camp-barrel", 17.3, -9.3, 0, .7, { obstacle: .42 }), this.#place("torch", "camp-torch", 12, -10, 0, 1)
+    ]);
+    const light = new BABYLON.PointLight("camp-light", new BABYLON.Vector3(14.3, 2.1, -8.2), this.scene); light.diffuse = new BABYLON.Color3(1, .32, .1); light.intensity = 2.4; light.range = 12;
+    const texture = new BABYLON.DynamicTexture("ember-texture", { width: 32, height: 32 }, this.scene, false);
+    const context = texture.getContext(), gradient = context.createRadialGradient(16, 16, 1, 16, 16, 15); gradient.addColorStop(0, "#fff7b0"); gradient.addColorStop(.25, "#ff8a24"); gradient.addColorStop(1, "rgba(255,30,0,0)"); context.fillStyle = gradient; context.fillRect(0, 0, 32, 32); texture.update();
+    const fire = new BABYLON.ParticleSystem("campfire", Math.round(180 * this.profile.particles), this.scene); fire.particleTexture = texture; fire.emitter = new BABYLON.Vector3(14.3, .45, -8.2); fire.minEmitBox.set(-.22, 0, -.22); fire.maxEmitBox.set(.22, .1, .22); fire.color1 = new BABYLON.Color4(1, .55, .1, 1); fire.color2 = new BABYLON.Color4(1, .12, .02, .8); fire.minSize = .12; fire.maxSize = .42; fire.minLifeTime = .25; fire.maxLifeTime = .75; fire.emitRate = 95 * this.profile.particles; fire.direction1.set(-.2, 1.2, -.2); fire.direction2.set(.2, 2, .2); fire.gravity.set(0, .2, 0); fire.start();
+  }
+
+  async #buildBridge() {
+    const jobs = [];
+    for (let i = 0; i < 5; i++) jobs.push(this.#place("stone-stairs", `bridge-deck-${i}`, -2.4 + i * 1.2, 6.2, Math.PI / 2, .45, { collision: true }));
+    for (const side of [-1, 1]) for (let i = 0; i < 4; i++) jobs.push(this.#place("wood-fence", `bridge-rail-${side}-${i}`, -2 + i * 1.35, 6.2 + side * 1.15, Math.PI / 2, .55, { collision: true }));
+    await Promise.all(jobs);
+  }
+
+  async #buildMountains() {
+    const jobs = [], count = Math.round(14 * this.profile.lod);
+    for (let i = 0; i < count; i++) { const a = i / count * Math.PI * 2, radius = 37.5, x = Math.cos(a) * radius, z = Math.sin(a) * radius; jobs.push(this.#place(i % 2 ? "rock-a" : "rock-b", `mountain-${i}`, x, z, a, 4.8 + (i % 4) * .8, { obstacle: 2.3, shadow: false })); }
+    await Promise.all(jobs);
+  }
 }

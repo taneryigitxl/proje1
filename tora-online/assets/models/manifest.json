@@ -1,6 +1,21 @@
 {
-  "player": null,
-  "weapon": null,
-  "mobs": [],
-  "environment": []
+  "version": 2,
+  "player": { "url": "assets/models/player/female-ranger.glb", "scale": 1.0 },
+  "npc": { "url": "assets/models/player/village-blacksmith.glb", "name": "Demirci Ayame", "scale": 1.0 },
+  "weapon": { "url": "assets/models/weapons/greatsword.glb", "bone": "hand_r", "scale": 1.55, "position": [0.02, 0.02, -0.05], "rotation": [0, 0, 1.5708] },
+  "animationLibraries": ["assets/animations/ual1-standard.glb", "assets/animations/ual2-standard.glb"],
+  "mobs": [
+    { "id": "ashen-demon", "name": "Kül İblisi", "url": "assets/models/mobs/ashen-demon.glb", "scale": 1.05, "clips": { "idle": "Idle", "walk": "Walk", "run": "Run", "attack": "Punch", "hit": "HitReact", "death": "Death" } },
+    { "id": "skull-orc", "name": "Kafatası Orku", "url": "assets/models/mobs/skull-orc.glb", "scale": 1.0, "clips": { "idle": "Idle", "walk": "Walk", "run": "Run", "attack": "Weapon", "hit": "HitReact", "death": "Death" } }
+  ],
+  "environment": {
+    "common-tree": "assets/models/nature/common-tree.glb", "pine": "assets/models/nature/pine.glb", "bush": "assets/models/nature/bush.glb", "grass": "assets/models/nature/grass.glb", "fern": "assets/models/nature/fern.glb", "rock-a": "assets/models/nature/rock-a.glb", "rock-b": "assets/models/nature/rock-b.glb",
+    "plaster-wall": "assets/models/buildings/plaster-wall.glb", "round-door-wall": "assets/models/buildings/round-door-wall.glb", "window-wall": "assets/models/buildings/window-wall.glb", "tile-roof": "assets/models/buildings/tile-roof.glb", "stone-arch": "assets/models/buildings/stone-arch.glb", "ruin-wall": "assets/models/buildings/ruin-wall.glb", "stone-stairs": "assets/models/buildings/stone-stairs.glb", "wood-fence": "assets/models/buildings/wood-fence.glb",
+    "wagon": "assets/models/props/wagon.glb", "anvil": "assets/models/props/anvil.glb", "workbench": "assets/models/props/workbench.glb", "market-stall": "assets/models/props/market-stall.glb", "chest": "assets/models/props/chest.glb", "barrel": "assets/models/props/barrel.glb", "crate": "assets/models/props/crate.glb", "torch": "assets/models/props/torch.glb", "weapon-stand": "assets/models/props/weapon-stand.glb"
+  },
+  "terrain": {
+    "forest": { "albedo": "assets/textures/terrain/forest_ground_04-albedo.jpg", "normal": "assets/textures/terrain/forest_ground_04-normal.jpg", "roughness": "assets/textures/terrain/forest_ground_04-roughness.jpg" },
+    "mud": { "albedo": "assets/textures/terrain/brown_mud_dry-albedo.jpg", "normal": "assets/textures/terrain/brown_mud_dry-normal.jpg", "roughness": "assets/textures/terrain/brown_mud_dry-roughness.jpg" },
+    "rock": { "albedo": "assets/textures/terrain/mossy_rock-albedo.jpg", "normal": "assets/textures/terrain/mossy_rock-normal.jpg", "roughness": "assets/textures/terrain/mossy_rock-roughness.jpg" }
+  }
 }

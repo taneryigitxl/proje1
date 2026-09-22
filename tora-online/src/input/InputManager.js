@@ -12,6 +12,7 @@ export class InputManager {
   }
   #bind() {
     addEventListener("keydown", (event) => {
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
       if (!this.enabled || event.repeat) return;
       const code = event.code;
       this.keys.add(code); this.justPressed.add(code);

@@ -1,5 +1,7 @@
 export class Navigation {
-  constructor(halfSize) { this.halfSize = halfSize; this.obstacles = []; }
+  constructor(halfSize) { this.halfSize = halfSize; this.obstacles = []; this.heightProvider = () => 0; }
+  setHeightProvider(provider) { this.heightProvider = provider; }
+  heightAt(x, z) { return this.heightProvider(x, z); }
   addObstacle(x, z, radius) { this.obstacles.push({ x, z, radius }); }
   canOccupy(position, radius = 0.45) {
     if (Math.abs(position.x) > this.halfSize - radius || Math.abs(position.z) > this.halfSize - radius) return false;

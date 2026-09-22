@@ -2,7 +2,7 @@ export const GAME_CONFIG = Object.freeze({
   debug: typeof location !== "undefined" && new URLSearchParams(location.search).has("debug"),
   playerModelUrl: null,
   assetManifestUrl: "assets/models/manifest.json",
-  assetTimeoutMs: 12000,
+  assetTimeoutMs: 30000,
   mapHalfSize: 38,
   spawn: { x: 0, y: 0, z: -18 },
 });

@@ -1,7 +1,7 @@
 import { Mob } from "./Mob.js";
 
 export class EntityManager {
-  constructor(scene, navigation, spawns, onDamage) { this.scene=scene; this.navigation=navigation; this.mobs=spawns.map((spawn,index)=>new Mob(scene,spawn,index,navigation,onDamage)); this.selected=null; this.slowAccumulator=0; }
+  constructor(scene, navigation, spawns, onDamage, visuals) { this.scene=scene; this.navigation=navigation; this.mobs=spawns.map((spawn,index)=>new Mob(scene,spawn,index,navigation,onDamage,visuals[index])); this.selected=null; this.slowAccumulator=0; }
   getById(id){return this.mobs.find(mob=>mob.id===id)||null;}
   aliveMobs(){return this.mobs.filter(mob=>mob.alive);}
   select(mob){this.selected=mob?.alive?mob:null;return this.selected;}
