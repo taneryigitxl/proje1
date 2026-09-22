@@ -97,6 +97,7 @@ export class Game {
         player: this.player,
         camera: this.camera,
         combat: this.combat,
+        animator: this.animator,
         map: this.map,
         getGrassStats: () => this.map.getGrassStats(),
       };

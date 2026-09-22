@@ -52,7 +52,7 @@ export class PlayerController extends Entity {
     const groundY = this.navigation.heightAt(this.position.x, this.position.z);
     if (!this.grounded) {
       this.verticalVelocity -= 18.5 * dt; this.position.y += this.verticalVelocity * dt;
-      if (this.position.y <= groundY) { this.position.y = groundY; this.verticalVelocity = 0; this.grounded = true; this.landingTimer = .24; this.state = "land"; }
+      if (this.position.y <= groundY) { this.position.y = groundY; this.verticalVelocity = 0; this.grounded = true; this.landingTimer = .42; this.state = "land"; }
       else if (this.verticalVelocity < 0) this.state = "fall";
     } else {
       this.position.y = groundY;

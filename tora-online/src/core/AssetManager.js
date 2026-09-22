@@ -1,3 +1,5 @@
+import { CharacterFace } from "../player/CharacterFace.js";
+
 export class AssetManager {
   constructor(scene, config, onProgress = () => {}) {
     this.scene = scene;
@@ -83,72 +85,18 @@ export class AssetManager {
     weaponRoot.position.copyFrom(BABYLON.Vector3.FromArray(this.manifest.weapon.position));
     weaponRoot.rotation.copyFrom(BABYLON.Vector3.FromArray(this.manifest.weapon.rotation));
     weaponRoot.scaling.setAll(this.manifest.weapon.scale || 1);
-    weaponRoot.getChildMeshes(false).forEach((mesh) => { mesh.isPickable = false; });
+    weaponRoot.getChildMeshes(false).forEach((mesh) => {
+      mesh.isPickable = false;
+      mesh.receiveShadows = true;
+      // Normalize nested GLB offsets so grip comes from weaponRoot only
+      if (!mesh.parent || mesh.parent === weaponRoot) return;
+    });
+    console.info(`[Tora Assets] Kılıç '${hand.name}' kemiğine bağlandı (scale=${this.manifest.weapon.scale}).`);
 
     this.onProgress(70, "Yüz detayı ekleniyor…");
-    this.#attachFace(skeleton, skinnedMesh, root);
+    CharacterFace.attach(this.scene, skeleton, skinnedMesh, root);
 
     return { root, skeleton, weaponRoot, animationGroups };
-  }
-
-  #attachFace(skeleton, skinnedMesh, root) {
-    const headBone = skeleton.bones.find((bone) => {
-      const name = bone.name.toLowerCase();
-      return name === "head" || name.includes("head") || name.includes("neck");
-    });
-    const faceRoot = new BABYLON.TransformNode("player-face-root", this.scene);
-    const skin = new BABYLON.StandardMaterial("player-face-skin", this.scene);
-    skin.diffuseColor = new BABYLON.Color3(0.92, 0.74, 0.62);
-    skin.specularColor = new BABYLON.Color3(0.15, 0.12, 0.1);
-    const head = BABYLON.MeshBuilder.CreateSphere("player-face-head", { diameter: 0.28, segments: 12 }, this.scene);
-    head.material = skin;
-    head.parent = faceRoot;
-    head.position.set(0, 0.02, 0.04);
-    head.isPickable = false;
-
-    const eyeMat = new BABYLON.StandardMaterial("player-face-eye", this.scene);
-    eyeMat.diffuseColor = new BABYLON.Color3(0.12, 0.16, 0.22);
-    eyeMat.emissiveColor = new BABYLON.Color3(0.05, 0.08, 0.12);
-    for (const side of [-1, 1]) {
-      const eye = BABYLON.MeshBuilder.CreateSphere(`player-eye-${side}`, { diameter: 0.045, segments: 8 }, this.scene);
-      eye.material = eyeMat;
-      eye.parent = faceRoot;
-      eye.position.set(side * 0.055, 0.035, 0.14);
-      eye.scaling.set(1, 0.85, 0.7);
-      eye.isPickable = false;
-    }
-
-    const browMat = new BABYLON.StandardMaterial("player-face-brow", this.scene);
-    browMat.diffuseColor = new BABYLON.Color3(0.22, 0.12, 0.08);
-    for (const side of [-1, 1]) {
-      const brow = BABYLON.MeshBuilder.CreateBox(`player-brow-${side}`, { width: 0.06, height: 0.012, depth: 0.02 }, this.scene);
-      brow.material = browMat;
-      brow.parent = faceRoot;
-      brow.position.set(side * 0.055, 0.07, 0.13);
-      brow.rotation.z = side * -0.12;
-      brow.isPickable = false;
-    }
-
-    const mouth = BABYLON.MeshBuilder.CreateBox("player-mouth", { width: 0.07, height: 0.015, depth: 0.02 }, this.scene);
-    const mouthMat = new BABYLON.StandardMaterial("player-mouth-mat", this.scene);
-    mouthMat.diffuseColor = new BABYLON.Color3(0.55, 0.22, 0.25);
-    mouth.material = mouthMat;
-    mouth.parent = faceRoot;
-    mouth.position.set(0, -0.035, 0.13);
-    mouth.isPickable = false;
-
-    if (headBone && skinnedMesh) {
-      faceRoot.attachToBone(headBone, skinnedMesh);
-      faceRoot.position.set(0, 0.08, 0.05);
-      faceRoot.rotation.set(0, 0, 0);
-      faceRoot.scaling.setAll(1);
-      console.info(`[Tora Assets] Yüz '${headBone.name}' kemiğine bağlandı.`);
-    } else {
-      faceRoot.parent = root;
-      faceRoot.position.set(0, 1.55, 0.08);
-      console.warn("[Tora Assets] Head kemiği bulunamadı; yüz köke sabitlendi.");
-    }
-    return faceRoot;
   }
 
   async preloadStatics(keys = Object.keys(this.manifest.environment)) {
