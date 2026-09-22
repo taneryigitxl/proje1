@@ -1,4 +1,4 @@
-import { GrassSystem } from "./GrassSystem.js?v=15";
+import { GrassSystem } from "./GrassSystem.js?v=16";
 
 /**
  * Dark medieval MMORPG test valley — Metin2-inspired atmosphere without rewriting gameplay systems.
@@ -63,6 +63,7 @@ export class TestMap {
       pipeline.imageProcessing.exposure = 1.15;
     });
     this.#buildOptionalEffect("kamp ateşi", () => this.#buildCampfireEffect());
+    this.#buildOptionalEffect("ork kamp ateşi", () => this.#buildOrcCampfireEffect());
     this.#buildOptionalEffect("rüzgar partikülleri", () => this.#buildAmbientDust());
   }
 
@@ -77,6 +78,12 @@ export class TestMap {
     this.grass?.update(dt, camera, fps);
     if (this.ambientParticles) {
       this.ambientParticles.emitRate = 8 * (this.profile.particles || 0.5);
+    }
+    // Soft tree / bush sway — only every other frame, cheap root rotation
+    if ((this._windFrame = (this._windFrame || 0) + 1) % 2 === 0 && this.swayRoots?.length) {
+      for (const entry of this.swayRoots) {
+        entry.root.rotation.z = Math.sin(this.windTime * entry.speed + entry.phase) * entry.amp;
+      }
     }
   }
 
@@ -109,7 +116,8 @@ export class TestMap {
     const hills =
       Math.sin(x * 0.09) * Math.cos(z * 0.08) * 0.55 +
       Math.sin(x * 0.21 + 1.3) * Math.cos(z * 0.17) * 0.28 +
-      Math.sin(x * 0.37) * Math.sin(z * 0.29) * 0.12;
+      Math.sin(x * 0.37) * Math.sin(z * 0.29) * 0.12 +
+      Math.sin(x * 0.65 + z * 0.4) * 0.06;
 
     const bowl = -Math.exp(-(radius * radius) / 420) * 0.35;
     return edgeHill + valley + roadDip + hills + bowl;
@@ -207,12 +215,35 @@ export class TestMap {
     ground.checkCollisions = true;
     ground.isPickable = true;
     ground.metadata = { ground: true, cursor: "move" };
+
+    // Soft rock / mud blend patches so the valley isn't a flat single color
+    this.#blendPatch("edge-rock-n", [
+      new BABYLON.Vector3(-18, 0, 28), new BABYLON.Vector3(-6, 0, 30), new BABYLON.Vector3(8, 0, 29), new BABYLON.Vector3(18, 0, 27),
+    ], 11, "rock", new BABYLON.Color3(0.4, 0.38, 0.32));
+    this.#blendPatch("edge-rock-e", [
+      new BABYLON.Vector3(26, 0, -12), new BABYLON.Vector3(28, 0, 0), new BABYLON.Vector3(27, 0, 12), new BABYLON.Vector3(24, 0, 20),
+    ], 9, "rock", new BABYLON.Color3(0.38, 0.36, 0.3));
+    this.#blendPatch("stream-mud", [
+      new BABYLON.Vector3(-22, 0, 4), new BABYLON.Vector3(-14, 0, 6), new BABYLON.Vector3(-6, 0, 7), new BABYLON.Vector3(2, 0, 5),
+    ], 5.5, "mud", new BABYLON.Color3(0.42, 0.32, 0.2));
+    this.#blendPatch("camp-approach-dirt", [
+      new BABYLON.Vector3(-3, 0, 5), new BABYLON.Vector3(0, 0, 7.5), new BABYLON.Vector3(2, 0, 9.5),
+    ], 4.8, "mud", new BABYLON.Color3(0.45, 0.34, 0.22));
+  }
+
+  #blendPatch(name, points, width, kind, fallback) {
+    const alphas = [0, 0.25, 0.55, 0.75, 0.55, 0.25, 0];
+    const mesh = this.#ribbon(name, points, width, 7, alphas, 0.025);
+    mesh.material = this.#terrainMaterial(`terrain-${name}`, kind, fallback, true);
+    mesh.metadata = { ground: true, cursor: "move" };
+    mesh.isPickable = true;
+    mesh.receiveShadows = true;
   }
 
   #path() {
     const points = Array.from({ length: 28 }, (_, i) => new BABYLON.Vector3(Math.sin(i * 0.4) * 2.35, 0, -35 + i * 2.65));
-    // Soft alpha edges for natural road blend into grass
-    const path = this.#ribbon("village-road", points, 7.2, 7, [0, 0.35, 0.75, 1, 0.75, 0.35, 0], 0.04);
+    // Wider soft alpha edges — road fades into grass instead of hard cut
+    const path = this.#ribbon("village-road", points, 8.4, 9, [0, 0.18, 0.42, 0.72, 1, 0.72, 0.42, 0.18, 0], 0.045);
     path.material = this.#terrainMaterial("terrain-mud", "mud", new BABYLON.Color3(0.48, 0.36, 0.22), true);
     path.metadata = { ground: true, cursor: "move" };
     path.isPickable = true;
@@ -276,33 +307,38 @@ export class TestMap {
 
   /** Prefer real terrain JPGs with dark grade; fall back to painted procedural. */
   #terrainMaterial(name, kind, fallbackColor, alphaBlend = false) {
-    const pack = this.assets?.manifest?.terrain?.[kind === "mud" ? "mud" : kind === "rock" ? "rock" : "forest"];
+    const packKey = kind === "mud" ? "mud" : kind === "rock" ? "rock" : "forest";
+    const pack = this.assets?.manifest?.terrain?.[packKey];
     if (pack?.albedo) {
       const material = new BABYLON.StandardMaterial(name, this.scene);
       material.disableLighting = false;
-      // Lift dark albedo packs into readable dusk greens/browns
+      // Lift dark albedo packs into readable dusk greens/browns/rocks
       material.diffuseColor = kind === "mud"
         ? new BABYLON.Color3(1.05, 0.95, 0.82)
-        : new BABYLON.Color3(0.95, 1.05, 0.78);
+        : kind === "rock"
+          ? new BABYLON.Color3(0.92, 0.9, 0.86)
+          : new BABYLON.Color3(0.95, 1.05, 0.78);
       material.ambientColor = new BABYLON.Color3(0.45, 0.48, 0.4);
       material.specularColor = BABYLON.Color3.Black();
       material.emissiveColor = kind === "mud"
         ? new BABYLON.Color3(0.08, 0.06, 0.04)
-        : new BABYLON.Color3(0.07, 0.1, 0.04);
+        : kind === "rock"
+          ? new BABYLON.Color3(0.06, 0.06, 0.05)
+          : new BABYLON.Color3(0.07, 0.1, 0.04);
       try {
         const albedo = new BABYLON.Texture(pack.albedo, this.scene, false, true);
-        albedo.uScale = kind === "mud" ? 4.2 : 4.8;
+        albedo.uScale = kind === "mud" ? 4.2 : kind === "rock" ? 3.6 : 4.8;
         albedo.vScale = albedo.uScale;
         albedo.level = 1.15;
         material.diffuseTexture = albedo;
         if (pack.normal) {
           material.bumpTexture = new BABYLON.Texture(pack.normal, this.scene, false, true);
-          material.bumpTexture.level = 0.35;
+          material.bumpTexture.level = kind === "rock" ? 0.45 : 0.35;
           material.bumpTexture.uScale = albedo.uScale;
           material.bumpTexture.vScale = albedo.vScale;
         }
       } catch (_) {
-        return this.#paintedGround(name, kind === "mud" ? "mud" : "grass", fallbackColor, alphaBlend);
+        return this.#paintedGround(name, kind === "mud" ? "mud" : kind === "rock" ? "rock" : "grass", fallbackColor, alphaBlend);
       }
       if (alphaBlend) {
         material.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
@@ -310,7 +346,7 @@ export class TestMap {
       }
       return material;
     }
-    return this.#paintedGround(name, kind === "mud" ? "mud" : "grass", fallbackColor, alphaBlend);
+    return this.#paintedGround(name, kind === "mud" ? "mud" : kind === "rock" ? "rock" : "grass", fallbackColor, alphaBlend);
   }
 
   #paintedGround(name, kind, baseColor, alphaBlend = false) {
@@ -345,8 +381,11 @@ export class TestMap {
       const y = Math.random() * size;
       const radius = 22 + Math.random() * 70;
       const patch = ctx.createRadialGradient(x, y, 2, x, y, radius);
-      if (kind === "grass") {
+    if (kind === "grass") {
         patch.addColorStop(0, Math.random() > 0.5 ? "rgba(70, 95, 40, 0.5)" : "rgba(40, 70, 30, 0.45)");
+        patch.addColorStop(1, "rgba(0,0,0,0)");
+      } else if (kind === "rock") {
+        patch.addColorStop(0, Math.random() > 0.5 ? "rgba(90, 85, 75, 0.5)" : "rgba(55, 52, 45, 0.45)");
         patch.addColorStop(1, "rgba(0,0,0,0)");
       } else {
         patch.addColorStop(0, Math.random() > 0.5 ? "rgba(120, 90, 55, 0.45)" : "rgba(70, 50, 30, 0.4)");
@@ -361,12 +400,16 @@ export class TestMap {
       const a = 0.06 + Math.random() * 0.18;
       ctx.fillStyle = kind === "grass"
         ? `rgba(${40 + Math.random() * 50}, ${70 + Math.random() * 60}, ${20 + Math.random() * 30}, ${a})`
-        : `rgba(${90 + Math.random() * 60}, ${65 + Math.random() * 40}, ${35 + Math.random() * 25}, ${a})`;
+        : kind === "rock"
+          ? `rgba(${70 + Math.random() * 50}, ${65 + Math.random() * 40}, ${55 + Math.random() * 30}, ${a})`
+          : `rgba(${90 + Math.random() * 60}, ${65 + Math.random() * 40}, ${35 + Math.random() * 25}, ${a})`;
       ctx.fillRect(Math.random() * size, Math.random() * size, 1 + Math.random() * 2, 1 + Math.random() * 2);
     }
     if (kind !== "grass") {
       for (let i = 0; i < 160; i++) {
-        ctx.fillStyle = `rgba(${60 + Math.random() * 50}, ${45 + Math.random() * 30}, ${25 + Math.random() * 20}, ${0.2 + Math.random() * 0.35})`;
+        ctx.fillStyle = kind === "rock"
+          ? `rgba(${50 + Math.random() * 40}, ${48 + Math.random() * 30}, ${42 + Math.random() * 25}, ${0.2 + Math.random() * 0.35})`
+          : `rgba(${60 + Math.random() * 50}, ${45 + Math.random() * 30}, ${25 + Math.random() * 20}, ${0.2 + Math.random() * 0.35})`;
         ctx.beginPath();
         ctx.arc(Math.random() * size, Math.random() * size, 1 + Math.random() * 3.5, 0, Math.PI * 2);
         ctx.fill();
@@ -395,6 +438,15 @@ export class TestMap {
       if (options.shadow !== false) this.shadowGenerator.addShadowCaster(mesh);
     });
     if (options.obstacle) this.navigation.addObstacle(x, z, options.obstacle);
+    if (options.sway) {
+      if (!this.swayRoots) this.swayRoots = [];
+      this.swayRoots.push({
+        root,
+        phase: Math.random() * Math.PI * 2,
+        speed: 0.45 + Math.random() * 0.35,
+        amp: 0.012 + Math.random() * 0.018,
+      });
+    }
     this.staticRoots.push(root);
     return root;
   }
@@ -417,6 +469,7 @@ export class TestMap {
         obstacle: 0.65 + random() * 0.2,
         shadow: i % 2 === 0,
         sink: 0.05,
+        sway: true,
       }));
     }
 
@@ -489,21 +542,69 @@ export class TestMap {
   }
 
   async #buildRuins() {
+    // Orc war-camp built on the northern ruin ring
     const jobs = [];
+    // Broken stone perimeter (ruins)
     for (let i = 0; i < 8; i++) {
       const a = (i / 8) * Math.PI * 2;
-      const x = Math.cos(a) * 8.2;
-      const z = 17 + Math.sin(a) * 7.2;
-      jobs.push(this.#place(i % 2 ? "ruin-wall" : "stone-arch", `ruin-${i}`, x, z, -a + Math.PI / 2, i % 2 ? 0.68 : 0.74, {
+      const x = Math.cos(a) * 8.4;
+      const z = 17 + Math.sin(a) * 7.4;
+      jobs.push(this.#place(i % 2 ? "ruin-wall" : "stone-arch", `orc-wall-${i}`, x, z, -a + Math.PI / 2, i % 2 ? 0.62 : 0.7, {
         collision: true,
-        obstacle: 1.05,
-        sink: 0.15,
+        obstacle: 1.0,
+        sink: 0.18,
       }));
     }
-    jobs.push(this.#place("stone-stairs", "ruin-stairs", 0, 10, 0, 0.85, { collision: true, obstacle: 1.2, sink: 0.08 }));
-    jobs.push(this.#place("crate", "ruin-crate", 3.2, 14.5, 0.4, 0.6, { obstacle: 0.4, sink: 0.05 }));
-    jobs.push(this.#place("barrel", "ruin-barrel", -3.5, 15.2, 0.2, 0.62, { obstacle: 0.4, sink: 0.05 }));
+    // Approach stairs / gate
+    jobs.push(this.#place("stone-stairs", "orc-gate", 0, 9.6, 0, 0.82, { collision: true, obstacle: 1.1, sink: 0.1 }));
+    // Tents (market stalls as canvas shelters)
+    jobs.push(this.#place("market-stall", "orc-tent-a", -5.5, 16.5, 0.6, 0.95, { collision: true, obstacle: 0.9, sink: 0.05 }));
+    jobs.push(this.#place("market-stall", "orc-tent-b", 5.8, 17.2, -0.9, 0.92, { collision: true, obstacle: 0.9, sink: 0.05 }));
+    jobs.push(this.#place("market-stall", "orc-tent-c", 0.2, 20.5, 3.1, 0.88, { collision: true, obstacle: 0.85, sink: 0.05 }));
+    // Central war fire ring
+    jobs.push(this.#place("rock-a", "orc-fire-a", -0.7, 16.2, 0, 0.22, { sink: 0.1 }));
+    jobs.push(this.#place("rock-b", "orc-fire-b", 0.8, 16.0, 1.2, 0.2, { sink: 0.1 }));
+    jobs.push(this.#place("rock-a", "orc-fire-c", 0.1, 17.1, 2.1, 0.2, { sink: 0.1 }));
+    // Supplies / cages / totems
+    jobs.push(this.#place("crate", "orc-crate-a", 3.5, 14.2, 0.4, 0.58, { obstacle: 0.38, sink: 0.05 }));
+    jobs.push(this.#place("crate", "orc-crate-b", 4.1, 14.8, -0.3, 0.52, { obstacle: 0.35, sink: 0.05 }));
+    jobs.push(this.#place("barrel", "orc-barrel-a", -3.8, 14.5, 0.2, 0.58, { obstacle: 0.38, sink: 0.05 }));
+    jobs.push(this.#place("barrel", "orc-barrel-b", -4.4, 15.2, 0.8, 0.55, { obstacle: 0.35, sink: 0.05 }));
+    jobs.push(this.#place("chest", "orc-chest", 6.5, 15.5, -0.4, 0.65, { obstacle: 0.4, metadata: { cursor: "loot", loot: true } }));
+    jobs.push(this.#place("weapon-stand", "orc-totem-a", -6.8, 14.0, 0.5, 0.85, { obstacle: 0.4 }));
+    jobs.push(this.#place("weapon-stand", "orc-totem-b", 7.2, 18.8, -1.0, 0.85, { obstacle: 0.4 }));
+    jobs.push(this.#place("wagon", "orc-warwagon", -2.5, 12.2, 0.8, 0.72, { collision: true, obstacle: 0.95, sink: 0.08 }));
+    // Stake fence segments (camp perimeter poles)
+    for (let i = 0; i < 6; i++) {
+      const a = 0.4 + i * 0.45;
+      jobs.push(this.#place("wood-fence", `orc-stake-${i}`, Math.cos(a) * 6.2, 17 + Math.sin(a) * 5.5, a + Math.PI / 2, 0.55, {
+        collision: true,
+        obstacle: 0.35,
+        sink: 0.08,
+      }));
+    }
+    jobs.push(this.#place("torch", "orc-torch-a", -4.8, 12.8, 0, 1.0));
+    jobs.push(this.#place("torch", "orc-torch-b", 5.2, 12.5, 0.3, 1.0));
+    jobs.push(this.#place("torch", "orc-torch-c", 1.2, 21.2, 0.1, 1.0));
+    // Bone piles / skull markers (small rock stacks) + cage crates
+    jobs.push(this.#place("rock-b", "orc-skull-a", -7.2, 16.8, 0.8, 0.16, { sink: 0.04 }));
+    jobs.push(this.#place("rock-a", "orc-skull-b", 6.8, 19.5, 1.4, 0.14, { sink: 0.04 }));
+    jobs.push(this.#place("crate", "orc-cage-a", -5.8, 19.2, 0.2, 0.7, { obstacle: 0.45, sink: 0.06, collision: true }));
+    jobs.push(this.#place("crate", "orc-cage-b", -5.2, 19.8, -0.4, 0.55, { obstacle: 0.35, sink: 0.05 }));
+    jobs.push(this.#place("barrel", "orc-barrel-c", 2.8, 19.8, 0.5, 0.52, { obstacle: 0.32, sink: 0.04 }));
+    jobs.push(this.#place("wood-fence", "orc-banner-pole", 0.2, 13.4, 0, 0.7, { obstacle: 0.3, sink: 0.1 }));
     await Promise.all(jobs);
+
+    // Warm local lights for campfires / torches
+    const fire = new BABYLON.PointLight("orc-campfire-light", new BABYLON.Vector3(0.1, 1.8, 16.4), this.scene);
+    fire.diffuse = new BABYLON.Color3(1, 0.42, 0.12);
+    fire.intensity = 2.4;
+    fire.range = 14;
+    const torchLight = new BABYLON.PointLight("orc-torch-light", new BABYLON.Vector3(-4.8, 2.4, 12.8), this.scene);
+    torchLight.diffuse = new BABYLON.Color3(1, 0.5, 0.18);
+    torchLight.intensity = 1.4;
+    torchLight.range = 9;
+    this.orcCampfire = new BABYLON.Vector3(0.1, 0.55, 16.4);
   }
 
   async #buildNpc() {
@@ -533,32 +634,68 @@ export class TestMap {
 
   async #buildWorldDetails() {
     const jobs = [];
-    // Broken wagon roadside
     jobs.push(this.#place("wagon", "road-wagon", 4.5, -22, 1.1, 0.7, { obstacle: 0.9, sink: 0.08, collision: true }));
     jobs.push(this.#place("crate", "road-crate-a", 5.8, -21.2, 0.3, 0.55, { obstacle: 0.35, sink: 0.04 }));
     jobs.push(this.#place("barrel", "road-barrel", 3.2, -21.5, 0.6, 0.58, { obstacle: 0.35, sink: 0.04 }));
-    // Signpost stand-in with weapon rack + torch
     jobs.push(this.#place("weapon-stand", "road-sign", 1.8, -28, 0.2, 0.7, { obstacle: 0.35 }));
     jobs.push(this.#place("torch", "road-torch", 0.5, -27.5, 0, 0.95));
-    // Small woodpile / crates near stream bank
     jobs.push(this.#place("crate", "stream-crate", -16, 4.5, 0.4, 0.55, { obstacle: 0.35, sink: 0.05 }));
     jobs.push(this.#place("barrel", "stream-barrel", -15.2, 5.2, -0.3, 0.55, { obstacle: 0.35, sink: 0.05 }));
-    // Extra ruin scrap
     jobs.push(this.#place("rock-b", "field-rock-a", 8, 2, 0.7, 0.32, { obstacle: 0.3, sink: 0.14 }));
     jobs.push(this.#place("rock-a", "field-rock-b", -10, 3, 1.2, 0.28, { obstacle: 0.28, sink: 0.12 }));
+    // Mid-road waystone / resting spot
+    jobs.push(this.#place("rock-a", "waystone", -1.2, -5.5, 0.2, 0.4, { obstacle: 0.35, sink: 0.16, shadow: true }));
+    jobs.push(this.#place("barrel", "way-barrel", 0.4, -6.2, 0.5, 0.5, { obstacle: 0.3, sink: 0.04 }));
+    jobs.push(this.#place("crate", "way-crate", 1.0, -5.4, -0.2, 0.48, { obstacle: 0.3, sink: 0.04 }));
+    jobs.push(this.#place("torch", "way-torch", -2.4, -6.0, 0, 0.9));
+    // Abandoned campsite near stream bend
+    jobs.push(this.#place("rock-b", "stream-camp-a", -20, 7.5, 0.4, 0.2, { sink: 0.08 }));
+    jobs.push(this.#place("rock-a", "stream-camp-b", -19.3, 8.0, 1.1, 0.18, { sink: 0.08 }));
+    jobs.push(this.#place("crate", "stream-camp-crate", -18.5, 7.2, 0.3, 0.5, { obstacle: 0.3, sink: 0.04 }));
+    // Broken fence along approach to orc camp
+    for (let i = 0; i < 4; i++) {
+      jobs.push(this.#place("wood-fence", `approach-fence-${i}`, -3.5 + i * 2.1, 6.8 + (i % 2) * 0.3, 0.1, 0.65, {
+        collision: true,
+        obstacle: 0.4,
+        sink: 0.06,
+      }));
+    }
+    // Scattered field rocks guiding the eye toward the camp
+    const rocks = [
+      [6.5, -2, 0.3], [-8, -4, 0.35], [11, 4, 0.28], [-12, 8, 0.32], [2, 4.5, 0.25],
+      [9.5, -12, 0.26], [-5.5, -16, 0.3], [12, -6, 0.24], [-14, -2, 0.28],
+    ];
+    rocks.forEach(([x, z, s], i) => {
+      jobs.push(this.#place(i % 2 ? "rock-a" : "rock-b", `guide-rock-${i}`, x, z, i, s, {
+        obstacle: 0.22 + s,
+        sink: 0.12 + s * 0.2,
+        shadow: s > 0.3,
+      }));
+    });
+    // Wood piles / abandoned camp clutter along the east trail
+    jobs.push(this.#place("crate", "woodpile-a", 10.5, -14, 0.2, 0.48, { obstacle: 0.3, sink: 0.04 }));
+    jobs.push(this.#place("crate", "woodpile-b", 11.1, -14.4, -0.5, 0.42, { obstacle: 0.28, sink: 0.04 }));
+    jobs.push(this.#place("barrel", "trail-barrel", 10.2, -15.2, 0.4, 0.5, { obstacle: 0.3, sink: 0.04 }));
+    jobs.push(this.#place("wagon", "broken-wagon", -6.5, 1.5, -0.9, 0.65, { collision: true, obstacle: 0.85, sink: 0.1 }));
+    jobs.push(this.#place("wood-fence", "broken-fence-a", 7.2, 7.5, 0.8, 0.55, { obstacle: 0.3, sink: 0.08 }));
+    jobs.push(this.#place("wood-fence", "broken-fence-b", 8.5, 7.8, 1.1, 0.5, { obstacle: 0.28, sink: 0.08 }));
+    jobs.push(this.#place("chest", "ruined-chest", -9.5, 5.5, 0.3, 0.6, { obstacle: 0.35, metadata: { cursor: "loot", loot: true } }));
+    jobs.push(this.#place("torch", "trail-torch", 5.5, -18, 0, 0.9));
+    // Small pebble clusters (tiny rocks) near the road edges
+    for (let i = 0; i < 8; i++) {
+      const z = -28 + i * 4.5;
+      const side = i % 2 === 0 ? 1 : -1;
+      const x = Math.sin((z + 35) / 2.65 * 0.4) * 2.35 + side * (3.6 + (i % 3) * 0.4);
+      jobs.push(this.#place(i % 2 ? "rock-a" : "rock-b", `pebble-${i}`, x, z, i * 0.7, 0.12 + (i % 3) * 0.04, {
+        sink: 0.06,
+        shadow: false,
+      }));
+    }
     await Promise.all(jobs);
   }
 
   #buildCampfireEffect() {
-    const texture = new BABYLON.DynamicTexture("ember-texture", { width: 32, height: 32 }, this.scene, false);
-    const context = texture.getContext();
-    const gradient = context.createRadialGradient(16, 16, 1, 16, 16, 15);
-    gradient.addColorStop(0, "#fff7b0");
-    gradient.addColorStop(0.25, "#ff8a24");
-    gradient.addColorStop(1, "rgba(255,30,0,0)");
-    context.fillStyle = gradient;
-    context.fillRect(0, 0, 32, 32);
-    texture.update();
+    const texture = this.#emberTexture("ember-texture");
     const fire = new BABYLON.ParticleSystem("campfire", Math.round(160 * this.profile.particles), this.scene);
     fire.particleTexture = texture;
     fire.emitter = new BABYLON.Vector3(14.3, 0.45, -8.2);
@@ -575,6 +712,58 @@ export class TestMap {
     fire.direction2.set(0.15, 1.8, 0.15);
     fire.gravity.set(0, 0.15, 0);
     fire.start();
+  }
+
+  #buildOrcCampfireEffect() {
+    if (!this.orcCampfire) return;
+    const texture = this.#emberTexture("orc-ember-texture");
+    const fire = new BABYLON.ParticleSystem("orc-campfire", Math.round(120 * this.profile.particles), this.scene);
+    fire.particleTexture = texture;
+    fire.emitter = this.orcCampfire.clone();
+    fire.minEmitBox.set(-0.25, 0, -0.25);
+    fire.maxEmitBox.set(0.25, 0.1, 0.25);
+    fire.color1 = new BABYLON.Color4(1, 0.45, 0.08, 1);
+    fire.color2 = new BABYLON.Color4(0.9, 0.15, 0.02, 0.7);
+    fire.minSize = 0.12;
+    fire.maxSize = 0.42;
+    fire.minLifeTime = 0.3;
+    fire.maxLifeTime = 0.85;
+    fire.emitRate = 70 * this.profile.particles;
+    fire.direction1.set(-0.2, 1.2, -0.2);
+    fire.direction2.set(0.2, 2.0, 0.2);
+    fire.gravity.set(0, 0.12, 0);
+    fire.start();
+    // Soft smoke
+    const smoke = new BABYLON.ParticleSystem("orc-smoke", Math.round(30 * this.profile.particles), this.scene);
+    smoke.particleTexture = texture;
+    smoke.emitter = this.orcCampfire.add(new BABYLON.Vector3(0, 0.4, 0));
+    smoke.minEmitBox.set(-0.15, 0, -0.15);
+    smoke.maxEmitBox.set(0.15, 0.1, 0.15);
+    smoke.color1 = new BABYLON.Color4(0.25, 0.22, 0.18, 0.35);
+    smoke.color2 = new BABYLON.Color4(0.15, 0.14, 0.12, 0.05);
+    smoke.minSize = 0.25;
+    smoke.maxSize = 0.7;
+    smoke.minLifeTime = 1.2;
+    smoke.maxLifeTime = 2.4;
+    smoke.emitRate = 12 * this.profile.particles;
+    smoke.direction1.set(-0.1, 0.8, -0.1);
+    smoke.direction2.set(0.15, 1.4, 0.15);
+    smoke.gravity.set(0, 0.05, 0);
+    smoke.blendMode = BABYLON.ParticleSystem.BLENDMODE_STANDARD;
+    smoke.start();
+  }
+
+  #emberTexture(name) {
+    const texture = new BABYLON.DynamicTexture(name, { width: 32, height: 32 }, this.scene, false);
+    const context = texture.getContext();
+    const gradient = context.createRadialGradient(16, 16, 1, 16, 16, 15);
+    gradient.addColorStop(0, "#fff7b0");
+    gradient.addColorStop(0.25, "#ff8a24");
+    gradient.addColorStop(1, "rgba(255,30,0,0)");
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, 32, 32);
+    texture.update();
+    return texture;
   }
 
   #buildAmbientDust() {

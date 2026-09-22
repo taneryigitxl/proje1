@@ -1,5 +1,5 @@
-import { CharacterFace } from "../player/CharacterFace.js?v=15";
-import { WeaponSheath } from "../player/WeaponSheath.js?v=15";
+import { CharacterFace } from "../player/CharacterFace.js?v=16";
+import { WeaponSheath } from "../player/WeaponSheath.js?v=16";
 
 export class AssetManager {
   constructor(scene, config, onProgress = () => {}) {
@@ -146,11 +146,117 @@ export class AssetManager {
     const loaded = await this.#load(definition.url);
     if (!loaded.skeletons.length || !loaded.animationGroups.length) throw new Error(`Animasyonlu düşman GLB geçersiz: ${definition.url}`);
     const root = this.#wrap(`mob-model-${index}`, loaded.meshes, loaded.transformNodes);
-    root.scaling.setAll(definition.scale || 1);
-    // Slight per-instance jitter so packs don't look cloned
-    const jitter = 0.92 + (index % 5) * 0.03;
-    root.scaling.scaleInPlace(jitter);
-    return { root, animationGroups: loaded.animationGroups, definition };
+    const baseScale = definition.scale || 1;
+    // Height / bulk variation so packs don't look cloned
+    const heightJitter = 0.9 + (index % 7) * 0.028;
+    const bulkJitter = 0.94 + ((index * 3) % 5) * 0.02;
+    root.scaling.set(baseScale * bulkJitter, baseScale * heightJitter, baseScale * bulkJitter);
+    this.#styleMob(root, definition, index);
+    this.#attachMobWeapon(root, loaded.skeletons[0], definition, index);
+    const footOffset = this.#estimateFootOffset(root);
+    return { root, animationGroups: loaded.animationGroups, definition, footOffset };
+  }
+
+  /** Dark fantasy materials + per-index palette so orcs/goblins don't look toy-bright. */
+  #styleMob(root, definition, index) {
+    const palettes = definition.id?.includes("orc")
+      ? [
+          { skin: new BABYLON.Color3(0.28, 0.38, 0.22), cloth: new BABYLON.Color3(0.22, 0.16, 0.12), armor: new BABYLON.Color3(0.32, 0.28, 0.24) },
+          { skin: new BABYLON.Color3(0.34, 0.42, 0.2), cloth: new BABYLON.Color3(0.3, 0.14, 0.1), armor: new BABYLON.Color3(0.4, 0.34, 0.26) },
+          { skin: new BABYLON.Color3(0.24, 0.32, 0.18), cloth: new BABYLON.Color3(0.18, 0.14, 0.1), armor: new BABYLON.Color3(0.28, 0.26, 0.22) },
+        ]
+      : [
+          { skin: new BABYLON.Color3(0.42, 0.22, 0.18), cloth: new BABYLON.Color3(0.16, 0.14, 0.18), armor: new BABYLON.Color3(0.35, 0.3, 0.28) },
+          { skin: new BABYLON.Color3(0.36, 0.18, 0.16), cloth: new BABYLON.Color3(0.2, 0.12, 0.1), armor: new BABYLON.Color3(0.3, 0.28, 0.26) },
+          { skin: new BABYLON.Color3(0.48, 0.26, 0.2), cloth: new BABYLON.Color3(0.14, 0.12, 0.14), armor: new BABYLON.Color3(0.38, 0.32, 0.24) },
+        ];
+    const palette = palettes[index % palettes.length];
+    root.getChildMeshes(false).forEach((mesh, meshIndex) => {
+      const mat = mesh.material?.clone?.(`${mesh.name}-mob-${index}`) || new BABYLON.StandardMaterial(`mob-mat-${index}-${meshIndex}`, this.scene);
+      const pick = meshIndex % 3 === 0 ? palette.skin : meshIndex % 3 === 1 ? palette.cloth : palette.armor;
+      if (mat.diffuseColor) mat.diffuseColor = pick;
+      if (mat.albedoColor) mat.albedoColor = pick;
+      mat.ambientColor = pick.scale(0.55);
+      mat.emissiveColor = pick.scale(0.04);
+      mat.specularColor = new BABYLON.Color3(0.08, 0.07, 0.06);
+      mat.specularPower = 32;
+      mesh.material = mat;
+      mesh.receiveShadows = true;
+    });
+  }
+
+  #attachMobWeapon(root, skeleton, definition, index) {
+    const isOrc = definition.id?.includes("orc");
+    const weapon = isOrc ? this.#makeAxe(`mob-axe-${index}`) : this.#makeClub(`mob-club-${index}`);
+    const hand = skeleton?.bones?.find((bone) => {
+      const n = bone.name.toLowerCase();
+      return n.includes("hand_r") || n.includes("righthand") || n.includes("hand.r") || n === "hand_r";
+    });
+    const skinned = root.getChildMeshes(false).find((mesh) => mesh.skeleton === skeleton);
+    if (hand && skinned && typeof weapon.attachToBone === "function") {
+      try {
+        weapon.attachToBone(hand, skinned);
+        weapon.position.set(0.02, 0.04, 0);
+        weapon.rotation.set(1.2, 0.1, 1.4);
+        weapon.scaling.setAll(isOrc ? 0.95 : 0.85);
+        return;
+      } catch (_) { /* fall through to hip grip */ }
+    }
+    weapon.parent = root;
+    weapon.position.set(0.28 + (index % 3) * 0.02, 0.85, 0.12);
+    weapon.rotation.set(0.2, 0.4 + index * 0.15, -0.5);
+    weapon.scaling.setAll(isOrc ? 0.9 : 0.8);
+  }
+
+  #makeClub(name) {
+    const root = new BABYLON.TransformNode(name, this.scene);
+    const wood = new BABYLON.StandardMaterial(`${name}-wood`, this.scene);
+    wood.diffuseColor = new BABYLON.Color3(0.32, 0.22, 0.12);
+    wood.specularColor = BABYLON.Color3.Black();
+    const shaft = BABYLON.MeshBuilder.CreateCylinder(`${name}-shaft`, { height: 0.55, diameterTop: 0.04, diameterBottom: 0.055, tessellation: 6 }, this.scene);
+    shaft.material = wood;
+    shaft.parent = root;
+    shaft.position.y = 0.28;
+    const head = BABYLON.MeshBuilder.CreateSphere(`${name}-head`, { diameter: 0.16, segments: 6 }, this.scene);
+    head.material = wood;
+    head.parent = root;
+    head.position.y = 0.58;
+    head.scaling.set(1.1, 0.85, 1.1);
+    root.getChildMeshes(false).forEach((m) => { m.isPickable = false; });
+    return root;
+  }
+
+  #makeAxe(name) {
+    const root = new BABYLON.TransformNode(name, this.scene);
+    const wood = new BABYLON.StandardMaterial(`${name}-wood`, this.scene);
+    wood.diffuseColor = new BABYLON.Color3(0.28, 0.18, 0.1);
+    wood.specularColor = BABYLON.Color3.Black();
+    const iron = new BABYLON.StandardMaterial(`${name}-iron`, this.scene);
+    iron.diffuseColor = new BABYLON.Color3(0.35, 0.34, 0.32);
+    iron.specularColor = new BABYLON.Color3(0.25, 0.25, 0.22);
+    const shaft = BABYLON.MeshBuilder.CreateCylinder(`${name}-shaft`, { height: 0.62, diameter: 0.045, tessellation: 6 }, this.scene);
+    shaft.material = wood;
+    shaft.parent = root;
+    shaft.position.y = 0.3;
+    const blade = BABYLON.MeshBuilder.CreateBox(`${name}-blade`, { width: 0.28, height: 0.16, depth: 0.04 }, this.scene);
+    blade.material = iron;
+    blade.parent = root;
+    blade.position.set(0.1, 0.58, 0);
+    root.getChildMeshes(false).forEach((m) => { m.isPickable = false; });
+    return root;
+  }
+
+  #estimateFootOffset(root) {
+    let minY = Infinity;
+    root.getChildMeshes(false).forEach((mesh) => {
+      mesh.computeWorldMatrix(true);
+      const bi = mesh.getBoundingInfo?.();
+      if (!bi) return;
+      minY = Math.min(minY, bi.boundingBox.minimumWorld.y);
+    });
+    if (!Number.isFinite(minY)) return 0;
+    // Lift so soles sit on terrain (negative minY means mesh hangs below root)
+    return -minY + 0.02;
   }
 
   async instantiateNpc(position, rotationY = 0) {

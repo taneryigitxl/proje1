@@ -109,5 +109,23 @@ body[data-quality="low"] .menu-grid,body[data-quality="low"] .rune-field{display
 @media(max-width:760px){.stats-panel{right:8px;top:auto;bottom:120px;transform:none}.inventory-panel{transform:translate(-50%,-48%)}.buff-bar{top:100px}}
 @media(max-width:640px){.minimap,.chat-panel{display:none}.player-frame{width:280px}.skill-bar{bottom:8px}.target-frame{top:108px}}
 
-/* Atmosphere pack UI polish v15 */
-.hud .player-frame{width:300px;height:82px}.hud .portrait{width:54px;height:54px}.hud .meter{height:11px}.hud .meter.hp i{background:linear-gradient(#c44538,#6e221c)}.hud .meter.mana i{background:linear-gradient(#4a7aab,#243c61)}.hud .xp{height:8px}.hud .xp i{background:linear-gradient(90deg,#a07a3c,#e0bc66)}.hud .quest-panel{width:168px;padding:9px}.hud .quest-panel span{color:#b9a786;font-size:.6rem;line-height:1.4}.hud .skill-slot{width:44px;height:44px}.hud .skill-slot:hover{border-color:#e0bc66;box-shadow:0 0 10px rgba(212,173,94,.22)}.hud .mob-label .bar{height:4px;border:1px solid #5a3428}.hud .minimap{width:168px}.hud .minimap-map{width:154px;height:154px}
+/* Atmosphere pack UI polish v16 */
+.hud .player-frame{width:300px;height:82px}.hud .portrait{width:54px;height:54px}
+.hud .meter{height:12px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.45)}
+.hud .meter.hp i{background:linear-gradient(#d45042,#6e221c);box-shadow:0 0 6px rgba(200,60,40,.25)}
+.hud .meter.mana i{background:linear-gradient(#5590c4,#243c61)}
+.hud .xp{height:8px}.hud .xp i{background:linear-gradient(90deg,#a07a3c,#e0bc66)}
+.hud .player-data strong{text-shadow:0 1px 2px #000;font-size:.84rem}
+.hud .quest-panel{width:172px;padding:10px;border-color:rgba(155,116,55,.55)}
+.hud .quest-panel span{color:#c4b494;font-size:.62rem;line-height:1.45}
+.hud .quest-panel.is-complete{border-color:rgba(117,255,176,.4)}
+.hud .skill-slot{width:44px;height:44px}
+.hud .skill-slot:hover{border-color:#e0bc66;box-shadow:0 0 10px rgba(212,173,94,.22);transform:translateY(-2px)}
+.hud .skill-slot:active{transform:translateY(1px);border-color:#9b7437}
+.hud .skill-slot .cooldown{background:rgba(8,6,4,.72);font-size:.7rem;font-weight:800;color:#f2e6c4;text-shadow:0 1px 2px #000}
+.hud .skill-slot.unavailable{opacity:.45;filter:saturate(.6)}
+.hud .mob-label strong{font-size:.64rem;letter-spacing:.03em}
+.hud .mob-label .bar{height:5px;border:1px solid #5a3428;box-shadow:0 1px 2px #000}
+.hud .mob-label .bar i{background:linear-gradient(90deg,#e05570,#8a2038)}
+.hud .minimap{width:168px}.hud .minimap-map{width:154px;height:154px}
+.hud .damage-number{font-size:.85rem;font-weight:900;text-shadow:0 2px 3px #000,0 0 8px rgba(0,0,0,.5)}

@@ -111,10 +111,17 @@ export class AmbientAudio {
 
   #footstep(player) {
     if (!this.ctx) return;
-    // Dirt vs grass: near road (approx |x| small and z mid) → dirt
-    const onRoad = Math.abs(player.position.x) < 4.5;
+    const x = player.position.x;
+    const z = player.position.z;
+    // Dirt road corridor
+    const roadIndex = (z + 35) / 2.65;
+    const onRoad = roadIndex >= 0 && roadIndex <= 28 && Math.abs(x - Math.sin(roadIndex * 0.4) * 2.35) < 4.2;
+    // Stone near bridge / camp approach
+    const onStone = Math.hypot(x + 0, z - 6.2) < 3.2 || Math.hypot(x, z - 17) < 9;
+    const surface = onStone ? "stone" : onRoad ? "dirt" : "grass";
+    this.lastSurface = surface;
     const t = this.ctx.currentTime;
-    const buffer = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.08, this.ctx.sampleRate);
+    const buffer = this.ctx.createBuffer(1, this.ctx.sampleRate * (surface === "stone" ? 0.05 : 0.08), this.ctx.sampleRate);
     const data = buffer.getChannelData(0);
     for (let i = 0; i < data.length; i++) {
       const env = 1 - i / data.length;
@@ -124,9 +131,9 @@ export class AmbientAudio {
     source.buffer = buffer;
     const filter = this.ctx.createBiquadFilter();
     filter.type = "bandpass";
-    filter.frequency.value = onRoad ? 280 : 520;
+    filter.frequency.value = surface === "stone" ? 900 : surface === "dirt" ? 280 : 520;
     const gain = this.ctx.createGain();
-    gain.gain.value = onRoad ? 0.05 : 0.035;
+    gain.gain.value = surface === "stone" ? 0.06 : surface === "dirt" ? 0.05 : 0.035;
     source.connect(filter);
     filter.connect(gain);
     gain.connect(this.ctx.destination);
