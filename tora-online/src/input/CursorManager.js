@@ -6,9 +6,10 @@ export class CursorManager {
     this.onDown = (event) => { if (event.button === 2) { this.dragging = true; this.canvas.dataset.cursor = "hidden"; } };
     this.onUp = (event) => { if (event.button === 2) { this.dragging = false; this.#move(event); } };
     this.onCancel = () => { this.dragging = false; this.#set("normal"); };
+    this.onLeave = () => { if (!this.dragging) this.#set("normal"); };
     canvas.addEventListener("pointermove", this.onMove); canvas.addEventListener("pointerdown", this.onDown); addEventListener("pointerup", this.onUp);
     addEventListener("pointercancel", this.onCancel); addEventListener("blur", this.onCancel);
-    canvas.addEventListener("pointerleave", () => { if (!this.dragging) this.#set("normal"); });
+    canvas.addEventListener("pointerleave", this.onLeave);
     this.#set("normal");
   }
   #move() {
@@ -27,5 +28,5 @@ export class CursorManager {
     this.#set(data.cursor || "normal");
   }
   #set(state) { if (this.state !== state || this.canvas.dataset.cursor !== state) { this.state = state; this.canvas.dataset.cursor = state; } }
-  dispose() { this.canvas.removeEventListener("pointermove", this.onMove); this.canvas.removeEventListener("pointerdown", this.onDown); removeEventListener("pointerup", this.onUp); removeEventListener("pointercancel", this.onCancel); removeEventListener("blur", this.onCancel); }
+  dispose() { this.canvas.removeEventListener("pointermove", this.onMove); this.canvas.removeEventListener("pointerdown", this.onDown); this.canvas.removeEventListener("pointerleave", this.onLeave); removeEventListener("pointerup", this.onUp); removeEventListener("pointercancel", this.onCancel); removeEventListener("blur", this.onCancel); }
 }

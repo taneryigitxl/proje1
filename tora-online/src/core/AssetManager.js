@@ -8,6 +8,7 @@ export class AssetManager {
   }
 
   async initialize() {
+    console.info("[Tora Startup] 3/10 Asset manifesti yükleniyor.");
     this.onProgress(34, "Varlık manifesti doğrulanıyor…");
     const response = await this.#withTimeout(fetch(this.config.assetManifestUrl, { cache: "no-cache" }), this.config.assetTimeoutMs);
     if (!response.ok) throw new Error(`Zorunlu varlık manifesti okunamadı (HTTP ${response.status}).`);
@@ -21,6 +22,7 @@ export class AssetManager {
     if (!this.manifest.environment || Object.keys(this.manifest.environment).length < 8) missing.push("environment");
     if (!this.manifest.terrain?.forest || !this.manifest.terrain?.mud || !this.manifest.terrain?.rock) missing.push("terrain");
     if (missing.length) throw new Error(`Manifest eksik; prosedürel fallback kapalı. Eksikler: ${missing.join(", ")}`);
+    console.info(`[Tora Assets] Manifest v${this.manifest.version ?? "?"} doğrulandı.`);
     return this.manifest;
   }
 
@@ -33,27 +35,43 @@ export class AssetManager {
     root.scaling.setAll(this.manifest.player.scale || 1);
     root.metadata = { assetType: "rigged-gltf" };
     const skeleton = loaded.skeletons[0];
+    console.info(`[Tora Animations] Oyuncu iskeleti: ${skeleton.name || "isimsiz"}, ${skeleton.bones.length} kemik.`);
     const targetByName = new Map();
-    [...loaded.meshes, ...loaded.transformNodes, ...skeleton.bones].forEach((target) => target?.name && targetByName.set(target.name, target));
+    [...loaded.meshes, ...loaded.transformNodes, ...skeleton.bones].forEach((target) => {
+      if (!target?.name) return;
+      targetByName.set(target.name, target);
+      targetByName.set(target.name.toLowerCase(), target);
+    });
 
     this.onProgress(57, "Skeletal animasyonlar bağlanıyor…");
     const animationGroups = [];
     for (const [libraryIndex, url] of this.manifest.animationLibraries.entries()) {
-      const source = await this.#load(url);
-      source.meshes.forEach((mesh) => mesh.setEnabled(false));
-      for (const group of source.animationGroups) {
-        const clone = group.clone(`tora-${libraryIndex}-${group.name}`, (target) => targetByName.get(target?.name) || null);
-        if (clone?.targetedAnimations?.length) animationGroups.push(clone);
+      try {
+        console.info(`[Tora Animations] Kütüphane yükleniyor: ${url}`);
+        const source = await this.#load(url);
+        source.meshes.forEach((mesh) => mesh.setEnabled(false));
+        let cloned = 0;
+        for (const group of source.animationGroups) {
+          const clone = group.clone(`tora-${libraryIndex}-${group.name}`, (target) => {
+            const name = target?.name;
+            return name ? targetByName.get(name) || targetByName.get(name.toLowerCase()) || null : null;
+          });
+          if (clone?.targetedAnimations?.length) { animationGroups.push(clone); cloned++; }
+          else clone?.dispose?.();
+        }
+        console.info(`[Tora Animations] ${url}: ${cloned}/${source.animationGroups.length} klip iskelete bağlandı.`);
+        source.animationGroups.forEach((group) => group.dispose());
+        source.meshes.forEach((mesh) => mesh.dispose(false, true));
+        source.transformNodes.forEach((node) => { if (!node.isDisposed?.()) node.dispose(); });
+        source.skeletons.forEach((sourceSkeleton) => sourceSkeleton.dispose());
+      } catch (error) {
+        console.error(`[Tora Animations] Animasyon kütüphanesi kullanılamadı: ${url}. Oyun kalan kliplerle devam edecek.`, error);
       }
-      source.animationGroups.forEach((group) => group.dispose());
-      source.meshes.forEach((mesh) => mesh.dispose(false, true));
-      source.transformNodes.forEach((node) => { if (!node.isDisposed?.()) node.dispose(); });
-      source.skeletons.forEach((sourceSkeleton) => sourceSkeleton.dispose());
     }
     const required = ["idle", "walk", "jump", "sword", "hit", "death"];
     const names = animationGroups.map((group) => group.name.toLowerCase()).join(" ");
     const absent = required.filter((name) => !names.includes(name));
-    if (absent.length) throw new Error(`Oyuncu animasyon seti eksik: ${absent.join(", ")}.`);
+    if (absent.length) console.error(`[Tora Animations] Eksik oyuncu klipleri: ${absent.join(", ")}. İlgili state'ler mevcut kliple devam edecek.`);
 
     this.onProgress(66, "Büyük kılıç ele bağlanıyor…");
     const weapon = await this.#load(this.manifest.weapon.url);
@@ -128,7 +146,7 @@ export class AssetManager {
     try {
       return await this.#withTimeout(BABYLON.SceneLoader.ImportMeshAsync("", rootUrl, filename, this.scene), this.config.assetTimeoutMs);
     } catch (error) {
-      throw new Error(`Zorunlu GLB yüklenemedi: ${url} (${error?.message || error})`);
+      throw new Error(`GLB yüklenemedi: ${url} (${error?.message || error})`);
     }
   }
 
@@ -136,7 +154,9 @@ export class AssetManager {
     const root = new BABYLON.TransformNode(name, this.scene);
     const nodes = [...meshes, ...transformNodes];
     nodes.filter((node) => !node.parent && node !== root).forEach((node) => { node.parent = root; });
-    if (!root.getChildMeshes(false).length) throw new Error(`${name} içinde render edilebilir mesh yok.`);
+    if (!root.getChildMeshes(false).length) {
+      console.warn(`[Tora Assets] ${name} içinde render edilebilir mesh yok (TransformNode-only hierarşi).`);
+    }
     return root;
   }
 

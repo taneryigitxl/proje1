@@ -20,22 +20,30 @@ const CLIP_ALIASES = {
 
 export class PlayerAnimator {
   constructor(visual) {
-    if (!visual.animationGroups?.length) throw new Error("Rig üzerinde animasyon klipleri bulunamadı.");
-    this.groups = visual.animationGroups;
+    this.groups = visual.animationGroups || [];
     this.state = "";
     this.activeGroup = null;
     this.previousGroup = null;
     this.blend = 1;
     this.actionSpeed = null;
+    this.missingLogged = new Set();
     this.clips = new Map(Object.keys(CLIP_ALIASES).map((state) => [state, this.#findGroup(state)]));
     const missing = [...this.clips].filter(([, group]) => !group).map(([state]) => state);
-    if (missing.length) throw new Error(`Zorunlu animasyon klipleri eşleşmedi: ${missing.join(", ")}`);
-    this.setState("idle", true);
+    if (missing.length) console.error(`[Tora Animator] Eşleşmeyen klip/state: ${missing.join(", ")}. Oyun kalan animasyonlarla devam edecek.`);
+    if (this.groups.length) this.setState("idle", true);
+    else console.error("[Tora Animator] Rig üzerinde animasyon klibi yok; oyun animasyonsuz devam edecek.");
   }
   setState(next, force = false, duration = null) {
     if (!force && next === this.state) return;
     const group = this.clips.get(next) || this.#findGroup(next);
-    if (!group) throw new Error(`Zorunlu animasyon klibi eşleşmedi: ${next}`);
+    if (!group) {
+      if (!this.missingLogged.has(next)) {
+        this.missingLogged.add(next);
+        console.error(`[Tora Animator] Animasyon klibi eşleşmedi: ${next}. State animasyonu atlandı.`);
+      }
+      this.state = next;
+      return;
+    }
     if (this.previousGroup && this.previousGroup !== this.activeGroup) this.previousGroup.stop();
     this.previousGroup = this.activeGroup;
     this.activeGroup = group;

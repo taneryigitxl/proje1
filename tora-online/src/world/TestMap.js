@@ -10,16 +10,18 @@ export class TestMap {
     this.assets = null;
     this.staticRoots = [];
     this.grass = null;
+    this.optionalBuilt = false;
+    this.campfirePosition = new BABYLON.Vector3(14.3, .45, -8.2);
   }
 
-  async build(assets) {
+  async build(assets, { deferOptional = false } = {}) {
     this.assets = assets;
     this.navigation.setHeightProvider((x, z) => this.heightAt(x, z));
     this.#atmosphere();
     this.#terrain();
     this.#path();
     this.#stream();
-    const required = Object.keys(assets.manifest.environment);
+    const required = Object.keys(assets.manifest.environment).filter((key) => key !== "grass");
     await assets.preloadStatics(required);
     await this.#populateNature();
     await this.#buildVillage();
@@ -28,12 +30,35 @@ export class TestMap {
     await this.#buildCamp();
     await this.#buildBridge();
     await this.#buildMountains();
-    this.grass = new GrassSystem(this.scene, this.assets, this.navigation, (x, z) => this.heightAt(x, z));
-    await this.grass.build(this.profile, this.quality);
+    if (!deferOptional) await this.buildOptional();
     return { spawn: new BABYLON.Vector3(0, this.heightAt(0, -18), -18), shadowGenerator: this.shadowGenerator };
   }
 
-  applyQuality(profile, quality) { this.profile = profile; this.quality = quality; this.grass?.applyQuality(profile, quality); }
+  async buildOptional() {
+    if (this.optionalBuilt) return;
+    this.optionalBuilt = true;
+    console.info("[Tora Startup] 9/10 Opsiyonel çim ve efektler hazırlanıyor.");
+    this.grass = new GrassSystem(this.scene, this.assets, this.navigation, (x, z) => this.heightAt(x, z));
+    try {
+      await this.grass.build(this.profile, this.quality);
+    } catch (error) {
+      // dispose() yerine sadece disable() — dispose cells'i temizler ve disable() sonrasız kalır.
+      // GrassSystem.disable() mevcut cells varsa setEnabled(false) yapar, sonra error'u kaydeder.
+      this.grass.disable(error);
+      console.error("[Tora Grass] Çim kurulamadı; oyun çimsiz devam ediyor.", error);
+    }
+    this.#buildOptionalEffect("bloom", () => {
+      if (!this.profile.bloom) return;
+      const pipeline = new BABYLON.DefaultRenderingPipeline("tora-pipeline", true, this.scene, this.scene.cameras);
+      pipeline.bloomEnabled = true;
+      pipeline.bloomThreshold = .82;
+      pipeline.bloomWeight = .18;
+      pipeline.fxaaEnabled = true;
+    });
+    this.#buildOptionalEffect("kamp ateşi", () => this.#buildCampfireEffect());
+  }
+
+  applyQuality(profile, quality) { this.profile = profile; this.quality = quality; if (!this.grass?.disabled) this.grass?.applyQuality(profile, quality); }
   update(dt, camera, fps) { this.grass?.update(dt, camera, fps); }
   getGrassStats() { return this.grass?.getStats() || { quality: this.quality, instances: 0, cells: 0, autoReduced: false }; }
 
@@ -46,6 +71,11 @@ export class TestMap {
 
   addShadowCaster(root) {
     root?.getChildMeshes?.(false).forEach((mesh) => this.shadowGenerator?.addShadowCaster(mesh));
+  }
+
+  dispose() {
+    this.grass?.dispose();
+    this.grass = null;
   }
 
   #atmosphere() {
@@ -65,10 +95,6 @@ export class TestMap {
     this.scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
     this.scene.imageProcessingConfiguration.exposure = 1.12;
     this.scene.imageProcessingConfiguration.contrast = 1.18;
-    if (this.profile.bloom) {
-      const pipeline = new BABYLON.DefaultRenderingPipeline("tora-pipeline", true, this.scene, this.scene.cameras);
-      pipeline.bloomEnabled = true; pipeline.bloomThreshold = .82; pipeline.bloomWeight = .18; pipeline.fxaaEnabled = true;
-    }
   }
 
   #terrain() {
@@ -200,9 +226,17 @@ export class TestMap {
       this.#place("barrel", "camp-barrel", 17.3, -9.3, 0, .7, { obstacle: .42 }), this.#place("torch", "camp-torch", 12, -10, 0, 1)
     ]);
     const light = new BABYLON.PointLight("camp-light", new BABYLON.Vector3(14.3, 2.1, -8.2), this.scene); light.diffuse = new BABYLON.Color3(1, .32, .1); light.intensity = 2.4; light.range = 12;
+  }
+
+  #buildCampfireEffect() {
     const texture = new BABYLON.DynamicTexture("ember-texture", { width: 32, height: 32 }, this.scene, false);
     const context = texture.getContext(), gradient = context.createRadialGradient(16, 16, 1, 16, 16, 15); gradient.addColorStop(0, "#fff7b0"); gradient.addColorStop(.25, "#ff8a24"); gradient.addColorStop(1, "rgba(255,30,0,0)"); context.fillStyle = gradient; context.fillRect(0, 0, 32, 32); texture.update();
     const fire = new BABYLON.ParticleSystem("campfire", Math.round(180 * this.profile.particles), this.scene); fire.particleTexture = texture; fire.emitter = new BABYLON.Vector3(14.3, .45, -8.2); fire.minEmitBox.set(-.22, 0, -.22); fire.maxEmitBox.set(.22, .1, .22); fire.color1 = new BABYLON.Color4(1, .55, .1, 1); fire.color2 = new BABYLON.Color4(1, .12, .02, .8); fire.minSize = .12; fire.maxSize = .42; fire.minLifeTime = .25; fire.maxLifeTime = .75; fire.emitRate = 95 * this.profile.particles; fire.direction1.set(-.2, 1.2, -.2); fire.direction2.set(.2, 2, .2); fire.gravity.set(0, .2, 0); fire.start();
+  }
+
+  #buildOptionalEffect(name, build) {
+    try { build(); }
+    catch (error) { console.error(`[Tora Effects] ${name} devre dışı; oyun devam ediyor.`, error); }
   }
 
   async #buildBridge() {

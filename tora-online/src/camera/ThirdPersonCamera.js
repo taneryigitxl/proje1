@@ -1,5 +1,11 @@
 export class ThirdPersonCamera {
   constructor(scene, canvas, target, config) {
+    const requiredConfig = ["distance", "minDistance", "minCollisionDistance", "maxDistance", "pitch", "minPitch", "maxPitch", "sensitivityX", "sensitivityY", "zoomStep", "zoomSmoothness", "followSmoothness", "collisionSmoothness", "collisionPadding", "focusHeight"];
+    const missingConfig = requiredConfig.filter((key) => !Number.isFinite(config?.[key]));
+    if (missingConfig.length) throw new Error(`Kamera ayarları eksik/geçersiz: ${missingConfig.join(", ")}`);
+    if (!target?.position || !Number.isFinite(target.position.x) || !Number.isFinite(target.position.y) || !Number.isFinite(target.position.z)) {
+      throw new Error("ThirdPersonCamera geçerli position taşıyan bir hedef gerektirir.");
+    }
     this.scene = scene;
     this.canvas = canvas;
     this.target = target;
@@ -10,6 +16,7 @@ export class ThirdPersonCamera {
     this.collisionDistance = config.distance;
     this.dragging = false;
     this.pointerId = null;
+    this.collisionWarningShown = false;
     this.camera = new BABYLON.ArcRotateCamera("third-person-camera", -Math.PI / 2, config.pitch, config.distance, this.focus, scene);
     this.camera.lowerRadiusLimit = config.minCollisionDistance;
     this.camera.upperRadiusLimit = config.maxDistance;
@@ -32,9 +39,10 @@ export class ThirdPersonCamera {
     scene.activeCamera = this.camera;
   }
   update(dt) {
-    if (!this.target) return;
-    if (this.target.grounded) this.groundFocusY = this.target.position.y + this.config.focusHeight;
-    const desired = new BABYLON.Vector3(this.target.position.x, this.groundFocusY, this.target.position.z);
+    const position = this.target?.position;
+    if (!position || !Number.isFinite(position.x) || !Number.isFinite(position.y) || !Number.isFinite(position.z)) return;
+    if (this.target.grounded === true) this.groundFocusY = position.y + this.config.focusHeight;
+    const desired = new BABYLON.Vector3(position.x, this.groundFocusY, position.z);
     const follow = 1 - Math.exp(-this.config.followSmoothness * dt);
     this.focus.copyFrom(BABYLON.Vector3.Lerp(this.focus, desired, follow));
     this.camera.setTarget(this.focus);
@@ -42,7 +50,15 @@ export class ThirdPersonCamera {
     if (direction.lengthSquared() < .001) direction.set(0, .35, -1);
     direction.normalize();
     const ray = new BABYLON.Ray(this.focus, direction, this.zoomDistance);
-    const hit = this.scene.pickWithRay(ray, (mesh) => Boolean(mesh.metadata?.cameraBlocker) && mesh.isEnabled() && mesh.isVisible);
+    let hit = null;
+    try {
+      hit = this.scene.pickWithRay(ray, (mesh) => Boolean(mesh?.metadata?.cameraBlocker) && mesh.isEnabled?.() && mesh.isVisible);
+    } catch (error) {
+      if (!this.collisionWarningShown) {
+        this.collisionWarningShown = true;
+        console.warn("[Tora Camera] Collision raycast devre dışı; kamera takibi sürüyor.", error);
+      }
+    }
     const allowed = hit?.hit ? Math.max(this.config.minCollisionDistance, hit.distance - this.config.collisionPadding) : this.zoomDistance;
     const rate = hit?.hit ? this.config.collisionSmoothness : this.config.zoomSmoothness;
     this.collisionDistance = BABYLON.Scalar.Lerp(this.collisionDistance, allowed, 1 - Math.exp(-rate * dt));
@@ -57,7 +73,8 @@ export class ThirdPersonCamera {
     event.preventDefault();
     this.dragging = true;
     this.pointerId = event.pointerId;
-    this.canvas.setPointerCapture?.(event.pointerId);
+    try { this.canvas.setPointerCapture?.(event.pointerId); }
+    catch (error) { console.warn("[Tora Camera] Pointer capture kullanılamıyor; sürükleme capture olmadan devam edecek.", error); }
     this.canvas.dataset.cursor = "hidden";
   }
   #pointerMove(event) {
@@ -70,7 +87,11 @@ export class ThirdPersonCamera {
     this.#cancelDrag();
   }
   #cancelDrag() {
-    if (this.pointerId !== null && this.canvas.hasPointerCapture?.(this.pointerId)) this.canvas.releasePointerCapture(this.pointerId);
+    try {
+      if (this.pointerId !== null && this.canvas.hasPointerCapture?.(this.pointerId)) this.canvas.releasePointerCapture(this.pointerId);
+    } catch (error) {
+      console.warn("[Tora Camera] Pointer capture serbest bırakılamadı.", error);
+    }
     this.dragging = false;
     this.pointerId = null;
     if (this.canvas.dataset.cursor === "hidden") this.canvas.dataset.cursor = "normal";

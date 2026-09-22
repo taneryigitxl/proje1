@@ -68,8 +68,19 @@ export class Mob extends Entity {
   #play(state, loop, force = false) {
     if (!force && this.animationState === state) return;
     const wanted = this.definition.clips[state]?.toLowerCase();
+    if (!wanted) {
+      console.warn(`[Tora Mob] ${this.definition.name}: tanımsız animasyon state'i: ${state}`);
+      return;
+    }
     const group = this.groups.find((candidate) => candidate.name.toLowerCase().includes(wanted));
-    if (!group) throw new Error(`${this.definition.name} animasyonu eksik: ${state}`);
+    if (!group) {
+      if (!this._missingAnims) this._missingAnims = new Set();
+      if (!this._missingAnims.has(state)) {
+        this._missingAnims.add(state);
+        console.warn(`[Tora Mob] ${this.definition.name} animasyonu eksik: ${state} (clip adı: ${wanted}). State atlandı.`);
+      }
+      return;
+    }
     this.activeAnimation?.stop();
     this.activeAnimation = group;
     this.animationState = state;
