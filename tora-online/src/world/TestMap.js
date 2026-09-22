@@ -1,4 +1,4 @@
-import { GrassSystem } from "./GrassSystem.js?v=19";
+import { GrassSystem } from "./GrassSystem.js?v=20";
 
 /**
  * Dark medieval MMORPG test valley — Metin2-inspired atmosphere without rewriting gameplay systems.
@@ -210,7 +210,22 @@ export class TestMap {
     data.normals = normals;
     data.uvs = uvs;
     data.applyToMesh(ground);
-    ground.material = this.#terrainMaterial("terrain-forest", "forest", new BABYLON.Color3(0.34, 0.42, 0.24));
+    // Painted base never goes gray if JPG decode fails; JPG packs layer on top as blends
+    ground.material = this.#paintedGround("terrain-base", "grass", new BABYLON.Color3(0.3, 0.4, 0.2));
+    // Soft forest albedo overlay (readable greens) with fail-safe
+    const forestOverlay = this.#terrainMaterial("terrain-forest-overlay", "forest", new BABYLON.Color3(0.34, 0.42, 0.24), true);
+    // Apply as a full-map soft veil via a second coplanar mesh
+    const overlay = ground.clone("tora-forest-veil");
+    overlay.material = forestOverlay;
+    overlay.position.y += 0.012;
+    overlay.isPickable = true;
+    overlay.receiveShadows = true;
+    overlay.metadata = { ground: true, cursor: "move" };
+    // Soften veil alpha so painted base always shows through if overlay is dark
+    if (overlay.material) {
+      overlay.material.alpha = 0.72;
+      overlay.material.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
+    }
     ground.receiveShadows = true;
     ground.checkCollisions = true;
     ground.isPickable = true;
@@ -387,10 +402,11 @@ export class TestMap {
     const material = new BABYLON.StandardMaterial(name, this.scene);
     material.disableLighting = false;
     material.diffuseColor = BABYLON.Color3.White();
-    material.ambientColor = new BABYLON.Color3(0.4, 0.42, 0.36);
+    material.ambientColor = new BABYLON.Color3(0.48, 0.5, 0.42);
     material.specularColor = BABYLON.Color3.Black();
-    material.emissiveColor = new BABYLON.Color3(0.06, 0.07, 0.04);
+    material.emissiveColor = new BABYLON.Color3(0.08, 0.1, 0.05);
     material.diffuseTexture = this.#paintTerrainTexture(name, kind, baseColor);
+    material.diffuseTexture.level = 1.2;
     if (alphaBlend) {
       material.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
       material.useVertexAlpha = true;

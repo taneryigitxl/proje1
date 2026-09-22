@@ -36,15 +36,15 @@ export class GrassSystem {
     this.budget = Math.max(100, Number(profile?.grass) || 220);
 
     const blades = this.#buildBladeCluster("grass-blades", [
-      new BABYLON.Color3(0.14, 0.22, 0.09),
-      new BABYLON.Color3(0.18, 0.26, 0.1),
-      new BABYLON.Color3(0.12, 0.2, 0.08),
+      new BABYLON.Color3(0.12, 0.18, 0.08),
+      new BABYLON.Color3(0.15, 0.2, 0.09),
+      new BABYLON.Color3(0.1, 0.16, 0.07),
     ]);
     const dry = this.#buildBladeCluster("grass-dry", [
-      new BABYLON.Color3(0.28, 0.24, 0.12),
-      new BABYLON.Color3(0.32, 0.26, 0.11),
+      new BABYLON.Color3(0.24, 0.2, 0.1),
+      new BABYLON.Color3(0.28, 0.22, 0.1),
     ], 6);
-    const carpet = this.#buildCarpetMesh("grass-carpet", new BABYLON.Color3(0.13, 0.18, 0.09));
+    const carpet = this.#buildCarpetMesh("grass-carpet", new BABYLON.Color3(0.12, 0.16, 0.08));
 
     this.sources = [
       { mesh: blades, kind: "blades", weight: 0.55 },

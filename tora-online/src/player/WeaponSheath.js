@@ -29,10 +29,11 @@ export class WeaponSheath {
   sheath() {
     if (this.sheathed || !this.backBone) return;
     this.weaponRoot.attachToBone(this.backBone, this.skinnedMesh);
-    // Diagonal on upper back (spine_03): hilt near left shoulder, tip toward right hip
-    this.weaponRoot.position.set(0.04, 0.02, -0.08);
-    this.weaponRoot.rotation.set(0.15, 1.38, -0.92);
-    this.weaponRoot.scaling.setAll((this.handPose.scale || 1.32) * 0.9);
+    // Female-ranger spine_03 local space: keep blade tight to the back plate
+    // (less -Z = less stick-out; rotation lays blade along the torso)
+    this.weaponRoot.position.set(0.02, 0.08, -0.03);
+    this.weaponRoot.rotation.set(-0.25, 1.55, 1.15);
+    this.weaponRoot.scaling.setAll((this.handPose.scale || 1.32) * 0.82);
     this.sheathed = true;
   }
 
@@ -46,7 +47,6 @@ export class WeaponSheath {
   }
 
   #findBackBone() {
-    // Prefer upper spine for female-ranger (spine_03 / spine_02 UE naming)
     const preferred = [
       "spine_03", "Spine3", "spine_02", "Spine2", "spine2",
       "Chest", "chest", "UpperChest", "upperchest",
