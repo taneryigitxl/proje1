@@ -13,15 +13,15 @@ export class CharacterFace {
     // Unlit skin so features stay readable in dusk lighting
     const skinMat = new BABYLON.StandardMaterial("face-skin-mat", scene);
     skinMat.disableLighting = true;
-    skinMat.emissiveColor = new BABYLON.Color3(0.94, 0.78, 0.66);
+    skinMat.emissiveColor = new BABYLON.Color3(0.92, 0.72, 0.58);
     skinMat.diffuseColor = skinMat.emissiveColor;
     skinMat.specularColor = BABYLON.Color3.Black();
 
-    const head = BABYLON.MeshBuilder.CreateSphere("face-head", { diameter: 0.26, segments: 28 }, scene);
+    const head = BABYLON.MeshBuilder.CreateSphere("face-head", { diameter: 0.24, segments: 28 }, scene);
     head.material = skinMat;
     head.parent = faceRoot;
-    head.position.set(0, 0.01, 0.04);
-    head.scaling.set(0.88, 1.05, 0.95);
+    head.position.set(0, 0.01, 0.05);
+    head.scaling.set(0.9, 1.08, 0.92);
     head.isPickable = false;
 
     const jaw = BABYLON.MeshBuilder.CreateSphere("face-jaw", { diameter: 0.15, segments: 16 }, scene);

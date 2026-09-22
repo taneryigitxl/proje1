@@ -1,4 +1,4 @@
-import { GrassSystem } from "./GrassSystem.js?v=11";
+import { GrassSystem } from "./GrassSystem.js?v=12";
 
 export class TestMap {
   constructor(scene, navigation, profile, quality = "medium") {
@@ -112,7 +112,7 @@ export class TestMap {
     const ground = new BABYLON.Mesh("tora-heightfield", this.scene);
     const data = new BABYLON.VertexData(); data.positions = positions; data.indices = indices; data.normals = normals; data.uvs = uvs; data.applyToMesh(ground);
     // Procedural bright grass — never depends on dark albedo JPGs
-    ground.material = this.#paintedGround("terrain-forest", "grass", new BABYLON.Color3(0.42, 0.72, 0.28));
+    ground.material = this.#paintedGround("terrain-forest", "grass", new BABYLON.Color3(0.48, 0.78, 0.32));
     ground.receiveShadows = true; ground.checkCollisions = true; ground.isPickable = true; ground.metadata = { ground: true, cursor: "move" };
   }
 
