@@ -1,4 +1,4 @@
-import { CharacterFace } from "../player/CharacterFace.js";
+import { CharacterFace } from "../player/CharacterFace.js?v=9";
 
 export class AssetManager {
   constructor(scene, config, onProgress = () => {}) {
@@ -175,20 +175,19 @@ export class AssetManager {
   #createProceduralGrassTemplate() {
     const root = new BABYLON.TransformNode("template-grass", this.scene);
     const material = new BABYLON.StandardMaterial("procedural-grass-mat", this.scene);
-    material.diffuseColor = new BABYLON.Color3(0.28, 0.58, 0.2);
-    material.emissiveColor = new BABYLON.Color3(0.06, 0.14, 0.04);
+    material.diffuseColor = new BABYLON.Color3(0.26, 0.55, 0.18);
+    material.emissiveColor = new BABYLON.Color3(0.05, 0.12, 0.03);
     material.specularColor = BABYLON.Color3.Black();
     material.backFaceCulling = false;
     material.useVertexColors = true;
-    // Thin crossed blades — readable tufts, not giant neon billboards
-    for (let i = 0; i < 3; i++) {
-      const blade = BABYLON.MeshBuilder.CreatePlane(`grass-blade-${i}`, { width: 0.12, height: 0.38 }, this.scene);
+    // Slim tapered cards — look like tufts, not giant billboards
+    for (let i = 0; i < 5; i++) {
+      const blade = BABYLON.MeshBuilder.CreateBox(`grass-blade-${i}`, { width: 0.045, height: 0.32, depth: 0.012 }, this.scene);
       blade.material = material;
       blade.parent = root;
-      blade.rotation.y = (i / 3) * Math.PI;
-      blade.rotation.x = (Math.random() * 0.15) - 0.05;
-      blade.position.y = 0.19;
-      blade.position.x = (i - 1) * 0.04;
+      blade.rotation.y = (i / 5) * Math.PI * 2;
+      blade.rotation.z = (i % 2 === 0 ? -0.12 : 0.12);
+      blade.position.set(Math.sin(i) * 0.05, 0.16, Math.cos(i) * 0.05);
       blade.isPickable = false;
       blade.receiveShadows = false;
     }

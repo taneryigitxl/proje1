@@ -1,4 +1,4 @@
-import { GrassSystem } from "./GrassSystem.js";
+import { GrassSystem } from "./GrassSystem.js?v=9";
 
 export class TestMap {
   constructor(scene, navigation, profile, quality = "medium") {
@@ -112,14 +112,14 @@ export class TestMap {
     const ground = new BABYLON.Mesh("tora-heightfield", this.scene);
     const data = new BABYLON.VertexData(); data.positions = positions; data.indices = indices; data.normals = normals; data.uvs = uvs; data.applyToMesh(ground);
     // Procedural bright grass — never depends on dark albedo JPGs
-    ground.material = this.#paintedGround("terrain-forest", "grass", new BABYLON.Color3(0.32, 0.62, 0.24));
+    ground.material = this.#paintedGround("terrain-forest", "grass", new BABYLON.Color3(0.42, 0.72, 0.28));
     ground.receiveShadows = true; ground.checkCollisions = true; ground.isPickable = true; ground.metadata = { ground: true, cursor: "move" };
   }
 
   #path() {
     const points = Array.from({ length: 25 }, (_, i) => new BABYLON.Vector3(Math.sin(i * .43) * 2.4, 0, -34 + i * 2.9));
     const path = this.#ribbon("village-road", points, 6.4, 5, [0, .62, 1, .62, 0], .06);
-    path.material = this.#paintedGround("terrain-mud", "mud", new BABYLON.Color3(0.62, 0.46, 0.28), true);
+    path.material = this.#paintedGround("terrain-mud", "mud", new BABYLON.Color3(0.72, 0.52, 0.3), true);
     path.metadata = { ground: true, cursor: "move" }; path.isPickable = true; path.receiveShadows = true;
   }
 

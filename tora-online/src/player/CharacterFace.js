@@ -20,11 +20,11 @@ export class CharacterFace {
     skinMat.ambientColor = new BABYLON.Color3(0.55, 0.42, 0.36);
 
     // Primary head — features live on the painted texture so they read at distance
-    const head = BABYLON.MeshBuilder.CreateSphere("face-head", { diameter: 0.28, segments: 32 }, scene);
+    const head = BABYLON.MeshBuilder.CreateSphere("face-head", { diameter: 0.3, segments: 32 }, scene);
     head.material = skinMat;
     head.parent = faceRoot;
-    head.position.set(0, 0.02, 0.02);
-    head.scaling.set(0.92, 1.12, 1.02);
+    head.position.set(0, 0.02, 0.03);
+    head.scaling.set(0.92, 1.12, 1.05);
     head.isPickable = false;
 
     const jaw = BABYLON.MeshBuilder.CreateSphere("face-jaw", { diameter: 0.18, segments: 18 }, scene);
