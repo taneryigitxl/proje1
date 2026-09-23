@@ -7,7 +7,7 @@ import { mkdirSync, writeFileSync, copyFileSync } from "fs";
 const OUT = "/opt/cursor/artifacts/ground-face-orbit";
 mkdirSync(OUT, { recursive: true });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const URL = process.env.TORA_URL || "http://127.0.0.1:4173/?v=38";
+const URL = process.env.TORA_URL || "http://127.0.0.1:4173/?v=39";
 
 const browser = await chromium.launch({
   headless: true,

@@ -191,15 +191,15 @@ export class CharacterFace {
    * female-ranger.glb: Head_Hood socket owns mesh index 7, imported as `node7`
    * (skinned mesh reparented to Armature). Disabling the TransformNode alone
    * left the pale hood cavity; hide mesh `node7` + hood/helmet names.
+   *
+   * CRITICAL: never mutate mesh.material (MI_Ranger is shared by the whole outfit).
+   * disableColorWrite on that material made the body clothing disappear.
    */
   static #hideHood(root) {
     const hide = (mesh) => {
       mesh.setEnabled(false);
       mesh.isVisible = false;
       mesh.visibility = 0;
-      if (mesh.material) {
-        try { mesh.material.disableColorWrite = true; } catch (_) { /* ok */ }
-      }
     };
     root.getChildMeshes(false).forEach((mesh) => {
       const name = (mesh.name || "").toLowerCase();
@@ -222,6 +222,14 @@ export class CharacterFace {
         hide(mesh);
         console.info(`[Tora Face] Ek kafa mesh gizlendi: ${mesh.name}`);
       }
+    });
+
+    // Repair shared body materials in case a prior session/build flipped color write off
+    root.getChildMeshes(false).forEach((mesh) => {
+      const mat = mesh.material;
+      if (!mat) return;
+      if (mat.disableColorWrite) mat.disableColorWrite = false;
+      if (mat.disableDepthWrite) mat.disableDepthWrite = false;
     });
   }
 
