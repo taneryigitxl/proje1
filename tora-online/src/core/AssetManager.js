@@ -1,5 +1,5 @@
-import { CharacterFace } from "../player/CharacterFace.js?v=34";
-import { WeaponSheath } from "../player/WeaponSheath.js?v=34";
+import { CharacterFace } from "../player/CharacterFace.js?v=35";
+import { WeaponSheath } from "../player/WeaponSheath.js?v=35";
 
 export class AssetManager {
   constructor(scene, config, onProgress = () => {}) {

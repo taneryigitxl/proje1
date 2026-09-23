@@ -1,21 +1,21 @@
-import { GAME_CONFIG, MOB_SPAWNS } from "./Config.js?v=34";
-import { AssetManager } from "./AssetManager.js?v=34";
-import { Navigation } from "../world/Navigation.js?v=34";
-import { TestMap } from "../world/TestMap.js?v=34";
-import { InputManager } from "../input/InputManager.js?v=34";
-import { CursorManager } from "../input/CursorManager.js?v=34";
-import { ThirdPersonCamera } from "../camera/ThirdPersonCamera.js?v=34";
-import { PlayerController } from "../player/PlayerController.js?v=34";
-import { PlayerAnimator } from "../player/PlayerAnimator.js?v=34";
-import { EntityManager } from "../entities/EntityManager.js?v=34";
-import { CombatSystem } from "../combat/CombatSystem.js?v=34";
-import { NetworkAdapter } from "../network/NetworkAdapter.js?v=34";
-import { HUD } from "../ui/HUD.js?v=34";
-import { ProgressionSystem } from "../progression/ProgressionSystem.js?v=34";
-import { StatsSystem } from "../progression/StatsSystem.js?v=34";
-import { InventorySystem } from "../progression/InventorySystem.js?v=34";
-import { LootSystem } from "../progression/LootSystem.js?v=34";
-import { AmbientAudio } from "../audio/AmbientAudio.js?v=34";
+import { GAME_CONFIG, MOB_SPAWNS } from "./Config.js?v=35";
+import { AssetManager } from "./AssetManager.js?v=35";
+import { Navigation } from "../world/Navigation.js?v=35";
+import { TestMap } from "../world/TestMap.js?v=35";
+import { InputManager } from "../input/InputManager.js?v=35";
+import { CursorManager } from "../input/CursorManager.js?v=35";
+import { ThirdPersonCamera } from "../camera/ThirdPersonCamera.js?v=35";
+import { PlayerController } from "../player/PlayerController.js?v=35";
+import { PlayerAnimator } from "../player/PlayerAnimator.js?v=35";
+import { EntityManager } from "../entities/EntityManager.js?v=35";
+import { CombatSystem } from "../combat/CombatSystem.js?v=35";
+import { NetworkAdapter } from "../network/NetworkAdapter.js?v=35";
+import { HUD } from "../ui/HUD.js?v=35";
+import { ProgressionSystem } from "../progression/ProgressionSystem.js?v=35";
+import { StatsSystem } from "../progression/StatsSystem.js?v=35";
+import { InventorySystem } from "../progression/InventorySystem.js?v=35";
+import { LootSystem } from "../progression/LootSystem.js?v=35";
+import { AmbientAudio } from "../audio/AmbientAudio.js?v=35";
 
 export class Game {
   constructor(runtime, onProgress = () => {}, onFatal = () => {}) {
@@ -351,8 +351,9 @@ export class Game {
   #frame() {
     if (!this.scene || this.scene.isDisposed) return;
     const now = performance.now();
-    // Accumulate wall time so 1–10 FPS (or long stalls) still advance gameplay
-    const raw = Math.min(0.35, (now - this.lastTime) / 1000 || 0.016);
+    // Catch up wall time aggressively so blocked/low-FPS frames (SwiftShader, tab stall)
+    // still advance combat/movement near realtime instead of freezing at ~0.35s/frame.
+    const raw = Math.min(1.6, (now - this.lastTime) / 1000 || 0.016);
     this.lastTime = now;
     if (this.running && !this.paused) {
       let remaining = raw;
@@ -368,9 +369,10 @@ export class Game {
         this.loot?.update?.(dt);
         if (this.player.alive) this.player.mana = Math.min(this.player.maxMana, this.player.mana + 4 * dt);
       }
-      this.camera.update(Math.min(0.05, raw));
-      this.map.update(Math.min(0.05, raw), this.camera.camera, this.engine.getFps());
-      this.audio?.update?.(Math.min(0.05, raw), this.player);
+      const viewDt = Math.min(0.05, raw);
+      this.camera.update(viewDt);
+      this.map.update(viewDt, this.camera.camera, this.engine.getFps());
+      this.audio?.update?.(viewDt, this.player);
       this.snapshotTimer += raw;
       if (this.snapshotTimer > .25) {
         this.network.publishSnapshot([this.player, ...this.entities.mobs]);

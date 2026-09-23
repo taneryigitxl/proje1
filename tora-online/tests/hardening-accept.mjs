@@ -7,7 +7,7 @@ import { mkdirSync, writeFileSync, copyFileSync } from "fs";
 const OUT = "/opt/cursor/artifacts/hardening-accept";
 mkdirSync(OUT, { recursive: true });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const URL = process.env.TORA_URL || "http://127.0.0.1:4173/?v=34";
+const URL = process.env.TORA_URL || "http://127.0.0.1:4173/?v=35";
 
 const browser = await chromium.launch({
   headless: true,
@@ -114,26 +114,39 @@ await page.evaluate(() => {
 await sleep(400);
 await page.screenshot({ path: `${OUT}/03-sword.png` });
 
-// Full combat loop: tab, approach, kill
+// Full combat loop: tab once, press 1, let auto-approach + auto-chain finish the kill
 await page.evaluate(() => {
   const cam = window.__TORA_DEBUG__?.camera?.camera || window.__TORA_DEBUG__?.camera;
   if (cam) { cam.radius = 8; cam.beta = 1.12; }
 });
 await page.keyboard.press("Tab");
-await sleep(300);
-// Hold skill until kill or timeout while auto-approach runs
+await sleep(250);
+await page.keyboard.press("Digit1");
 let killed = false;
-for (let i = 0; i < 40; i++) {
-  await page.keyboard.press("Digit1");
-  await sleep(450);
+let lastHp = null;
+for (let i = 0; i < 70; i++) {
+  // Prefer letting the game render — only probe every other tick
+  await sleep(i < 8 ? 350 : 500);
+  if (i > 0 && i % 8 === 0) await page.keyboard.press("Digit1");
+  if (i % 2 === 1) continue;
   const st = await page.evaluate(() => ({
     quest: document.getElementById("quest-status")?.textContent,
-    targetHp: document.getElementById("target-hp-text")?.textContent || document.querySelector("#target-frame .meter.hp i")?.style?.width,
-    playerState: window.__TORA_DEBUG__?.player?.state,
+    thp: window.__TORA_DEBUG__?.entities?.selected?.health ?? null,
     pending: Boolean(window.__TORA_DEBUG__?.combat?.playerCombat?.pending),
     active: Boolean(window.__TORA_DEBUG__?.combat?.playerCombat?.active),
+    dist: (() => {
+      const p = window.__TORA_DEBUG__?.player;
+      const t = window.__TORA_DEBUG__?.entities?.selected;
+      return p && t ? BABYLON.Vector3.Distance(p.position, t.position) : null;
+    })(),
   }));
+  if (st.thp != null) lastHp = st.thp;
   if (/1\s*\/\s*5|2\s*\/\s*5|Tamamland|yenildi/i.test(st.quest || "") || (st.quest || "").includes("1 / 5")) {
+    killed = true;
+    break;
+  }
+  // Damage without quest text yet still counts as combat progress for early exit assist
+  if (lastHp != null && lastHp <= 0) {
     killed = true;
     break;
   }

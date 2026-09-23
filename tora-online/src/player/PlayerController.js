@@ -1,4 +1,4 @@
-import { Entity } from "../entities/Entity.js?v=34";
+import { Entity } from "../entities/Entity.js?v=35";
 
 export class PlayerController extends Entity {
   constructor(visual, input, navigation, identity = {}) {
@@ -7,22 +7,24 @@ export class PlayerController extends Entity {
     this.isAdmin = Boolean(identity.isAdmin);
     this.position = this.root.position; this.velocity = new BABYLON.Vector3(); this.destination = null; this.stopRange = .2;
     this.destinationTimer = 0; this.destinationStall = 0; this.previousDestinationDistance = Infinity;
+    this.destinationSprint = false;
     this.grounded = true; this.verticalVelocity = 0; this.landingTimer = 0; this.actionLocked = false;
     this.buffs = { guard: 0, rage: 0 }; this.speedRatio = 0;
     this.root.getChildMeshes(false).forEach((mesh) => { mesh.metadata = { ...(mesh.metadata || {}), entityId: this.id, player: true }; mesh.isPickable = false; });
   }
-  setDestination(point, stopRange = .2, { direct = false } = {}) {
+  setDestination(point, stopRange = .2, { direct = false, sprint = false } = {}) {
     const destination = direct
       ? this.navigation.clamp(point.clone ? point.clone() : new BABYLON.Vector3(point.x, point.y, point.z))
       : this.navigation.findReachable(this.position, point);
     const distance = BABYLON.Vector3.Distance(this.position, destination);
     this.destination = distance > stopRange ? destination : null;
     this.stopRange = stopRange;
+    this.destinationSprint = Boolean(sprint && this.destination);
     this.destinationTimer = Math.min(16, Math.max(2.5, distance / 2.4 + 1.5));
     this.destinationStall = 0;
     this.previousDestinationDistance = distance;
   }
-  cancelDestination() { this.destination = null; this.destinationTimer = 0; this.destinationStall = 0; }
+  cancelDestination() { this.destination = null; this.destinationTimer = 0; this.destinationStall = 0; this.destinationSprint = false; }
   dash(direction) {
     const move = direction?.lengthSquared() > .01 ? direction.normalize().scale(4.5) : new BABYLON.Vector3(0, 0, 4.5);
     const next = this.navigation.findReachable(this.position, this.position.add(move)); this.position.copyFrom(next);
@@ -45,7 +47,8 @@ export class PlayerController extends Entity {
     }
     if (this.actionLocked) direction.setAll(0);
     if (direction.lengthSquared() > .001) direction.normalize();
-    const running = axis.running || this.buffs.rage > 0; const maxSpeed = (running ? 6.4 : 3.65) * (this.buffs.rage > 0 ? 1.15 : 1);
+    const running = axis.running || this.buffs.rage > 0 || this.destinationSprint;
+    const maxSpeed = (running ? 6.4 : 3.65) * (this.buffs.rage > 0 ? 1.15 : 1);
     const desired = direction.scale(maxSpeed); const smooth = 1 - Math.exp(-(direction.lengthSquared() ? 10 : 13) * dt);
     this.velocity.x = BABYLON.Scalar.Lerp(this.velocity.x, desired.x, smooth); this.velocity.z = BABYLON.Scalar.Lerp(this.velocity.z, desired.z, smooth);
     const horizontal = new BABYLON.Vector3(this.velocity.x * dt, 0, this.velocity.z * dt);
