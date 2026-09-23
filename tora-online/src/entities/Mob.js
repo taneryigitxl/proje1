@@ -1,5 +1,5 @@
-import { Entity } from "./Entity.js?v=31";
-import { DamageSystem } from "../combat/DamageSystem.js?v=31";
+import { Entity } from "./Entity.js?v=32";
+import { DamageSystem } from "../combat/DamageSystem.js?v=32";
 
 export class Mob extends Entity {
   constructor(scene, spawn, index, navigation, onDamage, visual) {
@@ -42,8 +42,9 @@ export class Mob extends Entity {
       mesh.isPickable = true;
     });
     this.#play("idle", true);
-    // Bind-pose AABB can differ from idle — re-seat feet after first anim samples
-    setTimeout(() => this.#snapFeetToGround(), 120);
+    // Bind-pose AABB differs from idle — re-seat after anim samples, twice for safety
+    setTimeout(() => this.#snapFeetToGround(), 80);
+    setTimeout(() => this.#snapFeetToGround(), 400);
   }
 
   update(dt, player) {
@@ -168,20 +169,37 @@ export class Mob extends Entity {
 
   #snapFeetToGround() {
     if (!this.root || !this.alive) return;
+    // Force skinned AABB update — bind-pose bounds leave demons/orcs floating
+    const skel = this.root.getChildMeshes(false).map((m) => m.skeleton).find(Boolean);
+    try { skel?.prepare?.(); } catch (_) { /* ok */ }
     this.root.computeWorldMatrix(true);
     let minY = Infinity;
     this.root.getChildMeshes(false).forEach((mesh) => {
       const name = (mesh.name || "").toLowerCase();
-      if (name.includes("axe") || name.includes("club") || name.includes("weapon")) return;
+      if (/axe|club|weapon|sword|wing|horn|halo|particle/i.test(name)) return;
       mesh.computeWorldMatrix(true);
-      try { mesh.refreshBoundingInfo?.(true); } catch (_) { /* ok */ }
+      try { mesh.refreshBoundingInfo?.(true, true); } catch (_) {
+        try { mesh.refreshBoundingInfo?.(true); } catch (__) { /* ok */ }
+      }
       const y = mesh.getBoundingInfo?.()?.boundingBox?.minimumWorld?.y;
       if (Number.isFinite(y)) minY = Math.min(minY, y);
     });
-    if (!Number.isFinite(minY)) return;
+    // Fallback: probe body mesh only
+    if (!Number.isFinite(minY) || minY === Infinity) {
+      this.root.getChildMeshes(false).forEach((mesh) => {
+        mesh.computeWorldMatrix(true);
+        const y = mesh.getBoundingInfo?.()?.boundingBox?.minimumWorld?.y;
+        if (Number.isFinite(y)) minY = Math.min(minY, y);
+      });
+    }
+    if (!Number.isFinite(minY) || minY === Infinity) return;
     const ground = this.navigation.heightAt(this.position.x, this.position.z);
     if (!Number.isFinite(ground)) return;
-    this.position.y += (ground + 0.02) - minY;
+    const gap = minY - ground;
+    // Always seat feet ~2cm into ground; clamp extreme corrections
+    const delta = BABYLON.Scalar.Clamp((ground + 0.02) - minY, -1.6, 1.0);
+    if (Math.abs(delta) < 0.01 && Math.abs(gap) < 0.08) return;
+    this.position.y += delta;
     this.footOffset = this.position.y - ground;
     this.home.y = this.position.y;
     this.spawn.y = this.position.y;

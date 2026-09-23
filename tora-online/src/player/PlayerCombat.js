@@ -18,7 +18,17 @@ export class PlayerCombat {
     const {skill,target}=this.pending;
     if(skill.target==="enemy"&&(!target||!target.alive)){this.pending=null;this.player.targetId=null;return;}
     const distance=target?BABYLON.Vector3.Distance(this.player.position,target.position):0;
-    if(skill.target==="enemy"&&distance>skill.range){const dir=target.position.subtract(this.player.position);dir.y=0;const destination=target.position.subtract(dir.normalize().scale(Math.max(1.8,skill.range-.35)));this.player.setDestination(destination,.25);return;}
+    if(skill.target==="enemy"&&distance>skill.range){
+      const dir=target.position.subtract(this.player.position);dir.y=0;
+      if(dir.lengthSquared()<1e-6)return;
+      const destination=target.position.subtract(dir.normalize().scale(Math.max(1.6,skill.range-.4)));
+      this.player.setDestination(destination,.22);
+      if(!this._approachToast||performance.now()-this._approachToast>900){
+        this._approachToast=performance.now();
+        this.callbacks.onStatus?.(`${target.name} menziline giriliyor…`);
+      }
+      return;
+    }
     this.player.cancelDestination();if(target&&(skill.target==="enemy"||skill.action==="dash"))this.player.face(target.position);
     const commit=this.skills.commit(skill,this.player);if(!commit.ok){this.callbacks.onStatus?.(commit.reason);this.pending=null;return;}
     this.active=this.pending;this.pending=null;this.elapsed=0;this.applied.clear();

@@ -1,5 +1,5 @@
 // Blade-cluster grass (no carpet tiles)
-import { GrassSystem } from "./GrassSystem.js?v=31";
+import { GrassSystem } from "./GrassSystem.js?v=32";
 
 /**
  * Dark medieval MMORPG test valley — Metin2-inspired atmosphere without rewriting gameplay systems.
@@ -137,44 +137,42 @@ export class TestMap {
 
   #atmosphere() {
     // Readable dusk — warm sun, light atmospheric haze (not olive washout)
-    this.scene.clearColor = new BABYLON.Color4(0.38, 0.42, 0.36, 1);
-    this.scene.ambientColor = new BABYLON.Color3(0.52, 0.54, 0.48);
+    this.scene.clearColor = new BABYLON.Color4(0.4, 0.44, 0.38, 1);
+    this.scene.ambientColor = new BABYLON.Color3(0.42, 0.45, 0.38);
     this.scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
-    this.scene.fogDensity = 0.00028;
-    this.scene.fogColor = new BABYLON.Color3(0.62, 0.64, 0.58);
+    this.scene.fogDensity = 0.00022;
+    this.scene.fogColor = new BABYLON.Color3(0.64, 0.66, 0.6);
 
     const hemi = new BABYLON.HemisphericLight("valley-fill", new BABYLON.Vector3(-0.2, 1, 0.2), this.scene);
-    hemi.intensity = 1.25;
-    hemi.diffuse = new BABYLON.Color3(0.98, 0.96, 0.9);
-    hemi.groundColor = new BABYLON.Color3(0.32, 0.4, 0.26);
+    hemi.intensity = 0.95;
+    hemi.diffuse = new BABYLON.Color3(0.95, 0.94, 0.88);
+    hemi.groundColor = new BABYLON.Color3(0.28, 0.34, 0.22);
     hemi.specular = BABYLON.Color3.Black();
 
     const sun = new BABYLON.DirectionalLight("late-sun", new BABYLON.Vector3(-0.62, -1.05, 0.28), this.scene);
     sun.position.set(28, 48, -22);
-    sun.intensity = 2.35;
+    sun.intensity = 2.6;
     sun.diffuse = new BABYLON.Color3(1, 0.96, 0.84);
-    sun.specular = new BABYLON.Color3(0.28, 0.26, 0.22);
+    sun.specular = new BABYLON.Color3(0.32, 0.28, 0.22);
     this.sun = sun;
 
-    this.shadowGenerator = new BABYLON.ShadowGenerator(this.profile.shadows, sun);
+    this.shadowGenerator = new BABYLON.ShadowGenerator(Math.max(1536, this.profile.shadows), sun);
     this.shadowGenerator.usePercentageCloserFiltering = true;
-    this.shadowGenerator.filteringQuality = this.profile.shadows > 1024
-      ? BABYLON.ShadowGenerator.QUALITY_HIGH
-      : BABYLON.ShadowGenerator.QUALITY_MEDIUM;
-    this.shadowGenerator.darkness = 0.45;
-    this.shadowGenerator.bias = 0.0003;
-    this.shadowGenerator.normalBias = 0.03;
-    sun.shadowMaxZ = 95;
-    sun.shadowMinZ = 0.4;
+    this.shadowGenerator.filteringQuality = BABYLON.ShadowGenerator.QUALITY_HIGH;
+    this.shadowGenerator.darkness = 0.58;
+    this.shadowGenerator.bias = 0.00025;
+    this.shadowGenerator.normalBias = 0.04;
+    sun.shadowMaxZ = 110;
+    sun.shadowMinZ = 0.3;
     sun.autoUpdateExtends = true;
-    sun.shadowOrthoScale = 1.35;
+    sun.shadowOrthoScale = 1.5;
 
     this.scene.imageProcessingConfiguration.toneMappingEnabled = true;
     this.scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
-    this.scene.imageProcessingConfiguration.exposure = 1.28;
-    this.scene.imageProcessingConfiguration.contrast = 1.1;
+    this.scene.imageProcessingConfiguration.exposure = 1.18;
+    this.scene.imageProcessingConfiguration.contrast = 1.14;
     this.scene.imageProcessingConfiguration.vignetteEnabled = true;
-    this.scene.imageProcessingConfiguration.vignetteWeight = 0.75;
+    this.scene.imageProcessingConfiguration.vignetteWeight = 0.7;
     this.scene.imageProcessingConfiguration.vignetteColor = new BABYLON.Color4(0.05, 0.06, 0.04, 1);
   }
 
@@ -211,20 +209,19 @@ export class TestMap {
     data.normals = normals;
     data.uvs = uvs;
     data.applyToMesh(ground);
-    // Prefer forest albedo (real JPG) with vivid green grade — painted-only read as flat olive voids in play
-    ground.material = this.#terrainMaterial("terrain-world", "grass", new BABYLON.Color3(0.35, 0.62, 0.28), false);
+    // High-contrast painted grass is the readable ground (forest JPG + green multiply = flat olive void)
+    ground.material = this.#paintedGround("terrain-world", "grass", new BABYLON.Color3(0.28, 0.48, 0.22), false);
     if (ground.material?.diffuseTexture) {
-      ground.material.diffuseTexture.uScale = 4.2;
-      ground.material.diffuseTexture.vScale = 4.2;
-      ground.material.diffuseTexture.level = 1.65;
+      ground.material.diffuseTexture.uScale = 2.6;
+      ground.material.diffuseTexture.vScale = 2.6;
+      ground.material.diffuseTexture.level = 1.7;
       ground.material.diffuseTexture.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE;
       ground.material.diffuseTexture.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
     }
     if (ground.material) {
-      // Force a readable green grade even if pack albedo is brown dirt
-      ground.material.diffuseColor = new BABYLON.Color3(0.55, 1.15, 0.48);
-      ground.material.emissiveColor = new BABYLON.Color3(0.06, 0.12, 0.04);
-      ground.material.ambientColor = new BABYLON.Color3(0.32, 0.42, 0.26);
+      ground.material.diffuseColor = BABYLON.Color3.White();
+      ground.material.emissiveColor = new BABYLON.Color3(0.05, 0.09, 0.03);
+      ground.material.ambientColor = new BABYLON.Color3(0.28, 0.36, 0.22);
     }
     ground.receiveShadows = true;
     ground.checkCollisions = true;
@@ -381,19 +378,19 @@ export class TestMap {
       return `rgb(${r},${g},${b})`;
     };
     // High-contrast mottling so mid-distance never reads as a flat olive void
-    ctx.fillStyle = toHex(baseColor, kind === "grass" ? -0.04 : 0.08);
+    ctx.fillStyle = toHex(baseColor, kind === "grass" ? -0.08 : 0.08);
     ctx.fillRect(0, 0, size, size);
-    for (let i = 0; i < 240; i++) {
+    for (let i = 0; i < 320; i++) {
       const x = Math.random() * size;
       const y = Math.random() * size;
-      const radius = 12 + Math.random() * 70;
+      const radius = 10 + Math.random() * 85;
       const patch = ctx.createRadialGradient(x, y, 1, x, y, radius);
       if (kind === "grass") {
         const tone = Math.random();
-        if (tone > 0.78) patch.addColorStop(0, "rgba(125, 95, 50, 0.75)");
-        else if (tone > 0.48) patch.addColorStop(0, "rgba(65, 155, 40, 0.88)");
-        else if (tone > 0.22) patch.addColorStop(0, "rgba(28, 85, 26, 0.85)");
-        else patch.addColorStop(0, "rgba(16, 48, 14, 0.8)");
+        if (tone > 0.8) patch.addColorStop(0, "rgba(145, 110, 55, 0.9)");
+        else if (tone > 0.5) patch.addColorStop(0, "rgba(75, 175, 48, 0.95)");
+        else if (tone > 0.25) patch.addColorStop(0, "rgba(32, 100, 30, 0.92)");
+        else patch.addColorStop(0, "rgba(12, 42, 12, 0.9)");
         patch.addColorStop(1, "rgba(0,0,0,0)");
       } else if (kind === "rock") {
         patch.addColorStop(0, Math.random() > 0.5 ? "rgba(120, 115, 100, 0.5)" : "rgba(75, 70, 60, 0.45)");
@@ -407,24 +404,24 @@ export class TestMap {
       ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.fill();
     }
-    for (let i = 0; i < 7500; i++) {
-      const a = 0.2 + Math.random() * 0.42;
+    for (let i = 0; i < 9000; i++) {
+      const a = 0.25 + Math.random() * 0.5;
       ctx.fillStyle = kind === "grass"
-        ? `rgba(${30 + Math.random() * 105}, ${85 + Math.random() * 125}, ${22 + Math.random() * 55}, ${a})`
+        ? `rgba(${25 + Math.random() * 110}, ${80 + Math.random() * 140}, ${18 + Math.random() * 55}, ${a})`
         : kind === "rock"
           ? `rgba(${90 + Math.random() * 55}, ${85 + Math.random() * 45}, ${70 + Math.random() * 35}, ${a})`
           : `rgba(${120 + Math.random() * 70}, ${85 + Math.random() * 45}, ${45 + Math.random() * 30}, ${a})`;
-      ctx.fillRect(Math.random() * size, Math.random() * size, 1 + Math.random() * 3, 1 + Math.random() * 3);
+      ctx.fillRect(Math.random() * size, Math.random() * size, 1 + Math.random() * 3.5, 1 + Math.random() * 3.5);
     }
     if (kind === "grass") {
-      ctx.strokeStyle = "rgba(50, 125, 32, 0.55)";
-      ctx.lineWidth = 1.1;
-      for (let i = 0; i < 1700; i++) {
+      ctx.strokeStyle = "rgba(45, 130, 30, 0.65)";
+      ctx.lineWidth = 1.2;
+      for (let i = 0; i < 2200; i++) {
         const x = Math.random() * size;
         const y = Math.random() * size;
         ctx.beginPath();
         ctx.moveTo(x, y);
-        ctx.lineTo(x + (Math.random() - 0.5) * 4, y - 4 - Math.random() * 12);
+        ctx.lineTo(x + (Math.random() - 0.5) * 5, y - 5 - Math.random() * 14);
         ctx.stroke();
       }
     } else {

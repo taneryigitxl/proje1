@@ -4,7 +4,7 @@ import { mkdirSync, writeFileSync } from "fs";
 const OUT = "/opt/cursor/artifacts/verify-playtest-fixes";
 mkdirSync(OUT, { recursive: true });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const URL = "http://127.0.0.1:5173/?v=31";
+const URL = "http://127.0.0.1:5173/?v=32";
 
 const browser = await chromium.launch({
   headless: true,

@@ -1,5 +1,5 @@
 import { CharacterFace } from "../player/CharacterFace.js?v=32";
-import { WeaponSheath } from "../player/WeaponSheath.js?v=31";
+import { WeaponSheath } from "../player/WeaponSheath.js?v=32";
 
 export class AssetManager {
   constructor(scene, config, onProgress = () => {}) {
@@ -268,8 +268,8 @@ export class AssetManager {
       minY = Math.min(minY, bi.boundingBox.minimumWorld.y);
     });
     if (!Number.isFinite(minY)) return 0;
-    // Positive minY = mesh sits above root (float) → sink; negative = hangs below → lift
-    return BABYLON.Scalar.Clamp(-minY + 0.02, -0.4, 0.45);
+    // Allow deep sink for center-pivoted / tall GLBs that otherwise float
+    return BABYLON.Scalar.Clamp(-minY + 0.02, -1.35, 0.55);
   }
 
   async instantiateNpc(position, rotationY = 0) {

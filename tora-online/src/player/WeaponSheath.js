@@ -29,11 +29,10 @@ export class WeaponSheath {
   sheath() {
     if (this.sheathed || !this.backBone) return;
     this.weaponRoot.attachToBone(this.backBone, this.skinnedMesh);
-    // spine_02: upright/diagonal on back (tall world Y). Low lateral stick-out.
-    // Tuned by live AABB score favoring vertical blade over sideways slab.
-    this.weaponRoot.position.set(-0.05, 0.12, -0.2);
-    this.weaponRoot.rotation.set(0.25, 1.0, -0.55);
-    this.weaponRoot.scaling.setAll((this.handPose.scale || 1.32) * 0.86);
+    // Upright diagonal, tight to back plane (minimize world depth stick-out)
+    this.weaponRoot.position.set(-0.04, 0.1, -0.06);
+    this.weaponRoot.rotation.set(0.28, 0.92, -0.48);
+    this.weaponRoot.scaling.setAll((this.handPose.scale || 1.32) * 0.82);
     this.sheathed = true;
   }
 
