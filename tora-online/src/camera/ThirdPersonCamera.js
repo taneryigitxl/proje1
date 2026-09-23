@@ -101,7 +101,9 @@ export class ThirdPersonCamera {
   }
 
   #pointerDown(event) {
-    if (event.button !== 2 || event.target !== this.canvas) return;
+    if (event.button !== 2) return;
+    // Allow restart even if a prior attack cancelled drag without a clean mouseup
+    if (this.dragging) this.#cancelDrag();
     event.preventDefault();
     this.dragging = true;
     this.pointerId = event.pointerId;
@@ -111,7 +113,13 @@ export class ThirdPersonCamera {
   }
 
   #pointerMove(event) {
-    // While captured, keep orbiting even if buttons bitmask drops after skill/UI focus steal
+    // If RMB is still held after an attack cancelled drag, resume orbit this frame
+    if (!this.dragging && (event.buttons & 2)) {
+      this.dragging = true;
+      this.pointerId = event.pointerId;
+      try { this.canvas.setPointerCapture?.(event.pointerId); } catch (_) { /* ok */ }
+      this.canvas.dataset.cursor = "hidden";
+    }
     if (!this.dragging || event.pointerId !== this.pointerId) return;
     this.camera.alpha -= (event.movementX || 0) * this.config.sensitivityX;
     this.camera.beta = BABYLON.Scalar.Clamp(
@@ -122,11 +130,13 @@ export class ThirdPersonCamera {
   }
 
   #pointerUp(event) {
-    // pointercancel often reports button !== 2 — always clear matching capture
     if (this.pointerId !== null && event.pointerId !== this.pointerId) return;
-    if (event.type === "pointercancel" || event.type === "blur" || event.button === 2 || this.dragging) {
+    // ONLY end on RMB release / cancel / blur — never on LMB up after an attack
+    if (event.type === "pointercancel" || event.type === "blur") {
       this.#cancelDrag();
+      return;
     }
+    if (event.button === 2) this.#cancelDrag();
   }
 
   #cancelDrag() {

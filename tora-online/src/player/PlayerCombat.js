@@ -38,8 +38,19 @@ export class PlayerCombat {
 
   cancel() {
     this.pending = null;
+    // Mid-swing cancel must unlock body facing / movement immediately
+    if (this.active) {
+      this.active = null;
+      this.elapsed = 0;
+      this.applied.clear();
+      this.player.actionLocked = false;
+      if (this.player.alive) {
+        this.player.state = "idle";
+        this.animator.setState("idle");
+      }
+    }
     this.player.targetId = null;
-    if (!this.active) this.player.cancelDestination();
+    this.player.cancelDestination();
   }
 
   update(dt) {
@@ -150,7 +161,6 @@ export class PlayerCombat {
   #finish() {
     if (!this.active) return;
     const skill = this.active.skill;
-    const target = this.active.target;
     this.active = null;
     this.elapsed = 0;
     this.applied.clear();
@@ -160,11 +170,7 @@ export class PlayerCombat {
       this.animator.setState("idle");
     }
     this.callbacks.onActionEnd?.(skill);
-    // Soft-target auto-chain: keep swinging basic attack until target dies or cancel
-    if (skill?.slot === 1 && target?.alive && this.player.alive && !this.pending) {
-      this.pending = { skill, target };
-      this.player.targetId = target.id;
-    }
+    // actionLocked cleared above — next RMB / facing works this frame
   }
 
   #impact(skill, target, index) {

@@ -1,4 +1,4 @@
-import { QUALITY_PROFILES } from "./Config.js?v=35";
+import { QUALITY_PROFILES } from "./Config.js?v=36";
 
 export class EngineRuntime {
   constructor(canvas, engine, backend) {

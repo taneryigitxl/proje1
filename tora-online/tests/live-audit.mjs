@@ -7,7 +7,7 @@ import { mkdirSync, writeFileSync } from "fs";
 const OUT = "/opt/cursor/artifacts/live-audit";
 mkdirSync(OUT, { recursive: true });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const LIVE = "https://yigittaner.online/tora-online/?v=35";
+const LIVE = "https://yigittaner.online/tora-online/?v=36";
 
 const browser = await chromium.launch({
   headless: true,
