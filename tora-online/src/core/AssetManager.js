@@ -1,4 +1,4 @@
-import { CharacterFace } from "../player/CharacterFace.js?v=31";
+import { CharacterFace } from "../player/CharacterFace.js?v=32";
 import { WeaponSheath } from "../player/WeaponSheath.js?v=31";
 
 export class AssetManager {
