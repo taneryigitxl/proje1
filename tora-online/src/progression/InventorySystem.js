@@ -47,6 +47,7 @@ export class InventorySystem {
     this.selected = -1;
     this.equipped = { weapon: null, armor: null };
     this.#load();
+    this.#autoEquipStarters();
     this.#recomputeGear();
   }
 
@@ -153,6 +154,18 @@ export class InventorySystem {
     this.#recomputeGear();
     this.#save();
     return { ok: true, message: `${item.name} kuşatıldı (+${Object.entries(item.bonuses || {}).map(([k, v]) => `${k} ${v}`).join(", ") || "bonus"}).` };
+  }
+
+  #autoEquipStarters() {
+    if (!this.equipped.weapon) {
+      const weaponId = this.slots.find((id) => id && ITEM_DEFS[id]?.type === "weapon");
+      if (weaponId) this.equipped.weapon = weaponId;
+    }
+    if (!this.equipped.armor) {
+      const armorId = this.slots.find((id) => id && ITEM_DEFS[id]?.type === "armor");
+      if (armorId) this.equipped.armor = armorId;
+    }
+    if (this.equipped.weapon || this.equipped.armor) this.#save();
   }
 
   #recomputeGear() {

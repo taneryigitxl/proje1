@@ -1,5 +1,5 @@
-// GrassSystem disabled — square blade patches removed
-// import { GrassSystem } from "./GrassSystem.js?v=28";
+// Blade-cluster grass (no carpet tiles)
+import { GrassSystem } from "./GrassSystem.js?v=29";
 
 /**
  * Dark medieval MMORPG test valley — Metin2-inspired atmosphere without rewriting gameplay systems.
@@ -45,9 +45,14 @@ export class TestMap {
   async buildOptional() {
     if (this.optionalBuilt) return;
     this.optionalBuilt = true;
-    // Blade-cluster GrassSystem produced square neon patches — grass lives in terrain paint instead
-    console.info("[Tora Startup] 9/10 Opsiyonel efektler hazırlanıyor (kare çim yamaları kapalı).");
-    this.grass = null;
+    console.info("[Tora Startup] 9/10 Opsiyonel efektler hazırlanıyor (blade çim).");
+    try {
+      this.grass = new GrassSystem(this.scene, this.assets, this.navigation, (x, z) => this.heightAt(x, z));
+      await this.grass.build(this.profile, this.quality);
+    } catch (error) {
+      console.warn("[Tora Grass] Blade çim atlandı:", error?.message || error);
+      this.grass = null;
+    }
     this.#buildOptionalEffect("bloom", () => {
       if (!this.profile.bloom) return;
       const pipeline = new BABYLON.DefaultRenderingPipeline("tora-pipeline", true, this.scene, this.scene.cameras);
@@ -131,22 +136,22 @@ export class TestMap {
   }
 
   #atmosphere() {
-    // Readable dusk — warm sun, light fog (heavy fog washed textured ground into flat olive)
-    this.scene.clearColor = new BABYLON.Color4(0.32, 0.38, 0.3, 1);
-    this.scene.ambientColor = new BABYLON.Color3(0.58, 0.6, 0.5);
+    // Readable dusk — warm sun, light atmospheric haze (not olive washout)
+    this.scene.clearColor = new BABYLON.Color4(0.38, 0.42, 0.36, 1);
+    this.scene.ambientColor = new BABYLON.Color3(0.52, 0.54, 0.48);
     this.scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
-    this.scene.fogDensity = 0.00115;
-    this.scene.fogColor = new BABYLON.Color3(0.5, 0.56, 0.42);
+    this.scene.fogDensity = 0.00048;
+    this.scene.fogColor = new BABYLON.Color3(0.58, 0.6, 0.54);
 
     const hemi = new BABYLON.HemisphericLight("valley-fill", new BABYLON.Vector3(-0.2, 1, 0.2), this.scene);
-    hemi.intensity = 1.4;
+    hemi.intensity = 1.25;
     hemi.diffuse = new BABYLON.Color3(0.98, 0.96, 0.9);
-    hemi.groundColor = new BABYLON.Color3(0.4, 0.48, 0.32);
+    hemi.groundColor = new BABYLON.Color3(0.32, 0.4, 0.26);
     hemi.specular = BABYLON.Color3.Black();
 
     const sun = new BABYLON.DirectionalLight("late-sun", new BABYLON.Vector3(-0.62, -1.05, 0.28), this.scene);
     sun.position.set(28, 48, -22);
-    sun.intensity = 2.2;
+    sun.intensity = 2.35;
     sun.diffuse = new BABYLON.Color3(1, 0.96, 0.84);
     sun.specular = new BABYLON.Color3(0.28, 0.26, 0.22);
     this.sun = sun;
@@ -156,7 +161,7 @@ export class TestMap {
     this.shadowGenerator.filteringQuality = this.profile.shadows > 1024
       ? BABYLON.ShadowGenerator.QUALITY_HIGH
       : BABYLON.ShadowGenerator.QUALITY_MEDIUM;
-    this.shadowGenerator.darkness = 0.4;
+    this.shadowGenerator.darkness = 0.45;
     this.shadowGenerator.bias = 0.0003;
     this.shadowGenerator.normalBias = 0.03;
     sun.shadowMaxZ = 95;
@@ -166,10 +171,10 @@ export class TestMap {
 
     this.scene.imageProcessingConfiguration.toneMappingEnabled = true;
     this.scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
-    this.scene.imageProcessingConfiguration.exposure = 1.38;
-    this.scene.imageProcessingConfiguration.contrast = 1.06;
+    this.scene.imageProcessingConfiguration.exposure = 1.28;
+    this.scene.imageProcessingConfiguration.contrast = 1.1;
     this.scene.imageProcessingConfiguration.vignetteEnabled = true;
-    this.scene.imageProcessingConfiguration.vignetteWeight = 0.9;
+    this.scene.imageProcessingConfiguration.vignetteWeight = 0.75;
     this.scene.imageProcessingConfiguration.vignetteColor = new BABYLON.Color4(0.05, 0.06, 0.04, 1);
   }
 
@@ -206,19 +211,19 @@ export class TestMap {
     data.normals = normals;
     data.uvs = uvs;
     data.applyToMesh(ground);
-    // Bright painted grass base (forest JPG is brown dirt — green-tinting it reads as flat olive)
-    ground.material = this.#paintedGround("terrain-world", "grass", new BABYLON.Color3(0.45, 0.72, 0.3), false);
+    // Bright painted grass + dirt mottling (forest JPG is brown dirt — green-tinting it reads as flat olive)
+    ground.material = this.#paintedGround("terrain-world", "grass", new BABYLON.Color3(0.38, 0.62, 0.28), false);
     if (ground.material?.diffuseTexture) {
-      ground.material.diffuseTexture.uScale = 8;
-      ground.material.diffuseTexture.vScale = 8;
-      ground.material.diffuseTexture.level = 1.45;
+      ground.material.diffuseTexture.uScale = 5.5;
+      ground.material.diffuseTexture.vScale = 5.5;
+      ground.material.diffuseTexture.level = 1.35;
       ground.material.diffuseTexture.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE;
       ground.material.diffuseTexture.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
     }
     if (ground.material) {
       ground.material.diffuseColor = BABYLON.Color3.White();
-      ground.material.emissiveColor = new BABYLON.Color3(0.05, 0.09, 0.03);
-      ground.material.ambientColor = new BABYLON.Color3(0.5, 0.55, 0.4);
+      ground.material.emissiveColor = new BABYLON.Color3(0.03, 0.05, 0.02);
+      ground.material.ambientColor = new BABYLON.Color3(0.42, 0.48, 0.34);
     }
     ground.receiveShadows = true;
     ground.checkCollisions = true;
@@ -227,9 +232,9 @@ export class TestMap {
   }
 
   #path() {
-    // Soft dirt road only — alpha-faded into the forest ground
+    // Soft dirt road — wider alpha falloff into grass
     const points = Array.from({ length: 28 }, (_, i) => new BABYLON.Vector3(Math.sin(i * 0.4) * 2.35, 0, -35 + i * 2.65));
-    const path = this.#ribbon("village-road", points, 7.2, 9, [0, 0.12, 0.35, 0.65, 0.85, 0.65, 0.35, 0.12, 0], 0.04);
+    const path = this.#ribbon("village-road", points, 7.8, 11, [0, 0.08, 0.22, 0.45, 0.7, 0.88, 0.7, 0.45, 0.22, 0.08, 0], 0.055);
     path.material = this.#terrainMaterial("terrain-mud", "mud", new BABYLON.Color3(0.55, 0.4, 0.24), true);
     path.metadata = { ground: true, cursor: "move" };
     path.isPickable = true;
@@ -374,16 +379,23 @@ export class TestMap {
       const b = Math.round(BABYLON.Scalar.Clamp(c.b + lift, 0, 1) * 255);
       return `rgb(${r},${g},${b})`;
     };
-    // Brighter base so ground never reads gray/black under dusk lighting
-    ctx.fillStyle = toHex(baseColor, 0.18);
+    // Brighter varied base so ground never reads as flat olive slabs
+    ctx.fillStyle = toHex(baseColor, kind === "grass" ? 0.06 : 0.12);
     ctx.fillRect(0, 0, size, size);
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 160; i++) {
       const x = Math.random() * size;
       const y = Math.random() * size;
-      const radius = 30 + Math.random() * 100;
+      const radius = 18 + Math.random() * 90;
       const patch = ctx.createRadialGradient(x, y, 2, x, y, radius);
       if (kind === "grass") {
-        patch.addColorStop(0, Math.random() > 0.5 ? "rgba(130, 210, 75, 0.7)" : "rgba(60, 140, 45, 0.55)");
+        const tone = Math.random();
+        if (tone > 0.72) {
+          patch.addColorStop(0, "rgba(120, 95, 55, 0.45)");
+        } else if (tone > 0.4) {
+          patch.addColorStop(0, "rgba(95, 175, 55, 0.65)");
+        } else {
+          patch.addColorStop(0, "rgba(45, 110, 38, 0.55)");
+        }
         patch.addColorStop(1, "rgba(0,0,0,0)");
       } else if (kind === "rock") {
         patch.addColorStop(0, Math.random() > 0.5 ? "rgba(120, 115, 100, 0.5)" : "rgba(75, 70, 60, 0.45)");
@@ -397,24 +409,24 @@ export class TestMap {
       ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.fill();
     }
-    for (let i = 0; i < 3600; i++) {
-      const a = 0.1 + Math.random() * 0.28;
+    for (let i = 0; i < 5200; i++) {
+      const a = 0.12 + Math.random() * 0.32;
       ctx.fillStyle = kind === "grass"
-        ? `rgba(${60 + Math.random() * 80}, ${130 + Math.random() * 100}, ${35 + Math.random() * 45}, ${a})`
+        ? `rgba(${50 + Math.random() * 90}, ${110 + Math.random() * 110}, ${30 + Math.random() * 50}, ${a})`
         : kind === "rock"
           ? `rgba(${90 + Math.random() * 55}, ${85 + Math.random() * 45}, ${70 + Math.random() * 35}, ${a})`
           : `rgba(${120 + Math.random() * 70}, ${85 + Math.random() * 45}, ${45 + Math.random() * 30}, ${a})`;
       ctx.fillRect(Math.random() * size, Math.random() * size, 1 + Math.random() * 3, 1 + Math.random() * 3);
     }
     if (kind === "grass") {
-      ctx.strokeStyle = "rgba(100, 190, 60, 0.45)";
-      ctx.lineWidth = 1.4;
-      for (let i = 0; i < 700; i++) {
+      ctx.strokeStyle = "rgba(80, 160, 45, 0.4)";
+      ctx.lineWidth = 1.2;
+      for (let i = 0; i < 1100; i++) {
         const x = Math.random() * size;
         const y = Math.random() * size;
         ctx.beginPath();
         ctx.moveTo(x, y);
-        ctx.lineTo(x + (Math.random() - 0.5) * 6, y - 6 - Math.random() * 12);
+        ctx.lineTo(x + (Math.random() - 0.5) * 5, y - 5 - Math.random() * 14);
         ctx.stroke();
       }
     } else {
@@ -435,14 +447,29 @@ export class TestMap {
 
   async #place(key, name, x, z, rotation = 0, scale = 1, options = {}) {
     const sink = options.sink ?? 0;
+    const groundY = this.heightAt(x, z) + (options.y || 0);
     const root = await this.assets.instantiateStatic(
       key,
       name,
-      new BABYLON.Vector3(x, this.heightAt(x, z) + (options.y || 0) - sink, z),
+      new BABYLON.Vector3(x, groundY, z),
       rotation,
       scale,
       options.metadata || null,
     );
+    // AABB foot snap — center-pivoted props otherwise float above the heightfield
+    root.computeWorldMatrix(true);
+    let minY = null;
+    root.getChildMeshes(false).forEach((mesh) => {
+      mesh.computeWorldMatrix(true);
+      const y = mesh.getBoundingInfo?.()?.boundingBox?.minimumWorld?.y;
+      if (Number.isFinite(y)) minY = minY == null ? y : Math.min(minY, y);
+    });
+    if (minY != null) {
+      const bury = sink + 0.02;
+      root.position.y += (groundY - bury) - minY;
+    } else {
+      root.position.y = groundY - sink;
+    }
     root.getChildMeshes(false).forEach((mesh) => {
       const cameraBlocker = Boolean(options.cameraBlocker ?? options.collision ?? options.obstacle);
       mesh.receiveShadows = true;

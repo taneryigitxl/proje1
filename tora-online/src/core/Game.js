@@ -1,21 +1,21 @@
-import { GAME_CONFIG, MOB_SPAWNS } from "./Config.js?v=28";
-import { AssetManager } from "./AssetManager.js?v=28";
-import { Navigation } from "../world/Navigation.js?v=28";
-import { TestMap } from "../world/TestMap.js?v=28";
-import { InputManager } from "../input/InputManager.js?v=28";
-import { CursorManager } from "../input/CursorManager.js?v=28";
-import { ThirdPersonCamera } from "../camera/ThirdPersonCamera.js?v=28";
-import { PlayerController } from "../player/PlayerController.js?v=28";
-import { PlayerAnimator } from "../player/PlayerAnimator.js?v=28";
-import { EntityManager } from "../entities/EntityManager.js?v=28";
-import { CombatSystem } from "../combat/CombatSystem.js?v=28";
-import { NetworkAdapter } from "../network/NetworkAdapter.js?v=28";
-import { HUD } from "../ui/HUD.js?v=28";
-import { ProgressionSystem } from "../progression/ProgressionSystem.js?v=28";
-import { StatsSystem } from "../progression/StatsSystem.js?v=28";
-import { InventorySystem } from "../progression/InventorySystem.js?v=28";
-import { LootSystem } from "../progression/LootSystem.js?v=28";
-import { AmbientAudio } from "../audio/AmbientAudio.js?v=28";
+import { GAME_CONFIG, MOB_SPAWNS } from "./Config.js?v=29";
+import { AssetManager } from "./AssetManager.js?v=29";
+import { Navigation } from "../world/Navigation.js?v=29";
+import { TestMap } from "../world/TestMap.js?v=29";
+import { InputManager } from "../input/InputManager.js?v=29";
+import { CursorManager } from "../input/CursorManager.js?v=29";
+import { ThirdPersonCamera } from "../camera/ThirdPersonCamera.js?v=29";
+import { PlayerController } from "../player/PlayerController.js?v=29";
+import { PlayerAnimator } from "../player/PlayerAnimator.js?v=29";
+import { EntityManager } from "../entities/EntityManager.js?v=29";
+import { CombatSystem } from "../combat/CombatSystem.js?v=29";
+import { NetworkAdapter } from "../network/NetworkAdapter.js?v=29";
+import { HUD } from "../ui/HUD.js?v=29";
+import { ProgressionSystem } from "../progression/ProgressionSystem.js?v=29";
+import { StatsSystem } from "../progression/StatsSystem.js?v=29";
+import { InventorySystem } from "../progression/InventorySystem.js?v=29";
+import { LootSystem } from "../progression/LootSystem.js?v=29";
+import { AmbientAudio } from "../audio/AmbientAudio.js?v=29";
 
 export class Game {
   constructor(runtime, onProgress = () => {}, onFatal = () => {}) {
@@ -285,10 +285,8 @@ export class Game {
       }
       const groundPick = this.scene.pick(this.scene.pointerX, this.scene.pointerY, (mesh) => Boolean(mesh.metadata?.ground));
       if (groundPick?.hit) {
-        this.#clearTarget();
+        // Keep soft target while closing distance — only move
         this.player.setDestination(groundPick.pickedPoint, .18);
-      } else {
-        this.#clearTarget();
       }
     });
   }
@@ -331,6 +329,7 @@ export class Game {
 
   #useSkill(slot) {
     if (!this.running || this.paused) return;
+    this.hud?.skillBar?.markPressed?.(slot);
     this.combat.useSkill(slot, this.entities.selected, this.camera.forwardOnGround());
   }
 

@@ -18,12 +18,12 @@ export class CharacterFace {
     const skinMat = new BABYLON.StandardMaterial("face-skin-mat", scene);
     skinMat.diffuseTexture = faceTex;
     skinMat.emissiveTexture = faceTex;
-    skinMat.diffuseTexture.level = 1.35;
-    skinMat.emissiveTexture.level = 0.85;
-    skinMat.diffuseColor = new BABYLON.Color3(1, 0.95, 0.9);
-    skinMat.emissiveColor = new BABYLON.Color3(0.22, 0.16, 0.12);
-    skinMat.specularColor = new BABYLON.Color3(0.1, 0.07, 0.05);
-    skinMat.ambientColor = new BABYLON.Color3(0.5, 0.4, 0.34);
+    skinMat.diffuseTexture.level = 1.15;
+    skinMat.emissiveTexture.level = 0.45;
+    skinMat.diffuseColor = new BABYLON.Color3(0.92, 0.82, 0.74);
+    skinMat.emissiveColor = new BABYLON.Color3(0.08, 0.05, 0.04);
+    skinMat.specularColor = new BABYLON.Color3(0.08, 0.05, 0.04);
+    skinMat.ambientColor = new BABYLON.Color3(0.42, 0.34, 0.28);
 
     const head = BABYLON.MeshBuilder.CreateSphere("face-head", { diameter: 0.3, segments: 32 }, scene);
     head.material = skinMat;
@@ -151,9 +151,9 @@ export class CharacterFace {
     if (headBone && skinnedMesh) {
       faceRoot.attachToBone(headBone, skinnedMesh);
       // Seat face in the hood cavity opening; features face local +Z
-      faceRoot.position.set(0, 0.08, 0.1);
-      faceRoot.rotation.set(0.02, 0, 0);
-      faceRoot.scaling.setAll(1.15);
+      faceRoot.position.set(0, 0.06, 0.14);
+      faceRoot.rotation.set(0.04, 0, 0);
+      faceRoot.scaling.setAll(1.05);
       console.info(`[Tora Face] Boyalı yüz '${headBone.name}' kemiğine bağlandı (hood mesh gizlendi).`);
     } else {
       faceRoot.parent = root;
@@ -173,11 +173,31 @@ export class CharacterFace {
       if (typeof node.setEnabled === "function") node.setEnabled(false);
       if ("isVisible" in node) node.isVisible = false;
       if ("visibility" in node) node.visibility = 0;
+      if (node.material) {
+        try {
+          node.material = node.material.clone?.(`${node.name}-hidden`) || node.material;
+          if ("alpha" in node.material) node.material.alpha = 0;
+          if (node.material.emissiveColor) node.material.emissiveColor = BABYLON.Color3.Black();
+          if (node.material.diffuseColor) node.material.diffuseColor = BABYLON.Color3.Black();
+        } catch (_) { /* optional */ }
+      }
+    };
+
+    const isHoodName = (raw) => {
+      const name = (raw || "").toLowerCase().replace(/[_\s-]+/g, "");
+      return (
+        name.includes("hood")
+        || name.includes("headhood")
+        || name.includes("helmet")
+        || name.includes("mask")
+        || /^node7$/.test(name)
+        || /^node_?7$/.test((raw || "").toLowerCase())
+        || /^primitive_?7$/.test((raw || "").toLowerCase())
+      );
     };
 
     const visit = (node) => {
-      const name = (node.name || "").toLowerCase();
-      if (name.includes("hood") || name.includes("head_hood") || name.includes("helmet") || name.includes("mask")) {
+      if (isHoodName(node.name)) {
         hide(node);
         console.info(`[Tora Face] Hood node gizlendi: ${node.name}`);
       }
@@ -185,10 +205,9 @@ export class CharacterFace {
     };
     visit(root);
 
-    // Explicit: glTF mesh 7 is Female_Ranger_Head_Hood geometry
+    // Explicit: glTF mesh 7 is Female_Ranger_Head_Hood geometry (any depth)
     root.getChildMeshes?.(false)?.forEach((mesh) => {
-      const name = (mesh.name || "").toLowerCase();
-      if (name === "node7" || name.includes("hood") || name.includes("head_hood") || name.includes("helmet")) {
+      if (isHoodName(mesh.name)) {
         hide(mesh);
         console.info(`[Tora Face] Hood mesh gizlendi: ${mesh.name} (verts=${mesh.getTotalVertices?.() || 0})`);
       }

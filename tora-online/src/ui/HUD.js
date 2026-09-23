@@ -1,6 +1,6 @@
-import { SkillBar } from "./SkillBar.js?v=28";
-import { TargetFrame } from "./TargetFrame.js?v=28";
-import { ITEM_DEFS } from "../progression/InventorySystem.js?v=28";
+import { SkillBar } from "./SkillBar.js?v=29";
+import { TargetFrame } from "./TargetFrame.js?v=29";
+import { ITEM_DEFS } from "../progression/InventorySystem.js?v=29";
 
 function itemName(id) {
   return ITEM_DEFS[id]?.name || id || "—";
@@ -339,7 +339,7 @@ export class HUD {
     const labelLevel = this.playerLabel.querySelector(".player-label-level");
     if (labelName) labelName.textContent = p.name;
     if (labelLevel) labelLevel.textContent = `Lv.${progress.level}`;
-    const playerScreen = this.#project(p.position.add(new BABYLON.Vector3(0, 2.55, 0)));
+    const playerScreen = this.#project(p.position.add(new BABYLON.Vector3(0, 1.95, 0)));
     this.playerLabel.style.left = `${playerScreen.x}px`;
     this.playerLabel.style.top = `${playerScreen.y}px`;
     this.playerLabel.style.opacity = playerScreen.z > 0 && playerScreen.z < 1 ? "1" : "0";
@@ -357,7 +357,7 @@ export class HUD {
         continue;
       }
       const stack = this.chatBubbles.length - 1 - i;
-      const screen = this.#project(p.position.add(new BABYLON.Vector3(0, 2.85 + stack * 0.38, 0)));
+      const screen = this.#project(p.position.add(new BABYLON.Vector3(0, 2.25 + stack * 0.38, 0)));
       bubble.node.style.left = `${screen.x}px`;
       bubble.node.style.top = `${screen.y}px`;
       bubble.node.style.opacity = screen.z > 0 && screen.z < 1 ? String(Math.min(1, bubble.life)) : "0";
@@ -367,7 +367,7 @@ export class HUD {
     this.quest.textContent = performance.now() < this.statusUntil ? this.statusMessage : questText;
     this.questPanel.classList.toggle("is-complete", progress.quest.completed && (!progress.secondQuest.unlocked || progress.secondQuest.completed));
     this.targetFrame.update(this.entities.selected);
-    this.skillBar.update(this.skillSystem, p);
+    this.skillBar.update(this.skillSystem, p, this.entities.selected);
     this.fps.textContent = `${this.engine.getFps().toFixed(0)} FPS`;
     this.#updateBuffs();
     this.#minimapPosition(this.minimapPlayer, p.position, p.rotation, true);
@@ -378,11 +378,12 @@ export class HUD {
       dot.hidden = !mob.alive;
       if (!mob.alive) continue;
       this.#minimapPosition(dot, mob.position, 0, false);
-      const screen = this.#project(mob.position.add(new BABYLON.Vector3(0, 2.15, 0)));
+      const labelY = this.#mobLabelHeight(mob);
+      const screen = this.#project(mob.position.add(new BABYLON.Vector3(0, labelY, 0)));
       const dist = BABYLON.Vector3.Distance(p.position, mob.position);
       node.style.left = `${screen.x}px`;
       node.style.top = `${screen.y}px`;
-      const visible = screen.z > 0 && screen.z < 1 && dist < 28;
+      const visible = screen.z > 0 && screen.z < 1 && dist < 28 && Number.isFinite(mob.position.x);
       node.style.opacity = visible ? String(BABYLON.Scalar.Clamp(1.15 - dist / 28, 0.35, 1)) : "0";
       node.style.transform = `translate(-50%,-100%) scale(${BABYLON.Scalar.Clamp(1.15 - dist / 40, 0.75, 1.1)})`;
       node.classList.toggle("selected", this.entities.selected === mob);
@@ -438,6 +439,23 @@ export class HUD {
     if (s?.unlocked && !s.completed) return `Kurt Dişi topla: ${s.progress} / ${s.goal}`;
     if (s?.completed) return `Görevler tamam • +${q.rewardXp + s.rewardXp} XP`;
     return `Tamamlandı • +${q.rewardXp} XP`;
+  }
+
+  #mobLabelHeight(mob) {
+    try {
+      const meshes = mob.root?.getChildMeshes?.(false) || [];
+      let maxY = null;
+      for (const mesh of meshes) {
+        mesh.computeWorldMatrix?.(true);
+        const bi = mesh.getBoundingInfo?.();
+        const y = bi?.boundingBox?.maximumWorld?.y;
+        if (Number.isFinite(y)) maxY = maxY == null ? y : Math.max(maxY, y);
+      }
+      if (maxY != null && Number.isFinite(mob.position?.y)) {
+        return Math.max(1.2, Math.min(2.8, maxY - mob.position.y + 0.18));
+      }
+    } catch (_) { /* fallback */ }
+    return 1.75 * (mob.root?.scaling?.y || 1);
   }
 
   #updateBuffs() {

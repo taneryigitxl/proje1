@@ -30,7 +30,7 @@ export class InputManager {
       if (code === "KeyC") { event.preventDefault(); this.onStats?.(); }
       if (/^Digit[1-9]$/.test(code)) this.onSkill?.(Number(code.slice(-1)));
       if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(code)) event.preventDefault();
-      if (["KeyW", "KeyA", "KeyS", "KeyD", "Space"].includes(code)) this.onClearTarget?.();
+      // Keep soft-target while closing distance — clear only via ESC / empty cancel
     };
     this.onKeyUp = (event) => this.keys.delete(event.code);
     this.onVisibilityChange = () => { if (document.hidden) this.reset(); };

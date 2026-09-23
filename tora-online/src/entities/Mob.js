@@ -1,5 +1,5 @@
-import { Entity } from "./Entity.js?v=28";
-import { DamageSystem } from "../combat/DamageSystem.js?v=28";
+import { Entity } from "./Entity.js?v=29";
+import { DamageSystem } from "../combat/DamageSystem.js?v=29";
 
 export class Mob extends Entity {
   constructor(scene, spawn, index, navigation, onDamage, visual) {
@@ -49,6 +49,11 @@ export class Mob extends Entity {
       if (this.respawnTimer <= 0) this.respawn();
       return;
     }
+    if (!this.#finitePose()) {
+      this.position.copyFrom(this.home);
+      this.wanderTarget = null;
+      this.velocity.set(0, 0, 0);
+    }
     this.attackTimer -= dt;
     this.hitTimer -= dt;
     this.thinkTimer -= dt;
@@ -67,7 +72,7 @@ export class Mob extends Entity {
       if (distance > 2.15) {
         this.state = "chase";
         this.#play("run", true);
-        this.#move(toPlayer.normalize(), 2.65, dt);
+        this.#move(toPlayer, 2.65, dt);
       } else {
         this.state = "attack";
         this.targetYaw = Math.atan2(toPlayer.x, toPlayer.z);
@@ -103,7 +108,7 @@ export class Mob extends Entity {
       } else {
         this.state = "walk";
         this.#play("walk", true);
-        this.#move(dir.normalize(), this.patrol ? 0.95 : 1.15, dt);
+        this.#move(dir, this.patrol ? 0.95 : 1.15, dt);
       }
     } else {
       this.state = "idle";
@@ -158,16 +163,37 @@ export class Mob extends Entity {
   }
 
   #move(direction, speed, dt) {
-    const candidate = this.position.add(direction.scale(speed * dt));
+    if (!direction || !Number.isFinite(direction.x) || !Number.isFinite(direction.z)) {
+      this.wanderTarget = null;
+      return;
+    }
+    const len = Math.hypot(direction.x, direction.z);
+    if (len < 1e-4) {
+      this.wanderTarget = null;
+      return;
+    }
+    const nx = direction.x / len;
+    const nz = direction.z / len;
+    const candidate = this.position.add(new BABYLON.Vector3(nx * speed * dt, 0, nz * speed * dt));
     if (this.navigation.canOccupy(candidate, 0.55)) {
+      const y = this.navigation.heightAt(candidate.x, candidate.z) + this.footOffset;
+      if (!Number.isFinite(candidate.x) || !Number.isFinite(candidate.z) || !Number.isFinite(y)) {
+        this.position.copyFrom(this.home);
+        this.wanderTarget = null;
+        return;
+      }
       this.position.x = candidate.x;
       this.position.z = candidate.z;
-      this.position.y = this.navigation.heightAt(candidate.x, candidate.z) + this.footOffset;
-      this.velocity.copyFrom(direction.scale(speed));
-      this.targetYaw = Math.atan2(direction.x, direction.z);
+      this.position.y = y;
+      this.velocity.set(nx * speed, 0, nz * speed);
+      this.targetYaw = Math.atan2(nx, nz);
     } else {
       this.wanderTarget = null;
     }
+  }
+
+  #finitePose() {
+    return Number.isFinite(this.position?.x) && Number.isFinite(this.position?.y) && Number.isFinite(this.position?.z);
   }
 
   #smoothFace(dt) {

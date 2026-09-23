@@ -4,6 +4,7 @@ export class Navigation {
   heightAt(x, z) { return this.heightProvider(x, z); }
   addObstacle(x, z, radius) { this.obstacles.push({ x, z, radius }); }
   canOccupy(position, radius = 0.45) {
+    if (!Number.isFinite(position?.x) || !Number.isFinite(position?.z)) return false;
     if (Math.abs(position.x) > this.halfSize - radius || Math.abs(position.z) > this.halfSize - radius) return false;
     return !this.obstacles.some((o) => Math.hypot(position.x - o.x, position.z - o.z) < o.radius + radius);
   }

@@ -1,4 +1,4 @@
-import { SKILLS } from "../core/Config.js?v=28";
+import { SKILLS } from "../core/Config.js?v=29";
 
 const ICONS = {
   slash: `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 40 L36 8" stroke="#f2e6c4" stroke-width="5" stroke-linecap="round"/><path d="M12 36 L40 8" stroke="#c45a3a" stroke-width="2.5" stroke-linecap="round" opacity=".85"/><circle cx="38" cy="10" r="3.2" fill="#ead7a8"/></svg>`,
@@ -17,6 +17,7 @@ export class SkillBar {
     this.element = element;
     this.onActivate = onActivate;
     this.slots = new Map();
+    this.flashUntil = new Map();
     for (const skill of SKILLS) {
       const button = document.createElement("button");
       button.type = "button";
@@ -25,20 +26,33 @@ export class SkillBar {
       button.style.setProperty("--icon", skill.color);
       const svg = ICONS[skill.icon] || ICONS.slash;
       button.innerHTML = `<span class="key">${skill.slot}</span><span class="icon">${svg}</span><span class="cost">${skill.mana || "—"}</span><span class="cooldown" hidden></span>`;
-      button.addEventListener("click", () => onActivate(skill.slot));
+      button.addEventListener("click", () => {
+        this.flashUntil.set(skill.slot, performance.now() + 220);
+        onActivate(skill.slot);
+      });
       element.append(button);
       this.slots.set(skill.slot, button);
     }
   }
 
-  update(skillSystem, player) {
+  markPressed(slot) {
+    this.flashUntil.set(slot, performance.now() + 220);
+  }
+
+  update(skillSystem, player, selected = null) {
+    const now = performance.now();
     for (const skill of SKILLS) {
       const button = this.slots.get(skill.slot);
       const remaining = skillSystem.remaining(skill.slot);
       const overlay = button.querySelector(".cooldown");
       overlay.hidden = remaining <= 0.05;
       overlay.textContent = remaining > 0 ? remaining.toFixed(remaining < 1 ? 1 : 0) : "";
-      button.classList.toggle("unavailable", player.mana < skill.mana || !player.alive);
+      const check = skillSystem.canUse(skill, player);
+      const needsTarget = skill.target === "enemy" && !selected?.alive;
+      button.classList.toggle("unavailable", !check.ok);
+      button.classList.toggle("needs-target", needsTarget);
+      button.classList.toggle("flash", (this.flashUntil.get(skill.slot) || 0) > now);
+      button.title = !check.ok ? check.reason : (needsTarget ? "Hedef seç (TAB veya tıkla)" : skill.name);
     }
   }
 
