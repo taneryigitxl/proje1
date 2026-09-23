@@ -29,7 +29,7 @@ export class PlayerCombat {
       const desired=this.player.position.add(dir.scale(step));
       const dest=this.player.destination;
       if(!dest || BABYLON.Vector3.DistanceSquared(dest, desired)>1.0){
-        this.player.setDestination(desired, 0.45);
+        this.player.setDestination(desired, 0.45, { direct: true });
       }
       if(!this._approachToast||performance.now()-this._approachToast>1100){
         this._approachToast=performance.now();

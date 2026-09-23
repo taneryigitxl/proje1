@@ -1,5 +1,5 @@
 // Blade-cluster grass (no carpet tiles)
-import { GrassSystem } from "./GrassSystem.js?v=33";
+import { GrassSystem } from "./GrassSystem.js?v=34";
 
 /**
  * Dark medieval MMORPG test valley — Metin2-inspired atmosphere without rewriting gameplay systems.

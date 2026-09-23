@@ -20,7 +20,7 @@ page.on("console", (m) => {
 });
 page.on("pageerror", (e) => errors.push(String(e).slice(0, 400)));
 
-await page.goto("https://yigittaner.online/tora-online/?v=33", { waitUntil: "domcontentloaded", timeout: 90000 });
+await page.goto("https://yigittaner.online/tora-online/?v=34", { waitUntil: "domcontentloaded", timeout: 90000 });
 await sleep(1500);
 await page.screenshot({ path: `${OUT}/01-menu.png` });
 

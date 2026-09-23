@@ -1,4 +1,4 @@
-import { Entity } from "../entities/Entity.js?v=33";
+import { Entity } from "../entities/Entity.js?v=34";
 
 export class PlayerController extends Entity {
   constructor(visual, input, navigation, identity = {}) {
@@ -11,12 +11,14 @@ export class PlayerController extends Entity {
     this.buffs = { guard: 0, rage: 0 }; this.speedRatio = 0;
     this.root.getChildMeshes(false).forEach((mesh) => { mesh.metadata = { ...(mesh.metadata || {}), entityId: this.id, player: true }; mesh.isPickable = false; });
   }
-  setDestination(point, stopRange = .2) {
-    const destination = this.navigation.findReachable(this.position, point);
+  setDestination(point, stopRange = .2, { direct = false } = {}) {
+    const destination = direct
+      ? this.navigation.clamp(point.clone ? point.clone() : new BABYLON.Vector3(point.x, point.y, point.z))
+      : this.navigation.findReachable(this.position, point);
     const distance = BABYLON.Vector3.Distance(this.position, destination);
     this.destination = distance > stopRange ? destination : null;
     this.stopRange = stopRange;
-    this.destinationTimer = Math.min(14, Math.max(2, distance / 2.4 + 1.5));
+    this.destinationTimer = Math.min(16, Math.max(2.5, distance / 2.4 + 1.5));
     this.destinationStall = 0;
     this.previousDestinationDistance = distance;
   }
