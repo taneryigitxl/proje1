@@ -71,8 +71,9 @@ export class CharacterFace {
     const faceCard = BABYLON.MeshBuilder.CreateDisc("face-card", { radius: 0.11, tessellation: 28 }, scene);
     faceCard.material = skinMat;
     faceCard.parent = faceRoot;
-    faceCard.position.set(0, 0.01, 0.125);
+    faceCard.position.set(0, 0.015, 0.145);
     faceCard.rotation.x = Math.PI; // disc faces +Z after flip
+    faceCard.scaling.setAll(1.15);
     faceCard.isPickable = false;
 
     const browMat = new BABYLON.StandardMaterial("face-brow-mat", scene);

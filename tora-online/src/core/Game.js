@@ -1,21 +1,21 @@
-import { GAME_CONFIG, MOB_SPAWNS } from "./Config.js?v=29";
-import { AssetManager } from "./AssetManager.js?v=29";
-import { Navigation } from "../world/Navigation.js?v=29";
-import { TestMap } from "../world/TestMap.js?v=29";
-import { InputManager } from "../input/InputManager.js?v=29";
-import { CursorManager } from "../input/CursorManager.js?v=29";
-import { ThirdPersonCamera } from "../camera/ThirdPersonCamera.js?v=29";
-import { PlayerController } from "../player/PlayerController.js?v=29";
-import { PlayerAnimator } from "../player/PlayerAnimator.js?v=29";
-import { EntityManager } from "../entities/EntityManager.js?v=29";
-import { CombatSystem } from "../combat/CombatSystem.js?v=29";
-import { NetworkAdapter } from "../network/NetworkAdapter.js?v=29";
-import { HUD } from "../ui/HUD.js?v=29";
-import { ProgressionSystem } from "../progression/ProgressionSystem.js?v=29";
-import { StatsSystem } from "../progression/StatsSystem.js?v=29";
-import { InventorySystem } from "../progression/InventorySystem.js?v=29";
-import { LootSystem } from "../progression/LootSystem.js?v=29";
-import { AmbientAudio } from "../audio/AmbientAudio.js?v=29";
+import { GAME_CONFIG, MOB_SPAWNS } from "./Config.js?v=30";
+import { AssetManager } from "./AssetManager.js?v=30";
+import { Navigation } from "../world/Navigation.js?v=30";
+import { TestMap } from "../world/TestMap.js?v=30";
+import { InputManager } from "../input/InputManager.js?v=30";
+import { CursorManager } from "../input/CursorManager.js?v=30";
+import { ThirdPersonCamera } from "../camera/ThirdPersonCamera.js?v=30";
+import { PlayerController } from "../player/PlayerController.js?v=30";
+import { PlayerAnimator } from "../player/PlayerAnimator.js?v=30";
+import { EntityManager } from "../entities/EntityManager.js?v=30";
+import { CombatSystem } from "../combat/CombatSystem.js?v=30";
+import { NetworkAdapter } from "../network/NetworkAdapter.js?v=30";
+import { HUD } from "../ui/HUD.js?v=30";
+import { ProgressionSystem } from "../progression/ProgressionSystem.js?v=30";
+import { StatsSystem } from "../progression/StatsSystem.js?v=30";
+import { InventorySystem } from "../progression/InventorySystem.js?v=30";
+import { LootSystem } from "../progression/LootSystem.js?v=30";
+import { AmbientAudio } from "../audio/AmbientAudio.js?v=30";
 
 export class Game {
   constructor(runtime, onProgress = () => {}, onFatal = () => {}) {

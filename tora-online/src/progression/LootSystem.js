@@ -1,4 +1,4 @@
-import { ITEM_DEFS } from "./InventorySystem.js?v=29";
+import { ITEM_DEFS } from "./InventorySystem.js?v=30";
 
 const LOOT_TABLES = Object.freeze({
   "ashen-demon": [

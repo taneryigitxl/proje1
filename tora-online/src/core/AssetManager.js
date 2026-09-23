@@ -1,5 +1,5 @@
-import { CharacterFace } from "../player/CharacterFace.js?v=29";
-import { WeaponSheath } from "../player/WeaponSheath.js?v=29";
+import { CharacterFace } from "../player/CharacterFace.js?v=30";
+import { WeaponSheath } from "../player/WeaponSheath.js?v=30";
 
 export class AssetManager {
   constructor(scene, config, onProgress = () => {}) {
@@ -268,8 +268,8 @@ export class AssetManager {
       minY = Math.min(minY, bi.boundingBox.minimumWorld.y);
     });
     if (!Number.isFinite(minY)) return 0;
-    // Only lift when mesh hangs below root — never sink (that buried mobs)
-    return BABYLON.Scalar.Clamp(-minY + 0.02, 0, 0.45);
+    // Positive minY = mesh sits above root (float) → sink; negative = hangs below → lift
+    return BABYLON.Scalar.Clamp(-minY + 0.02, -0.4, 0.45);
   }
 
   async instantiateNpc(position, rotationY = 0) {

@@ -36,21 +36,21 @@ export class GrassSystem {
     this.budget = Math.max(100, Number(profile?.grass) || 220);
 
     const blades = this.#buildBladeCluster("grass-blades", [
-      new BABYLON.Color3(0.22, 0.38, 0.14),
-      new BABYLON.Color3(0.28, 0.44, 0.16),
-      new BABYLON.Color3(0.18, 0.34, 0.12),
+      new BABYLON.Color3(0.14, 0.26, 0.1),
+      new BABYLON.Color3(0.18, 0.3, 0.12),
+      new BABYLON.Color3(0.12, 0.22, 0.09),
     ]);
     const dry = this.#buildBladeCluster("grass-dry", [
-      new BABYLON.Color3(0.4, 0.34, 0.16),
-      new BABYLON.Color3(0.46, 0.38, 0.18),
-    ], 6);
+      new BABYLON.Color3(0.28, 0.26, 0.12),
+      new BABYLON.Color3(0.32, 0.28, 0.14),
+    ], 5);
 
     this.sources = [
       { mesh: blades, kind: "blades", weight: 0.75 },
       { mesh: dry, kind: "dry", weight: 0.25 },
     ];
 
-    const count = Math.min(420, this.budget + 120);
+    const count = Math.min(280, this.budget + 40);
     this.#plant(count);
     console.info(`[Tora Grass] Blade clusters only (no carpet): ${this.total} (budget ${this.budget}).`);
   }
@@ -67,11 +67,11 @@ export class GrassSystem {
       mat.emissiveColor = BABYLON.Color3.Black();
       mat.specularColor = BABYLON.Color3.Black();
       mat.backFaceCulling = false;
-      const h = 0.12 + random() * 0.14;
-      const w = 0.028 + random() * 0.018;
-      const blade = BABYLON.MeshBuilder.CreateBox(`${name}-b-${i}`, { width: w, height: h, depth: 0.008 }, this.scene);
+      const h = 0.07 + random() * 0.09;
+      const w = 0.014 + random() * 0.01;
+      const blade = BABYLON.MeshBuilder.CreateBox(`${name}-b-${i}`, { width: w, height: h, depth: 0.004 }, this.scene);
       blade.material = mat;
-      blade.position.set((random() - 0.5) * 0.14, h * 0.5, (random() - 0.5) * 0.14);
+      blade.position.set((random() - 0.5) * 0.09, h * 0.5, (random() - 0.5) * 0.09);
       blade.rotation.y = random() * Math.PI * 2;
       blade.rotation.z = (random() - 0.5) * 0.35;
       blade.rotation.x = (random() - 0.5) * 0.12;

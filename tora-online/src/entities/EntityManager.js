@@ -1,4 +1,4 @@
-import { Mob } from "./Mob.js?v=29";
+import { Mob } from "./Mob.js?v=30";
 
 export class EntityManager {
   constructor(scene, navigation, spawns, onDamage, visuals) {

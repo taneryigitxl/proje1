@@ -1,4 +1,4 @@
-import { SKILLS } from "../core/Config.js?v=29";
+import { SKILLS } from "../core/Config.js?v=30";
 
 export class SkillSystem {
   constructor() { this.skills = SKILLS; this.cooldowns = new Map(SKILLS.map((skill) => [skill.slot, 0])); }
