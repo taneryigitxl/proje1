@@ -11,7 +11,7 @@ const browser = await chromium.launch({
   args: ["--use-gl=angle", "--use-angle=swiftshader", "--ignore-gpu-blocklist"],
 });
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
-await page.goto("http://127.0.0.1:5173/?v=36", { waitUntil: "domcontentloaded", timeout: 90000 });
+await page.goto("http://127.0.0.1:5173/?v=37", { waitUntil: "domcontentloaded", timeout: 90000 });
 await page.fill("#login-username", "admin");
 await page.fill("#login-password", "2850");
 await page.click("#start-button");

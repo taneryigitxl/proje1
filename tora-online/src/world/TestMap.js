@@ -1,5 +1,5 @@
 // Blade-cluster grass (no carpet tiles)
-import { GrassSystem } from "./GrassSystem.js?v=36";
+import { GrassSystem } from "./GrassSystem.js?v=37";
 
 /**
  * Dark medieval MMORPG test valley — Metin2-inspired atmosphere without rewriting gameplay systems.
@@ -288,60 +288,58 @@ export class TestMap {
   }
 
   /**
-   * Main heightfield grass only — opaque repeating forest albedo tinted ~#3d7a32.
-   * Does not touch roads, water, props, or characters.
+   * Main heightfield grass only — opaque repeating green grass (#3d7a32).
+   * Prefers dedicated grass-tile.png, then forest pack, then painted fallback.
    */
   #grassGroundMaterial() {
     const name = "terrain-world";
-    const pack = this.assets?.manifest?.terrain?.forest;
     const tint = new BABYLON.Color3(0.239, 0.478, 0.196); // #3d7a32
     const material = new BABYLON.StandardMaterial(name, this.scene);
     material.disableLighting = false;
     material.transparencyMode = BABYLON.Material.MATERIAL_OPAQUE;
     material.alpha = 1;
     material.specularColor = BABYLON.Color3.Black();
-    material.ambientColor = new BABYLON.Color3(0.32, 0.42, 0.26);
-    material.emissiveColor = new BABYLON.Color3(0.03, 0.06, 0.02);
-    material.diffuseColor = new BABYLON.Color3(0.85, 1.05, 0.72); // lift albedo into #3d7a32 grass
+    material.ambientColor = new BABYLON.Color3(0.35, 0.48, 0.28);
+    material.emissiveColor = new BABYLON.Color3(0.04, 0.08, 0.02);
+    material.diffuseColor = new BABYLON.Color3(0.9, 1.15, 0.75);
+
+    const applyWrap = (tex, scale = 16) => {
+      tex.uScale = scale;
+      tex.vScale = scale;
+      tex.uOffset = 0.13;
+      tex.vOffset = 0.07;
+      tex.level = 1.4;
+      tex.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE;
+      tex.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
+      tex.hasAlpha = false;
+      return tex;
+    };
 
     const bindPainted = () => {
       const paint = this.#paintTerrainTexture(name, "grass", tint);
-      paint.uScale = 14;
-      paint.vScale = 14;
-      paint.level = 1.45;
-      paint.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE;
-      paint.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
-      material.diffuseTexture = paint;
+      material.diffuseTexture = applyWrap(paint, 14);
       material.diffuseColor = BABYLON.Color3.White();
+      material.emissiveColor = new BABYLON.Color3(0.06, 0.12, 0.03);
     };
 
-    if (pack?.albedo) {
-      const albedo = new BABYLON.Texture(pack.albedo, this.scene, false, true, undefined, undefined, () => {
-        console.warn(`[Tora Terrain] ${pack.albedo} yüklenemedi; boyalı çim kullanılıyor.`);
+    const grassTile = "assets/textures/terrain/grass-tile.png";
+    const forest = this.assets?.manifest?.terrain?.forest?.albedo;
+    const primary = grassTile;
+    const albedo = new BABYLON.Texture(primary, this.scene, false, true, undefined, undefined, () => {
+      console.warn(`[Tora Terrain] ${primary} yüklenemedi; yedek çim deneniyor.`);
+      if (forest) {
+        const fallback = new BABYLON.Texture(forest, this.scene, false, true, undefined, undefined, () => {
+          console.warn(`[Tora Terrain] ${forest} yüklenemedi; boyalı çim.`);
+          bindPainted();
+        });
+        material.diffuseTexture = applyWrap(fallback, 18);
+        material.diffuseColor = new BABYLON.Color3(0.55, 1.35, 0.45);
+      } else {
         bindPainted();
-      });
-      // High tiling so mid/far ground reads as grass, not a flat paint slab
-      albedo.uScale = 18;
-      albedo.vScale = 18;
-      albedo.uOffset = 0.17;
-      albedo.vOffset = 0.09;
-      albedo.level = 1.35;
-      albedo.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE;
-      albedo.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
-      albedo.hasAlpha = false;
-      material.diffuseTexture = albedo;
-      if (pack.normal) {
-        const bump = new BABYLON.Texture(pack.normal, this.scene, false, true);
-        bump.level = 0.55;
-        bump.uScale = albedo.uScale;
-        bump.vScale = albedo.vScale;
-        bump.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE;
-        bump.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
-        material.bumpTexture = bump;
       }
-    } else {
-      bindPainted();
-    }
+    });
+    material.diffuseTexture = applyWrap(albedo, 16);
+    material.diffuseColor = new BABYLON.Color3(1.05, 1.2, 0.85);
     return material;
   }
 

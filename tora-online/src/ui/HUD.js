@@ -1,6 +1,6 @@
-import { SkillBar } from "./SkillBar.js?v=36";
-import { TargetFrame } from "./TargetFrame.js?v=36";
-import { ITEM_DEFS } from "../progression/InventorySystem.js?v=36";
+import { SkillBar } from "./SkillBar.js?v=37";
+import { TargetFrame } from "./TargetFrame.js?v=37";
+import { ITEM_DEFS } from "../progression/InventorySystem.js?v=37";
 
 function itemName(id) {
   return ITEM_DEFS[id]?.name || id || "—";

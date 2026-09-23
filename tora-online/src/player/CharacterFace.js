@@ -58,15 +58,25 @@ export class CharacterFace {
       cheek.isPickable = false;
     }
 
-    // Primary readable face — larger card pushed forward of the skull
+    // PRIMARY visible face: painted disc — flip so albedo faces character forward (+Z after bone)
     const faceCard = BABYLON.MeshBuilder.CreateDisc("face-card", { radius: 0.14, tessellation: 32 }, scene);
     faceCard.material = cardMat;
     faceCard.parent = faceRoot;
     faceCard.position.set(0, 0.015, 0.135);
-    // Disc in XY faces +Z by default; keep painted side toward camera-forward (+Z local)
-    faceCard.rotation.x = 0;
+    faceCard.rotation.x = Math.PI; // CreateDisc faces +Z; flip so paint reads from play camera
     faceCard.scaling.set(1.15, 1.22, 1);
     faceCard.isPickable = false;
+
+    // Also stamp portrait onto the head sphere so features read even if disc seating is off
+    const headPaintMat = new BABYLON.StandardMaterial("face-head-paint-mat", scene);
+    headPaintMat.diffuseTexture = faceTex;
+    headPaintMat.emissiveTexture = faceTex;
+    headPaintMat.diffuseTexture.level = 1.15;
+    headPaintMat.emissiveTexture.level = 0.45;
+    headPaintMat.diffuseColor = new BABYLON.Color3(1, 1, 1);
+    headPaintMat.emissiveColor = new BABYLON.Color3(0.14, 0.09, 0.05);
+    headPaintMat.specularColor = BABYLON.Color3.Black();
+    head.material = headPaintMat;
 
     const noseMat = new BABYLON.StandardMaterial("face-nose-mat", scene);
     noseMat.diffuseColor = new BABYLON.Color3(0.48, 0.3, 0.2);
