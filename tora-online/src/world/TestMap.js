@@ -1,5 +1,5 @@
 // Blade-cluster grass (no carpet tiles)
-import { GrassSystem } from "./GrassSystem.js?v=40";
+import { GrassSystem } from "./GrassSystem.js?v=41";
 
 /**
  * Dark medieval MMORPG test valley — Metin2-inspired atmosphere without rewriting gameplay systems.
@@ -295,14 +295,13 @@ export class TestMap {
     const name = "terrain-world";
     const tint = new BABYLON.Color3(0.239, 0.478, 0.196); // #3d7a32
     const material = new BABYLON.StandardMaterial(name, this.scene);
-    material.disableLighting = false;
+    material.disableLighting = true;
     material.transparencyMode = BABYLON.Material.MATERIAL_OPAQUE;
     material.alpha = 1;
     material.specularColor = BABYLON.Color3.Black();
-    material.ambientColor = new BABYLON.Color3(0.4, 0.55, 0.32);
-    // Strong green emissive so fog / low-end GL still reads grass, not gray slab
-    material.emissiveColor = new BABYLON.Color3(0.1, 0.22, 0.06);
-    material.diffuseColor = new BABYLON.Color3(1.1, 1.35, 0.9);
+    material.ambientColor = new BABYLON.Color3(0.24, 0.48, 0.2);
+    material.emissiveColor = new BABYLON.Color3(1, 1, 1);
+    material.diffuseColor = new BABYLON.Color3(1, 1, 1);
 
     // Mesh UVs already span ~10 tiles across the valley. Extra uScale must stay
     // low or the pattern averages to a flat gray-green at camera distance.
@@ -342,10 +341,9 @@ export class TestMap {
       }
     });
     material.diffuseTexture = applyWrap(albedo, 2.4);
-    // Do not share the diffuse texture as emissive — setting emissive.level
-    // would also dim the albedo (same Texture object) and the ground reads gray.
-    material.emissiveTexture = null;
-    material.diffuseColor = new BABYLON.Color3(0.95, 1.25, 0.78);
+    const glow = new BABYLON.Texture(primary, this.scene, false, true);
+    material.emissiveTexture = applyWrap(glow, 2.4);
+    material.diffuseColor = BABYLON.Color3.White();
     return material;
   }
 

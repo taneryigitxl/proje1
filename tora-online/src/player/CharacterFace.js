@@ -62,10 +62,11 @@ export class CharacterFace {
     // portrait is not crushed into a dark blob by the hood shadow.
     cardMat.disableLighting = true;
     cardMat.emissiveTexture.level = 0.9;
-    const faceCard = BABYLON.MeshBuilder.CreatePlane("face-card", { width: 0.2, height: 0.24 }, scene);
+    const faceCard = BABYLON.MeshBuilder.CreatePlane("face-card", { width: 0.26, height: 0.3 }, scene);
     faceCard.material = cardMat;
     faceCard.parent = faceRoot;
-    faceCard.position.set(0, 0.02, 0.15);
+    faceCard.position.set(0, 0.02, 0.16);
+    faceCard.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
     faceCard.isPickable = false;
     // Head stays a solid dark-brown volume. Spherical UVs smear the portrait into a blot.
 

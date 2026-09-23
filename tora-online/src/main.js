@@ -1,5 +1,5 @@
-import { EngineRuntime } from "./core/Engine.js?v=40";
-import { Game } from "./core/Game.js?v=40";
+import { EngineRuntime } from "./core/Engine.js?v=41";
+import { Game } from "./core/Game.js?v=41";
 
 if (window.__TORA_BOOTSTRAP__) {
   console.warn("[Tora Startup] İkinci bootstrap isteği engellendi; mevcut oyun instance korunuyor.");
