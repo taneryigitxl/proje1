@@ -341,10 +341,11 @@ export class TestMap {
         bindPainted();
       }
     });
-    material.diffuseTexture = applyWrap(albedo, 16);
-    material.emissiveTexture = material.diffuseTexture;
-    material.emissiveTexture.level = 0.35;
-    material.diffuseColor = new BABYLON.Color3(1.1, 1.35, 0.9);
+    material.diffuseTexture = applyWrap(albedo, 2.4);
+    // Do not share the diffuse texture as emissive — setting emissive.level
+    // would also dim the albedo (same Texture object) and the ground reads gray.
+    material.emissiveTexture = null;
+    material.diffuseColor = new BABYLON.Color3(0.95, 1.25, 0.78);
     return material;
   }
 
