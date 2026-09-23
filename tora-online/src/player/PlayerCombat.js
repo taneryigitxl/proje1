@@ -20,10 +20,18 @@ export class PlayerCombat {
     const distance=target?BABYLON.Vector3.Distance(this.player.position,target.position):0;
     if(skill.target==="enemy"&&distance>skill.range){
       const dir=target.position.subtract(this.player.position);dir.y=0;
-      if(dir.lengthSquared()<1e-6)return;
-      const destination=target.position.subtract(dir.normalize().scale(Math.max(1.6,skill.range-.4)));
-      this.player.setDestination(destination,.22);
-      if(!this._approachToast||performance.now()-this._approachToast>900){
+      const len=dir.length();
+      if(len<1e-4)return;
+      dir.scaleInPlace(1/len);
+      // Short direct step toward target — findReachable to full goal often stalls on props
+      const need=Math.max(0.6, len - Math.max(1.5, skill.range - 0.35));
+      const step=Math.min(need, 5.5);
+      const desired=this.player.position.add(dir.scale(step));
+      const dest=this.player.destination;
+      if(!dest || BABYLON.Vector3.DistanceSquared(dest, desired)>1.0){
+        this.player.setDestination(desired, 0.45);
+      }
+      if(!this._approachToast||performance.now()-this._approachToast>1100){
         this._approachToast=performance.now();
         this.callbacks.onStatus?.(`${target.name} menziline giriliyor…`);
       }

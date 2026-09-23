@@ -1,4 +1,4 @@
-import { Entity } from "../entities/Entity.js?v=32";
+import { Entity } from "../entities/Entity.js?v=33";
 
 export class PlayerController extends Entity {
   constructor(visual, input, navigation, identity = {}) {
@@ -37,9 +37,9 @@ export class PlayerController extends Entity {
       direction = this.destination.subtract(this.position); direction.y = 0;
       const remaining = direction.length();
       this.destinationTimer -= dt;
-      this.destinationStall = remaining >= this.previousDestinationDistance - .005 ? this.destinationStall + dt : 0;
+      this.destinationStall = remaining >= this.previousDestinationDistance - .01 ? this.destinationStall + dt : 0;
       this.previousDestinationDistance = remaining;
-      if (remaining <= this.stopRange || this.destinationTimer <= 0 || this.destinationStall > .75) { this.cancelDestination(); direction.setAll(0); }
+      if (remaining <= this.stopRange || this.destinationTimer <= 0 || this.destinationStall > 1.4) { this.cancelDestination(); direction.setAll(0); }
     }
     if (this.actionLocked) direction.setAll(0);
     if (direction.lengthSquared() > .001) direction.normalize();

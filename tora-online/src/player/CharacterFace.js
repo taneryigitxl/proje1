@@ -166,12 +166,10 @@ export class CharacterFace {
 
     if (headBone && skinnedMesh) {
       faceRoot.attachToBone(headBone, skinnedMesh);
-      // Historical seating: Head bone local +Z often points into the skull /
-      // hood cavity. Math.PI yaw flips the face-card out through the hood opening
-      // toward character forward (+Z world when idle facing +Z).
-      faceRoot.position.set(0.05, 0.04, 0.02);
-      faceRoot.rotation.set(0.05, Math.PI, 0);
-      faceRoot.scaling.setAll(1.05);
+      // Seat in hood opening; face-card at local +Z. If features face into skull, flip yaw.
+      faceRoot.position.set(0, 0.06, 0.1);
+      faceRoot.rotation.set(0.08, 0, 0);
+      faceRoot.scaling.setAll(1.08);
       console.info(`[Tora Face] Boyalı yüz '${headBone.name}' kemiğine bağlandı (hood mesh gizlendi).`);
     } else {
       faceRoot.parent = root;
