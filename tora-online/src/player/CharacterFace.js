@@ -58,25 +58,16 @@ export class CharacterFace {
       cheek.isPickable = false;
     }
 
-    // PRIMARY visible face: painted disc — flip so albedo faces character forward (+Z after bone)
-    const faceCard = BABYLON.MeshBuilder.CreateDisc("face-card", { radius: 0.14, tessellation: 32 }, scene);
+    // PRIMARY visible face: plane faces +Z (character forward). Unlit so the
+    // portrait is not crushed into a dark blob by the hood shadow.
+    cardMat.disableLighting = true;
+    cardMat.emissiveTexture.level = 0.9;
+    const faceCard = BABYLON.MeshBuilder.CreatePlane("face-card", { width: 0.2, height: 0.24 }, scene);
     faceCard.material = cardMat;
     faceCard.parent = faceRoot;
-    faceCard.position.set(0, 0.015, 0.135);
-    faceCard.rotation.x = Math.PI; // CreateDisc faces +Z; flip so paint reads from play camera
-    faceCard.scaling.set(1.15, 1.22, 1);
+    faceCard.position.set(0, 0.02, 0.15);
     faceCard.isPickable = false;
-
-    // Also stamp portrait onto the head sphere so features read even if disc seating is off
-    const headPaintMat = new BABYLON.StandardMaterial("face-head-paint-mat", scene);
-    headPaintMat.diffuseTexture = faceTex;
-    headPaintMat.emissiveTexture = faceTex;
-    headPaintMat.diffuseTexture.level = 1.15;
-    headPaintMat.emissiveTexture.level = 0.45;
-    headPaintMat.diffuseColor = new BABYLON.Color3(1, 1, 1);
-    headPaintMat.emissiveColor = new BABYLON.Color3(0.14, 0.09, 0.05);
-    headPaintMat.specularColor = BABYLON.Color3.Black();
-    head.material = headPaintMat;
+    // Head stays a solid dark-brown volume. Spherical UVs smear the portrait into a blot.
 
     const noseMat = new BABYLON.StandardMaterial("face-nose-mat", scene);
     noseMat.diffuseColor = new BABYLON.Color3(0.48, 0.3, 0.2);

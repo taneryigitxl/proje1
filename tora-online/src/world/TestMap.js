@@ -1,5 +1,5 @@
 // Blade-cluster grass (no carpet tiles)
-import { GrassSystem } from "./GrassSystem.js?v=39";
+import { GrassSystem } from "./GrassSystem.js?v=40";
 
 /**
  * Dark medieval MMORPG test valley — Metin2-inspired atmosphere without rewriting gameplay systems.
@@ -304,12 +304,14 @@ export class TestMap {
     material.emissiveColor = new BABYLON.Color3(0.1, 0.22, 0.06);
     material.diffuseColor = new BABYLON.Color3(1.1, 1.35, 0.9);
 
-    const applyWrap = (tex, scale = 16) => {
+    // Mesh UVs already span ~10 tiles across the valley. Extra uScale must stay
+    // low or the pattern averages to a flat gray-green at camera distance.
+    const applyWrap = (tex, scale = 2.4) => {
       tex.uScale = scale;
       tex.vScale = scale;
       tex.uOffset = 0.13;
       tex.vOffset = 0.07;
-      tex.level = 1.4;
+      tex.level = 1.65;
       tex.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE;
       tex.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
       tex.hasAlpha = false;

@@ -7,7 +7,7 @@ import { mkdirSync, writeFileSync, copyFileSync } from "fs";
 const OUT = "/opt/cursor/artifacts/hardening-accept";
 mkdirSync(OUT, { recursive: true });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const URL = process.env.TORA_URL || "http://127.0.0.1:4173/?v=39";
+const URL = process.env.TORA_URL || "http://127.0.0.1:4173/?v=40";
 
 const browser = await chromium.launch({
   headless: true,
