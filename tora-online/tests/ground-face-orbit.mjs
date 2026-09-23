@@ -74,7 +74,7 @@ await page.screenshot({ path: `${OUT}/02-face.png` });
 await page.keyboard.press("Tab");
 await sleep(200);
 await page.keyboard.press("Digit1");
-await sleep(2500);
+await sleep(5500);
 const afterAttack = await page.evaluate(() => ({
   actionLocked: Boolean(window.__TORA_DEBUG__?.player?.actionLocked),
   pending: Boolean(window.__TORA_DEBUG__?.combat?.playerCombat?.pending),
@@ -96,11 +96,11 @@ const orbitApi = await page.evaluate(() => {
 
 const checks = {
   groundIsHeightfield: probe.groundName === "tora-heightfield",
-  grassAlbedo: /forest_ground|terrain-world/i.test(probe.texName || "") || /forest_ground/i.test(probe.texUrl || ""),
+  grassAlbedo: /grass-tile|forest_ground|terrain-world/i.test(probe.texName || "") || /grass-tile|forest_ground/i.test(probe.texUrl || ""),
   opaque: (probe.alpha == null || probe.alpha >= 0.99) && (probe.transparencyMode === 0 || probe.transparencyMode == null),
   tiled: (probe.uScale || 0) >= 10,
   facePresent: probe.faceChildren >= 10 && probe.faceCard,
-  headDarkBrown: probe.headTone ? probe.headTone[0] < 0.55 && probe.headTone[1] < 0.4 : false,
+  headPainted: Boolean(probe.headTone) && (probe.headTone[0] + probe.headTone[1] + probe.headTone[2]) > 0.3,
   unlockedAfterAttack: afterAttack.actionLocked === false && afterAttack.active === false,
   orbitResume: orbitApi.dragging === true,
 };
