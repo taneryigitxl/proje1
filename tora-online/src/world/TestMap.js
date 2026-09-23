@@ -1,5 +1,5 @@
 // Blade-cluster grass (no carpet tiles)
-import { GrassSystem } from "./GrassSystem.js?v=37";
+import { GrassSystem } from "./GrassSystem.js?v=38";
 
 /**
  * Dark medieval MMORPG test valley — Metin2-inspired atmosphere without rewriting gameplay systems.
@@ -299,9 +299,10 @@ export class TestMap {
     material.transparencyMode = BABYLON.Material.MATERIAL_OPAQUE;
     material.alpha = 1;
     material.specularColor = BABYLON.Color3.Black();
-    material.ambientColor = new BABYLON.Color3(0.35, 0.48, 0.28);
-    material.emissiveColor = new BABYLON.Color3(0.04, 0.08, 0.02);
-    material.diffuseColor = new BABYLON.Color3(0.9, 1.15, 0.75);
+    material.ambientColor = new BABYLON.Color3(0.4, 0.55, 0.32);
+    // Strong green emissive so fog / low-end GL still reads grass, not gray slab
+    material.emissiveColor = new BABYLON.Color3(0.1, 0.22, 0.06);
+    material.diffuseColor = new BABYLON.Color3(1.1, 1.35, 0.9);
 
     const applyWrap = (tex, scale = 16) => {
       tex.uScale = scale;
@@ -339,7 +340,9 @@ export class TestMap {
       }
     });
     material.diffuseTexture = applyWrap(albedo, 16);
-    material.diffuseColor = new BABYLON.Color3(1.05, 1.2, 0.85);
+    material.emissiveTexture = material.diffuseTexture;
+    material.emissiveTexture.level = 0.35;
+    material.diffuseColor = new BABYLON.Color3(1.1, 1.35, 0.9);
     return material;
   }
 
