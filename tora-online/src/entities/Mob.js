@@ -1,5 +1,5 @@
-import { Entity } from "./Entity.js?v=30";
-import { DamageSystem } from "../combat/DamageSystem.js?v=30";
+import { Entity } from "./Entity.js?v=31";
+import { DamageSystem } from "../combat/DamageSystem.js?v=31";
 
 export class Mob extends Entity {
   constructor(scene, spawn, index, navigation, onDamage, visual) {
@@ -36,11 +36,14 @@ export class Mob extends Entity {
     this.respawnTimer = 0;
     this.buffs = {};
     this.aggro = false;
+    this._feetFrames = 0;
     this.root.getChildMeshes(false).forEach((mesh) => {
       mesh.metadata = { ...(mesh.metadata || {}), entityId: this.id, mob: true };
       mesh.isPickable = true;
     });
     this.#play("idle", true);
+    // Bind-pose AABB can differ from idle — re-seat feet after first anim samples
+    setTimeout(() => this.#snapFeetToGround(), 120);
   }
 
   update(dt, player) {
@@ -160,6 +163,28 @@ export class Mob extends Entity {
     this.respawnTimer = 0;
     this.wanderTarget = null;
     this.#play("idle", true, true);
+    setTimeout(() => this.#snapFeetToGround(), 80);
+  }
+
+  #snapFeetToGround() {
+    if (!this.root || !this.alive) return;
+    this.root.computeWorldMatrix(true);
+    let minY = Infinity;
+    this.root.getChildMeshes(false).forEach((mesh) => {
+      const name = (mesh.name || "").toLowerCase();
+      if (name.includes("axe") || name.includes("club") || name.includes("weapon")) return;
+      mesh.computeWorldMatrix(true);
+      try { mesh.refreshBoundingInfo?.(true); } catch (_) { /* ok */ }
+      const y = mesh.getBoundingInfo?.()?.boundingBox?.minimumWorld?.y;
+      if (Number.isFinite(y)) minY = Math.min(minY, y);
+    });
+    if (!Number.isFinite(minY)) return;
+    const ground = this.navigation.heightAt(this.position.x, this.position.z);
+    if (!Number.isFinite(ground)) return;
+    this.position.y += (ground + 0.02) - minY;
+    this.footOffset = this.position.y - ground;
+    this.home.y = this.position.y;
+    this.spawn.y = this.position.y;
   }
 
   #move(direction, speed, dt) {

@@ -213,6 +213,17 @@ export class CharacterFace {
         console.info(`[Tora Face] Hood mesh gizlendi: ${mesh.name} (verts=${mesh.getTotalVertices?.() || 0})`);
       }
     });
+
+    // Hide leftover pale head shells that aren't our procedural face
+    root.getChildMeshes?.(false)?.forEach((mesh) => {
+      const name = (mesh.name || "").toLowerCase();
+      if (name.startsWith("face-")) return;
+      if (!/head|face|skull|cranial/i.test(name) && mesh.getTotalVertices?.() > 800) return;
+      if (/head|face|skull/i.test(name) && !name.includes("hair") && !name.includes("ear")) {
+        hide(mesh);
+        console.info(`[Tora Face] Ek kafa mesh gizlendi: ${mesh.name}`);
+      }
+    });
   }
 
   static #paintFaceTexture(scene) {

@@ -1,5 +1,5 @@
 // Blade-cluster grass (no carpet tiles)
-import { GrassSystem } from "./GrassSystem.js?v=30";
+import { GrassSystem } from "./GrassSystem.js?v=31";
 
 /**
  * Dark medieval MMORPG test valley — Metin2-inspired atmosphere without rewriting gameplay systems.
@@ -211,19 +211,20 @@ export class TestMap {
     data.normals = normals;
     data.uvs = uvs;
     data.applyToMesh(ground);
-    // High-contrast painted grass so mid-distance never reads as flat olive void
-    ground.material = this.#paintedGround("terrain-world", "grass", new BABYLON.Color3(0.32, 0.55, 0.24), false);
+    // Prefer forest albedo (real JPG) with vivid green grade — painted-only read as flat olive voids in play
+    ground.material = this.#terrainMaterial("terrain-world", "grass", new BABYLON.Color3(0.35, 0.62, 0.28), false);
     if (ground.material?.diffuseTexture) {
-      ground.material.diffuseTexture.uScale = 3.8;
-      ground.material.diffuseTexture.vScale = 3.8;
-      ground.material.diffuseTexture.level = 1.55;
+      ground.material.diffuseTexture.uScale = 4.2;
+      ground.material.diffuseTexture.vScale = 4.2;
+      ground.material.diffuseTexture.level = 1.65;
       ground.material.diffuseTexture.wrapU = BABYLON.Texture.WRAP_ADDRESSMODE;
       ground.material.diffuseTexture.wrapV = BABYLON.Texture.WRAP_ADDRESSMODE;
     }
     if (ground.material) {
-      ground.material.diffuseColor = BABYLON.Color3.White();
-      ground.material.emissiveColor = new BABYLON.Color3(0.04, 0.07, 0.02);
-      ground.material.ambientColor = new BABYLON.Color3(0.35, 0.42, 0.28);
+      // Force a readable green grade even if pack albedo is brown dirt
+      ground.material.diffuseColor = new BABYLON.Color3(0.55, 1.15, 0.48);
+      ground.material.emissiveColor = new BABYLON.Color3(0.06, 0.12, 0.04);
+      ground.material.ambientColor = new BABYLON.Color3(0.32, 0.42, 0.26);
     }
     ground.receiveShadows = true;
     ground.checkCollisions = true;
@@ -313,14 +314,14 @@ export class TestMap {
         ? new BABYLON.Color3(1.35, 1.15, 0.92)
         : kind === "rock"
           ? new BABYLON.Color3(1.2, 1.15, 1.05)
-          : new BABYLON.Color3(1.25, 1.45, 0.95);
-      material.ambientColor = new BABYLON.Color3(0.58, 0.6, 0.5);
+          : new BABYLON.Color3(0.7, 1.35, 0.55);
+      material.ambientColor = new BABYLON.Color3(0.45, 0.5, 0.4);
       material.specularColor = BABYLON.Color3.Black();
       material.emissiveColor = kind === "mud"
         ? new BABYLON.Color3(0.12, 0.08, 0.04)
         : kind === "rock"
           ? new BABYLON.Color3(0.08, 0.08, 0.07)
-          : new BABYLON.Color3(0.1, 0.16, 0.06);
+          : new BABYLON.Color3(0.08, 0.18, 0.05);
       const paintedKind = kind === "mud" ? "mud" : kind === "rock" ? "rock" : "grass";
       const albedo = new BABYLON.Texture(pack.albedo, this.scene, false, true, undefined, undefined, () => {
         console.warn(`[Tora Terrain] ${pack.albedo} yüklenemedi; boyalı zemin kullanılıyor.`);
