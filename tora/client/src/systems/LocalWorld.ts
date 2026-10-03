@@ -131,7 +131,7 @@ export class LocalWorld {
         mob.attackAt = now + 1100;
         const dealt = Math.max(1, def.damage - 1);
         player.health = Math.max(0, player.health - dealt);
-        emit({ effect: "hit", x: player.x, y: player.y, x2: mob.x, y2: mob.y, amount: dealt, crit: false, name: def.name, targetId: mob.id });
+        emit({ effect: "hit", x: mob.x, y: mob.y, x2: player.x, y2: player.y, amount: dealt, crit: false, name: def.name, targetId: this.character.id });
       }
     }
     if (now > this.actionUntil && player.anim !== "death") player.anim = "idle";
@@ -155,6 +155,10 @@ export class LocalWorld {
     const classId = (this.character.classId || "warrior") as ClassId;
     if (!skill || !CLASSES[classId].skills.includes(skillId)) return;
     if (player.mana < skill.mana || (this.cooldowns.get(skillId) ?? 0) > now) return;
+    const targets = skill.effect === "spin"
+      ? this.mobs.filter((mob) => mob.alive && Math.hypot(mob.x - player.x, mob.y - player.y) <= skill.range)
+      : this.mobs.filter((mob) => mob.id === mobId && mob.alive && Math.hypot(mob.x - player.x, mob.y - player.y) <= skill.range + 10);
+    if (skill.heal === 0 && targets.length === 0) return;
     player.mana -= skill.mana;
     this.cooldowns.set(skillId, now + skill.cooldown);
     player.anim = "skill";
@@ -164,9 +168,6 @@ export class LocalWorld {
       emit({ effect: skill.effect, x: player.x, y: player.y, x2: player.x, y2: player.y, amount: skill.heal, crit: false, name: skill.name });
       return;
     }
-    const targets = skill.effect === "spin"
-      ? this.mobs.filter((mob) => mob.alive && Math.hypot(mob.x - player.x, mob.y - player.y) <= skill.range)
-      : this.mobs.filter((mob) => mob.id === mobId && mob.alive && Math.hypot(mob.x - player.x, mob.y - player.y) <= skill.range + 10);
     for (const mob of targets) {
       const hit = rollDamage(this.stats(), skill.power, MOBS[mob.kind].defense, Math.random(), Math.random());
       this.hurt(mob, hit.amount, now);

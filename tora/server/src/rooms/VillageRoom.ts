@@ -174,7 +174,7 @@ export class VillageRoom extends Room<VillageRoomState, unknown, unknown, AuthCh
     const dt = Math.min(Math.max(deltaMs, 0), 100) / 1000;
     const { collision } = loadVillageMap();
     this.state.players.forEach((player, sessionId) => {
-      const input = this.inputs.get(sessionId) ?? EMPTY_INPUT;
+      const input = player.health > 0 ? this.inputs.get(sessionId) ?? EMPTY_INPUT : EMPTY_INPUT;
       const facing = isDirection(player.facing) ? player.facing : "down";
       const fighter = this.fighters.get(sessionId);
       const speed = fighter && player.mounted ? 1.45 : 1;
@@ -185,12 +185,17 @@ export class VillageRoom extends Room<VillageRoomState, unknown, unknown, AuthCh
       player.moving = next.moving;
       player.running = next.moving && input.running;
       const now = Date.now();
-      if (player.health <= 0 && (!fighter || now > fighter.actionUntil)) {
-        player.health = player.maxHealth;
-        player.mana = player.maxMana;
-        player.x = loadVillageMap().spawn.x;
-        player.y = loadVillageMap().spawn.y;
-        player.anim = "idle";
+      if (player.health <= 0) {
+        if (fighter && fighter.respawnAt === 0) fighter.respawnAt = now + 1400;
+        player.anim = "death";
+        if (!fighter || now >= fighter.respawnAt) {
+          player.health = player.maxHealth;
+          player.mana = player.maxMana;
+          player.x = loadVillageMap().spawn.x;
+          player.y = loadVillageMap().spawn.y;
+          player.anim = "idle";
+          if (fighter) fighter.respawnAt = 0;
+        }
       } else if (!fighter || now > fighter.actionUntil) {
         player.anim = player.moving ? (player.running || player.mounted ? "run" : "walk") : "idle";
       }
@@ -204,8 +209,10 @@ export class VillageRoom extends Room<VillageRoomState, unknown, unknown, AuthCh
     const player = this.state.players.get(client.sessionId);
     const fighter = this.fighters.get(client.sessionId);
     if (!player || !fighter || !mobId) return;
+    const previousGold = fighter.gold;
     const error = playerAttack(mobId, fighter, player, this.mobs, Date.now(), (fx) => this.broadcast("fx", fx));
     if (error) client.send("system", { text: error });
+    if (fighter.gold > previousGold) this.announceReward(client, player, fighter, fighter.gold - previousGold);
     syncMobs(this.state.mobs, this.mobs);
   }
 
@@ -215,9 +222,18 @@ export class VillageRoom extends Room<VillageRoomState, unknown, unknown, AuthCh
     const player = this.state.players.get(client.sessionId);
     const fighter = this.fighters.get(client.sessionId);
     if (!player || !fighter || !skillId) return;
+    const previousGold = fighter.gold;
     const error = playerSkill(client.sessionId, skillId, mobId, fighter, player, this.mobs, loadVillageMap().collision, Date.now(), (fx) => this.broadcast("fx", fx));
     if (error) client.send("system", { text: error });
+    if (fighter.gold > previousGold) this.announceReward(client, player, fighter, fighter.gold - previousGold);
     syncMobs(this.state.mobs, this.mobs);
+  }
+
+  private announceReward(client: Client, player: NetPlayerState, fighter: Fighter, gold: number): void {
+    this.broadcast("fx", { effect: "reward", x: player.x, y: player.y, x2: player.x, y2: player.y, amount: gold, crit: false, targetId: client.sessionId, name: "Altın" });
+    void readBag(player.characterId)
+      .then((items) => client.send("bag", bagPayload(items, fighter)))
+      .catch((error) => logger.error("Reward bag sync failed", error));
   }
 
   private async onEquip(client: Client, message: unknown): Promise<void> {

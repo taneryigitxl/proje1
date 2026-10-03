@@ -103,7 +103,7 @@ export function boot(): void {
     KeyQ: "quests",
     KeyM: "map",
   };
-  document.querySelectorAll<HTMLButtonElement>("[data-panel]").forEach((button) => {
+  document.querySelectorAll<HTMLButtonElement>(".menu-bar button[data-panel]").forEach((button) => {
     button.addEventListener("click", () => {
       const id = button.dataset.panel;
       if (id === "character" || id === "inventory" || id === "skills" || id === "quests" || id === "map" || id === "settings" || id === "guild") {
@@ -293,8 +293,18 @@ export function boot(): void {
       sendChat: () => undefined,
       leaveWorld: async () => undefined,
       onBag: (payload) => {
-        const bag = payload as { items?: Array<{ itemId: string; quantity: number; equipped: boolean }>; quest?: string };
+        const bag = payload as { items?: Array<{ itemId: string; quantity: number; equipped: boolean }>; quest?: string; fighter?: { weaponId?: string; gold?: number; experience?: number; statPoints?: number } };
         setSessionBag(bag.items ?? [], bag.quest ?? "");
+        if (character && bag.fighter) {
+          if (bag.fighter.weaponId) character.weaponId = bag.fighter.weaponId;
+          if (typeof bag.fighter.gold === "number") {
+            character.gold = bag.fighter.gold;
+            requireElement<HTMLElement>("gold-text").textContent = String(character.gold);
+          }
+          if (typeof bag.fighter.experience === "number") character.experience = bag.fighter.experience;
+          if (typeof bag.fighter.statPoints === "number") character.statPoints = bag.fighter.statPoints;
+        }
+        panels.refresh();
       },
     };
     if (offline) {
@@ -371,6 +381,7 @@ export function boot(): void {
   function renderChoices(): void {
     mountChoices("class-options", CLASS_IDS, classId, (value) => {
       classId = value;
+      void refreshPortrait();
     }, (value) => CLASSES[value].name);
     mountChoices("body-options", BODY_TYPES, body, (value) => {
       body = value;

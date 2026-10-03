@@ -1,4 +1,5 @@
-import { CLASSES, ITEMS, derivedStats, type ClassId, type PublicCharacter } from "@tora/shared";
+import { CLASSES, ITEMS, SKILLS, derivedStats, type ClassId, type PublicCharacter } from "@tora/shared";
+import { assetUrl } from "../config";
 import { sessionBag } from "./session";
 import { audio, type AudioChannel } from "../audio/AudioManager";
 
@@ -28,6 +29,7 @@ export function createPanels(getCharacter: () => PublicCharacter | null): {
   toggle: (id: PanelId) => void;
   close: () => void;
   isOpen: () => boolean;
+  refresh: () => void;
 } {
   const layerNode = document.getElementById("panel-layer");
   if (!(layerNode instanceof HTMLElement)) throw new Error("Panel katmanı yok.");
@@ -81,14 +83,27 @@ export function createPanels(getCharacter: () => PublicCharacter | null): {
     layer.hidden = false;
   }
 
-  return { toggle, close, isOpen: () => open !== null };
+  function refresh(): void {
+    if (!open) return;
+    const body = windows.get(open)?.querySelector<HTMLElement>(".panel-body");
+    if (!body) return;
+    if (open === "inventory") fillInventory(body);
+    else if (open === "character") fillCharacter(body, getCharacter());
+    else if (open === "quests") fillQuests(body);
+  }
+
+  return { toggle, close, isOpen: () => open !== null, refresh };
 }
 
 function fillStatic(windows: Map<PanelId, HTMLElement>): void {
   windows.get("inventory")!.querySelector(".panel-body")!.id = "inventory-body";
   windows.get("skills")!.querySelector(".panel-body")!.id = "skills-body";
   windows.get("quests")!.querySelector(".panel-body")!.id = "quests-body";
-  windows.get("map")!.querySelector(".panel-body")!.append(note("Dünya haritası bir sonraki harita ile açılacak. Şimdilik sağ üstteki küçük haritayı kullan."));
+  const mapPreview = document.createElement("img");
+  mapPreview.className = "panel-map";
+  mapPreview.src = assetUrl("illustrated/tora-village.png");
+  mapPreview.alt = "Tora Köyü haritası";
+  windows.get("map")!.querySelector(".panel-body")!.append(mapPreview);
   windows.get("guild")!.querySelector(".panel-body")!.append(note("Lonca kurma ve üyelik henüz açık değil."));
 
   const settings = windows.get("settings")!.querySelector(".panel-body")!;
@@ -173,8 +188,18 @@ function fillCharacter(body: HTMLElement, character: PublicCharacter | null): vo
     const cell = document.createElement("div");
     cell.className = "item-slot";
     const armorItem = sessionBag.items.find((item) => item.equipped && ITEMS[item.itemId]?.kind === "armor");
-    const worn = label === "Silah" ? ITEMS[character.weaponId]?.name ?? "Boş" : label === "Zırh" ? ITEMS[armorItem?.itemId ?? ""]?.name ?? "Boş" : "Boş";
-    cell.textContent = `${label}\n${worn}`;
+    const worn = label === "Silah" ? ITEMS[character.weaponId] : label === "Zırh" ? ITEMS[armorItem?.itemId ?? ""] : undefined;
+    if (worn) {
+      const image = document.createElement("img");
+      image.src = assetUrl(worn.icon);
+      image.alt = worn.name;
+      cell.append(image);
+      cell.title = worn.name;
+    }
+    const caption = document.createElement("span");
+    caption.className = "item-name";
+    caption.textContent = label;
+    cell.append(caption);
     slots.append(cell);
   }
   body.append(slots);
@@ -195,9 +220,25 @@ function fillInventory(body: HTMLElement): void {
     const cell = document.createElement("button");
     cell.type = "button";
     cell.className = `item-slot${def?.rarity === "Nadir" ? " rare" : ""}${item.equipped ? " equipped" : ""}`;
-    cell.textContent = def?.name ?? item.itemId;
+    if (def) {
+      const image = document.createElement("img");
+      image.src = assetUrl(def.icon);
+      image.alt = def.name;
+      cell.append(image);
+      if (item.quantity > 1) {
+        const count = document.createElement("span");
+        count.className = "stack";
+        count.textContent = String(item.quantity);
+        cell.append(count);
+      }
+    } else cell.textContent = item.itemId;
     cell.title = def ? `${def.name}\n${def.kind === "weapon" ? `Saldırı ${def.attackMin}-${def.attackMax}` : def.kind === "potion" ? `İyileştirme ${def.heal}` : `Savunma ${def.defense}`}\n${item.equipped ? "Kuşanıldı" : `x${item.quantity}`}` : item.itemId;
-    cell.addEventListener("dblclick", () => document.dispatchEvent(new CustomEvent("tora-equip", { detail: item.itemId })));
+    if (def?.kind !== "potion") cell.addEventListener("click", () => document.dispatchEvent(new CustomEvent("tora-equip", { detail: item.itemId })));
+    grid.append(cell);
+  }
+  for (let index = items.length; index < 32; index += 1) {
+    const cell = document.createElement("div");
+    cell.className = "item-slot empty";
     grid.append(cell);
   }
   body.append(grid);
@@ -207,7 +248,24 @@ function fillSkills(body: HTMLElement, character: PublicCharacter | null): void 
   body.replaceChildren();
   const classId = (character?.classId || "warrior") as ClassId;
   const klass = CLASSES[classId] ?? CLASSES.warrior;
-  body.append(note(`${klass.name}: 1 saldırı, 2 ${klass.skills[0]}, 3 ${klass.skills[1]}. H binek, 4 iksir.`));
+  body.append(note(`${klass.name} · Hedef seçmek için yaratığa tıkla. 1 normal saldırı, 2 ve 3 yetenek, H binek, 4 iksir.`));
+  for (const [index, id] of klass.skills.entries()) {
+    const skill = SKILLS[id];
+    if (!skill) continue;
+    const card = document.createElement("div");
+    card.className = "skill-card";
+    const image = document.createElement("img");
+    image.src = assetUrl(`icons/skill-${id}.png`);
+    image.alt = "";
+    const details = document.createElement("div");
+    const title = document.createElement("strong");
+    title.textContent = `${index + 2} · ${skill.name}`;
+    const description = document.createElement("span");
+    description.textContent = `${skill.description} · ${skill.mana} mana · ${(skill.cooldown / 1000).toFixed(1)} sn bekleme`;
+    details.append(title, description);
+    card.append(image, details);
+    body.append(card);
+  }
 }
 
 function fillQuests(body: HTMLElement): void {

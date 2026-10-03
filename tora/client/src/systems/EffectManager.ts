@@ -14,6 +14,7 @@ export class EffectManager {
     else if (fx.effect === "frost") this.projectile(fx, 0x7ecbff, 0xe8f7ff, false);
     else if (fx.effect === "spirit") this.spirit(fx);
     else if (fx.effect === "heal" || fx.effect === "mend") this.heal(fx);
+    else if (fx.effect === "reward") this.reward(fx);
     else this.spark(fx.x2, fx.y2 - 16, 0xfff1c2);
     if (fx.amount) this.number(fx);
     if (fx.effect === "slash" || fx.effect === "spin" || fx.effect === "fire" || fx.effect === "fireball") {
@@ -56,27 +57,44 @@ export class EffectManager {
   }
 
   private projectile(fx: FxEvent, core: number, hot: number, fire: boolean): void {
-    const bolt = this.borrowSpark(fx.x, fx.y - 26, fire ? 6 : 4, core);
+    const startY = fx.y - 29;
+    const endY = fx.y2 - 18;
+    const pulse = this.scene.add.circle(fx.x, startY, 5, hot, 0.55).setDepth(fx.y + 7);
+    pulse.setStrokeStyle(2, core, 0.9);
+    this.scene.tweens.add({ targets: pulse, scale: 3, alpha: 0, duration: 330, onComplete: () => pulse.destroy() });
+    const bolt = this.borrowSpark(fx.x, startY, fire ? 8 : 6, hot);
+    const glow = this.scene.add.circle(fx.x, startY, fire ? 17 : 14, core, 0.24).setDepth(fx.y + 5);
     const trail = this.scene.add.graphics().setDepth(fx.y + 4);
+    const length = Math.hypot(fx.x2 - fx.x, endY - startY) || 1;
+    const nx = (fx.x2 - fx.x) / length;
+    const ny = (endY - startY) / length;
     this.scene.tweens.add({
       targets: bolt,
       x: fx.x2,
-      y: fx.y2 - 16,
-      duration: 200,
+      y: endY,
+      duration: 440,
+      ease: "Cubic.easeIn",
       onUpdate: () => {
-        trail.fillStyle(hot, 0.35);
-        trail.fillCircle(bolt.x, bolt.y, fire ? 3 : 2);
+        glow.setPosition(bolt.x, bolt.y);
+        trail.fillStyle(core, fire ? 0.38 : 0.28);
+        trail.fillCircle(bolt.x - nx * 7, bolt.y - ny * 7, fire ? 6 : 4);
+        trail.fillStyle(hot, 0.7);
+        trail.fillCircle(bolt.x - nx * 15, bolt.y - ny * 15, fire ? 3 : 2);
       },
       onComplete: () => {
         this.releaseSpark(bolt);
-        this.scene.tweens.add({ targets: trail, alpha: 0, duration: 120, onComplete: () => trail.destroy() });
-        const burst = this.scene.add.circle(fx.x2, fx.y2 - 14, fire ? 8 : 7, hot, 0.85).setDepth(fx.y2 + 8);
-        if (!fire) {
-          const ring = this.scene.add.circle(fx.x2, fx.y2 - 14, 4, 0xd7f4ff, 0.4).setDepth(fx.y2 + 7);
-          this.scene.tweens.add({ targets: ring, scale: 2.4, alpha: 0, duration: 220, onComplete: () => ring.destroy() });
+        glow.destroy();
+        this.scene.tweens.add({ targets: trail, alpha: 0, duration: 260, onComplete: () => trail.destroy() });
+        const burst = this.scene.add.circle(fx.x2, endY, fire ? 10 : 7, hot, 0.9).setDepth(fx.y2 + 8);
+        const ring = this.scene.add.circle(fx.x2, endY, fire ? 9 : 7, core, 0.18).setDepth(fx.y2 + 7);
+        ring.setStrokeStyle(fire ? 3 : 2, hot, 0.9);
+        this.scene.tweens.add({ targets: burst, scale: fire ? 2.8 : 2.1, alpha: 0, duration: 350, onComplete: () => burst.destroy() });
+        this.scene.tweens.add({ targets: ring, scale: fire ? 3.5 : 3, alpha: 0, duration: 480, onComplete: () => ring.destroy() });
+        for (let i = 0; i < 8; i += 1) {
+          const angle = i * Math.PI / 4 + (fire ? 0.2 : 0);
+          const shard = this.scene.add.circle(fx.x2, endY, fire ? 2.6 : 1.8, i % 2 ? hot : core, 0.95).setDepth(fx.y2 + 9);
+          this.scene.tweens.add({ targets: shard, x: fx.x2 + Math.cos(angle) * (fire ? 29 : 25), y: endY + Math.sin(angle) * (fire ? 29 : 25), alpha: 0, duration: fire ? 390 : 460, onComplete: () => shard.destroy() });
         }
-        this.scene.tweens.add({ targets: burst, scale: fire ? 2.1 : 1.6, alpha: 0, duration: 180, onComplete: () => burst.destroy() });
-        this.spark(fx.x2, fx.y2 - 10, hot);
       },
     });
   }
@@ -103,6 +121,12 @@ export class EffectManager {
     this.scene.tweens.add({ targets: glow, y: fx.y - 48, alpha: 0, duration: 360, onComplete: () => glow.destroy() });
   }
 
+  private reward(fx: FxEvent): void {
+    const coin = this.scene.add.circle(fx.x2, fx.y2 - 22, 5, 0xffd36a, 0.9).setDepth(fx.y2 + 8);
+    coin.setStrokeStyle(2, 0xfff7cf, 0.95);
+    this.scene.tweens.add({ targets: coin, y: fx.y2 - 42, scale: 1.6, alpha: 0, duration: 550, onComplete: () => coin.destroy() });
+  }
+
   private spark(x: number, y: number, color: number): void {
     const dot = this.borrowSpark(x, y, 3, color);
     this.scene.tweens.add({
@@ -122,8 +146,9 @@ export class EffectManager {
       strokeThickness: 3,
     }).setOrigin(0.5).setDepth(200000);
     const heal = fx.effect === "heal" || fx.effect === "mend";
-    label.setText(`${fx.crit ? "KRİT " : ""}${heal ? "+" : ""}${fx.amount}`);
-    label.setColor(fx.crit ? "#ffd36a" : heal ? "#9dffb0" : "#fff4ea");
+    const reward = fx.effect === "reward";
+    label.setText(reward ? `+${fx.amount} ALTIN` : `${fx.crit ? "KRİT " : ""}${heal ? "+" : ""}${fx.amount}`);
+    label.setColor(fx.crit || reward ? "#ffd36a" : heal ? "#9dffb0" : "#fff4ea");
     label.setPosition(fx.x2, fx.y2 - 36).setAlpha(1).setVisible(true);
     this.scene.tweens.add({
       targets: label,

@@ -29,6 +29,8 @@ export interface PlayerSnapshot {
   armorId: string;
   health: number;
   maxHealth: number;
+  mana: number;
+  maxMana: number;
   anim: string;
   mounted: boolean;
 }
@@ -94,6 +96,11 @@ export class VillageConnection {
         this.stops.push(callbacks(player).listen("anim", () => publish(false)));
         this.stops.push(callbacks(player).listen("mounted", () => publish(false)));
         this.stops.push(callbacks(player).listen("classId", () => publish(false)));
+        this.stops.push(callbacks(player).listen("level", () => publish(false)));
+        this.stops.push(callbacks(player).listen("health", () => publish(false)));
+        this.stops.push(callbacks(player).listen("maxHealth", () => publish(false)));
+        this.stops.push(callbacks(player).listen("mana", () => publish(false)));
+        this.stops.push(callbacks(player).listen("maxMana", () => publish(false)));
       }, true),
     );
     this.stops.push(players.onRemove((_player, sessionId) => handlers.onPlayerRemove(sessionId)));
@@ -169,6 +176,8 @@ function snapshot(sessionId: string, player: NetPlayerState): PlayerSnapshot {
     armorId: player.armorId,
     health: player.health,
     maxHealth: player.maxHealth,
+    mana: player.mana,
+    maxMana: player.maxMana,
     anim: player.anim,
     mounted: player.mounted,
   };

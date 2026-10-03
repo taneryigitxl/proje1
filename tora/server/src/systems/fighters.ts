@@ -30,6 +30,7 @@ export interface Fighter {
   slimeKills: number;
   cooldowns: Map<string, number>;
   actionUntil: number;
+  respawnAt: number;
 }
 
 export interface LiveMob {
@@ -112,6 +113,7 @@ export async function loadFighter(characterId: string): Promise<Fighter> {
     slimeKills: 0,
     cooldowns: new Map(),
     actionUntil: 0,
+    respawnAt: 0,
   };
 }
 
@@ -183,9 +185,8 @@ export function tickMobs(mobs: LiveMob[], players: PlayerMap, collision: Collisi
       mob.attackAt = now + 1100;
       const dealt = Math.max(1, def.damage - Math.floor(player.level));
       player.health = Math.max(0, player.health - dealt);
-      emit({ effect: "hit", x: player.x, y: player.y, x2: mob.x, y2: mob.y, amount: dealt, crit: false, targetId: mob.target, name: def.name });
+      emit({ effect: "hit", x: mob.x, y: mob.y, x2: player.x, y2: player.y, amount: dealt, crit: false, targetId: mob.target, name: def.name });
       if (player.health <= 0) {
-        player.x = mob.homeX;
         player.anim = "death";
       }
     }
@@ -217,6 +218,10 @@ export function playerSkill(sessionId: string, skillId: string, mobId: string, f
   if (player.health <= 0) return "Ölüken yetenek kullanamazsın.";
   if (player.mana < skill.mana) return "Mana yetmiyor.";
   if ((fighter.cooldowns.get(skillId) ?? 0) > now) return null;
+  const targets = skill.heal > 0 ? [] : skill.effect === "spin"
+    ? mobs.filter((mob) => mob.alive && Math.hypot(mob.x - player.x, mob.y - player.y) <= skill.range)
+    : mobs.filter((mob) => mob.id === mobId && mob.alive && Math.hypot(mob.x - player.x, mob.y - player.y) <= skill.range + 8);
+  if (skill.heal === 0 && targets.length === 0) return "Hedef menzilde değil.";
   player.mana -= skill.mana;
   fighter.cooldowns.set(skillId, now + skill.cooldown);
   player.anim = "skill";
@@ -226,10 +231,6 @@ export function playerSkill(sessionId: string, skillId: string, mobId: string, f
     emit({ effect: skill.effect, x: player.x, y: player.y, x2: player.x, y2: player.y, amount: skill.heal, crit: false, targetId: sessionId, name: skill.name });
     return null;
   }
-  const targets = skill.effect === "spin"
-    ? mobs.filter((mob) => mob.alive && Math.hypot(mob.x - player.x, mob.y - player.y) <= skill.range)
-    : mobs.filter((mob) => mob.id === mobId && mob.alive && Math.hypot(mob.x - player.x, mob.y - player.y) <= skill.range + 8);
-  if (targets.length === 0) return "Hedef menzilde değil.";
   if (skill.effect === "rush" || skill.effect === "shadow") {
     const mob = targets[0];
     if (!mob) return "Hedef yok.";

@@ -57,7 +57,8 @@ const clientA = new Client("ws://localhost:2567");
 const clientB = new Client("ws://localhost:2567");
 const roomA = await clientA.joinOrCreate("village", { token: a.body.token, characterId: charA.body.character.id }, VillageState);
 const roomB = await clientB.joinOrCreate("village", { token: b.body.token, characterId: charB.body.character.id }, VillageState);
-await waitFor(() => roomA.state.players.size === 2 && roomA.state.mobs.size >= 2);
+await waitFor(() => roomA.state.players.has(roomA.sessionId) && roomA.state.players.has(roomB.sessionId)
+  && roomB.state.players.has(roomA.sessionId) && roomA.state.mobs.size >= 2);
 
 const remote = roomB.state.players.get(roomA.sessionId);
 assert.equal(remote.classId, "warrior");

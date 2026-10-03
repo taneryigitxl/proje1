@@ -13,6 +13,7 @@ export class RemotePlayer {
   facing: Direction = "down";
   moving = false;
   running = false;
+  alive = true;
 
   constructor(scene: Phaser.Scene, sessionId: string, name: string, appearance: AvatarAppearance, x: number, y: number) {
     this.sessionId = sessionId;
@@ -24,13 +25,16 @@ export class RemotePlayer {
     this.avatar = new Avatar(scene, appearance, x, y);
   }
 
-  apply(state: { x: number; y: number; facing: string; moving: boolean; running: boolean; name: string; weaponId?: string; armorId?: string; anim?: string; mounted?: boolean }): void {
+  apply(state: { x: number; y: number; facing: string; moving: boolean; running: boolean; name: string; weaponId?: string; armorId?: string; health: number; anim?: string; mounted?: boolean }): void {
     this.targetX = state.x;
     this.targetY = state.y;
     this.facing = isDirection(state.facing) ? state.facing : this.facing;
     this.moving = state.moving;
     this.running = state.running;
     this.name = state.name;
+    const revived = !this.alive && state.health > 0;
+    this.alive = state.health > 0;
+    if (revived) this.avatar.play(this.facing, "idle", true);
     if (state.weaponId) this.avatar.setWeapon(ITEMS[state.weaponId]?.texture);
     if (state.armorId) this.avatar.setArmor(ITEMS[state.armorId]?.texture);
     this.avatar.setMounted(Boolean(state.mounted), state.moving);
@@ -49,7 +53,7 @@ export class RemotePlayer {
       this.displayY = this.targetY;
     }
     this.avatar.setPosition(this.displayX, this.displayY);
-    this.avatar.play(this.facing, locomotionFromInput(this.moving || distance > 1.25, this.running));
+    this.avatar.play(this.facing, this.alive ? locomotionFromInput(this.moving || distance > 1.25, this.running) : "death");
   }
 
   destroy(): void {

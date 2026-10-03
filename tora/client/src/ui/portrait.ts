@@ -1,9 +1,19 @@
-const CLASS_CLOTH: Record<string, string> = {
-  warrior: "#7a3038",
-  ninja: "#243044",
-  mage: "#3c2d78",
-  shaman: "#1d655c",
-};
+import { assetUrl } from "../config";
+
+const FRAME: Record<string, number> = { warrior: 0, ninja: 1, mage: 2, shaman: 3 };
+let atlasPromise: Promise<HTMLImageElement> | null = null;
+
+function atlas(): Promise<HTMLImageElement> {
+  if (!atlasPromise) {
+    atlasPromise = new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error("Karakter resmi yüklenemedi."));
+      image.src = assetUrl("illustrated/classes.png");
+    });
+  }
+  return atlasPromise;
+}
 
 export async function drawPortrait(
   canvas: HTMLCanvasElement,
@@ -11,55 +21,21 @@ export async function drawPortrait(
 ): Promise<void> {
   const context = canvas.getContext("2d");
   if (!context) return;
-  canvas.width = 64;
-  canvas.height = 80;
-  context.clearRect(0, 0, 64, 80);
-  const cloth = CLASS_CLOTH[appearance.classId ?? "warrior"] ?? "#7a3038";
-  context.fillStyle = "rgba(0,0,0,0.25)";
-  context.beginPath();
-  context.ellipse(32, 74, 16, 5, 0, 0, Math.PI * 2);
-  context.fill();
-  context.fillStyle = cloth;
-  context.beginPath();
-  context.moveTo(16, 78);
-  context.lineTo(48, 78);
-  context.lineTo(44, 48);
-  context.lineTo(20, 48);
-  context.fill();
-  if (appearance.classId === "warrior") {
-    context.fillStyle = "#e0b15a";
-    context.fillRect(12, 46, 8, 10);
-    context.fillRect(44, 46, 8, 10);
-  } else if (appearance.classId === "mage") {
-    context.fillStyle = "#d7c4ff";
-    context.beginPath();
-    context.moveTo(32, 8);
-    context.lineTo(22, 28);
-    context.lineTo(42, 28);
-    context.fill();
-  } else if (appearance.classId === "shaman") {
-    context.fillStyle = "#f0d48a";
-    context.fillRect(18, 22, 4, 12);
-    context.fillRect(42, 22, 4, 12);
+  canvas.width = 160;
+  canvas.height = 220;
+  const gradient = context.createLinearGradient(0, 0, 160, 220);
+  gradient.addColorStop(0, "#283d45");
+  gradient.addColorStop(1, "#0f1d23");
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, 160, 220);
+  try {
+    const image = await atlas();
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = "high";
+    context.drawImage(image, (FRAME[appearance.classId ?? "warrior"] ?? 0) * 512, 0, 512, 768, 8, 2, 144, 216);
+  } catch {
+    context.fillStyle = "#d8b87b";
+    context.font = "20px Georgia";
+    context.fillText("TORA", 46, 110);
   }
-  context.fillStyle = "#f3c7a8";
-  context.beginPath();
-  context.ellipse(32, 38, 12, 14, 0, 0, Math.PI * 2);
-  context.fill();
-  context.fillStyle = appearance.hairColor || "#3b2416";
-  context.beginPath();
-  context.ellipse(32, 30, 13, 10, 0, Math.PI, 0);
-  context.fill();
-  if (appearance.classId === "ninja") {
-    context.fillStyle = "#111820";
-    context.fillRect(22, 38, 20, 5);
-  }
-  context.fillStyle = "#1c1420";
-  context.beginPath();
-  context.ellipse(27, 38, 1.6, 2, 0, 0, Math.PI * 2);
-  context.ellipse(37, 38, 1.6, 2, 0, 0, Math.PI * 2);
-  context.fill();
-  context.fillStyle = "#fff";
-  context.fillRect(28, 37, 1, 1);
-  context.fillRect(38, 37, 1, 1);
 }
