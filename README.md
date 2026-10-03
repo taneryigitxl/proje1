@@ -48,3 +48,7 @@ Ana dosyalar:
 - `styles.css`: HUD, dokunmatik kontroller ve pazar görünümü
 - `script.js`: fizik, on bölüm, iki boss, düşmanlar, kameralar, lazerler, altınlar, yetenekler ve çok oyunculu senkronizasyon
 - `assets/`: karakter ve düşman görselleri
+
+## TORA
+
+`tora/` bu sitenin kök oyunundan ayrı, `/tora/` adresinde yayınlanan tarayıcı MMORPG'sidir. Kurulum ve yayın notları `tora/README.md` içindedir.

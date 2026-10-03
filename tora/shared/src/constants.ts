@@ -1,0 +1,15 @@
+export const TILE_SIZE = 16;
+export const MAP_ID = "tora-village";
+export const PLAYER_SPEED = 78;
+export const PLAYER_HIT_WIDTH = 10;
+export const PLAYER_HIT_HEIGHT = 8;
+export const SIM_TICK_MS = 50;
+export const INPUT_HEARTBEAT_MS = 100;
+export const CHAT_MIN_INTERVAL_MS = 600;
+export const CHAT_BURST_LIMIT = 8;
+export const CHAT_BURST_WINDOW_MS = 10_000;
+export const MAX_CHAT_LENGTH = 180;
+export const STARTING_HEALTH = 100;
+export const STARTING_MANA = 50;
+export const INVENTORY_SLOT_COUNT = 24;
+export const HOTBAR_SLOT_COUNT = 9;

@@ -1,0 +1,45 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id           String      @id @default(cuid())
+  username     String
+  usernameKey  String      @unique
+  email        String
+  emailKey     String      @unique
+  passwordHash String
+  createdAt    DateTime    @default(now())
+  characters   Character[]
+}
+
+model Character {
+  id            String   @id @default(cuid())
+  accountId     String
+  account       Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  name          String
+  nameKey       String   @unique
+  gender        String
+  hairStyle     String
+  hairColor     String
+  level         Int      @default(1)
+  experience    Int      @default(0)
+  gold          Int      @default(0)
+  currentHealth Int      @default(100)
+  maxHealth     Int      @default(100)
+  currentMana   Int      @default(50)
+  maxMana       Int      @default(50)
+  mapId         String   @default("tora-village")
+  positionX     Float
+  positionY     Float
+  facing        String   @default("down")
+  createdAt     DateTime @default(now())
+  lastLogin     DateTime @default(now())
+
+  @@index([accountId])
+}

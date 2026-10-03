@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="TORA — a browser-based 2D fantasy MMORPG." />
+    <title>TORA</title>
+    <link rel="icon" href="/tora/assets/favicon.png" />
+    <script type="module" crossorigin src="/tora/static/index-BIqMfrxl.js"></script>
+    <link rel="stylesheet" crossorigin href="/tora/static/index-CMXShSAY.css">
+  </head>
+  <body>
+    <div id="app">
+      <div id="game-root"></div>
+      <div id="nameplate-layer"></div>
+
+      <div id="hud" hidden>
+        <header class="player-card">
+          <canvas id="hud-portrait" width="48" height="72" aria-hidden="true"></canvas>
+          <div>
+            <strong id="hud-name">Traveler</strong>
+            <span id="hud-level">Level 1</span>
+            <div class="bars" aria-label="Health and mana">
+              <div class="bar hp"><span id="hp-fill"></span><b id="hp-text">100 / 100</b></div>
+              <div class="bar mp"><span id="mp-fill"></span><b id="mp-text">50 / 50</b></div>
+            </div>
+          </div>
+        </header>
+
+        <aside class="minimap-panel">
+          <canvas id="minimap" width="168" height="112" aria-label="Minimap"></canvas>
+          <span id="online-count">1 online</span>
+        </aside>
+
+        <section class="chat-panel" aria-label="Chat">
+          <div id="chat-log"></div>
+          <form id="chat-form">
+            <input id="chat-input" maxlength="180" autocomplete="off" placeholder="Say something…  /say" />
+          </form>
+        </section>
+
+        <footer class="hotbar" aria-label="Hotbar">
+          <div data-slot="1">1</div>
+          <div data-slot="2">2</div>
+          <div data-slot="3">3</div>
+          <div data-slot="4">4</div>
+          <div data-slot="5">5</div>
+          <div data-slot="6">6</div>
+          <div data-slot="7">7</div>
+          <div data-slot="8">8</div>
+          <div data-slot="9">9</div>
+        </footer>
+
+        <div class="gold-panel"><i></i><b id="gold-text">0</b></div>
+        <div class="hud-actions">
+          <button id="mute-button" type="button">Sound</button>
+          <button id="leave-button" type="button">Leave</button>
+          <button id="hud-logout" type="button">Log out</button>
+        </div>
+      </div>
+
+      <div id="disconnect" hidden>
+        <p id="disconnect-text">The connection to Tora Village was lost.</p>
+        <div>
+          <button id="reconnect-button" type="button">Reconnect</button>
+          <button id="disconnect-logout" type="button">Log out</button>
+        </div>
+      </div>
+
+      <section id="auth-screen" class="screen">
+        <div class="panel auth-panel">
+          <p class="eyebrow">Tora Village</p>
+          <h1>TORA</h1>
+          <p class="lede">A persistent world of roads, hearths, and wild places. Other travelers are already here.</p>
+          <div class="tabs">
+            <button id="show-login" type="button" class="active">Login</button>
+            <button id="show-register" type="button">Register</button>
+          </div>
+          <form id="login-form">
+            <label>Username<input name="username" autocomplete="username" required /></label>
+            <label>Password<input name="password" type="password" autocomplete="current-password" required /></label>
+            <button type="submit">Enter</button>
+          </form>
+          <form id="register-form" hidden>
+            <label>Username<input name="username" autocomplete="username" required /></label>
+            <label>Email<input name="email" type="email" autocomplete="email" required /></label>
+            <label>Password<input name="password" type="password" autocomplete="new-password" required /></label>
+            <button type="submit">Create account</button>
+          </form>
+          <p id="auth-error" class="form-error" role="alert"></p>
+        </div>
+      </section>
+
+      <section id="character-screen" class="screen" hidden>
+        <div class="panel character-panel">
+          <p class="eyebrow">Character</p>
+          <h2 id="character-heading">Choose your traveler</h2>
+          <div id="character-card" hidden>
+            <canvas id="select-portrait" width="48" height="72" aria-hidden="true"></canvas>
+            <div>
+              <strong id="select-name"></strong>
+              <span id="select-meta"></span>
+            </div>
+            <button id="enter-world" type="button">Enter Tora Village</button>
+          </div>
+          <form id="create-form">
+            <label>Name<input id="character-name" name="name" maxlength="16" required /></label>
+            <fieldset>
+              <legend>Body</legend>
+              <div id="body-options" class="choice-row"></div>
+            </fieldset>
+            <fieldset>
+              <legend>Hairstyle</legend>
+              <div id="hair-options" class="choice-row"></div>
+            </fieldset>
+            <fieldset>
+              <legend>Hair color</legend>
+              <div id="color-options" class="choice-row"></div>
+            </fieldset>
+            <canvas id="create-portrait" width="48" height="72" aria-hidden="true"></canvas>
+            <button type="submit">Create character</button>
+          </form>
+          <p id="character-error" class="form-error" role="alert"></p>
+          <button id="character-logout" class="text-button" type="button">Log out</button>
+        </div>
+      </section>
+    </div>
+  </body>
+</html>

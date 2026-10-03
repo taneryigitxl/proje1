@@ -1,0 +1,42 @@
+{
+  "name": "tora",
+  "private": true,
+  "version": "0.1.0",
+  "description": "TORA — browser-based 2D MMORPG",
+  "workspaces": [
+    "client",
+    "server",
+    "shared",
+    "database"
+  ],
+  "scripts": {
+    "assets": "node tools/generate-assets.mjs",
+    "build": "npm run build -w @tora/shared && npm run build -w @tora/server && npm run build -w @tora/client",
+    "db:generate": "prisma generate --schema database/prisma/schema.prisma",
+    "db:push": "prisma db push --schema database/prisma/schema.prisma",
+    "db:up": "node tools/dev-postgres.mjs",
+    "dev": "npm run build -w @tora/shared && concurrently -n server,client -c cyan,green \"npm run dev -w @tora/server\" \"npm run dev -w @tora/client\"",
+    "dev:client": "npm run dev -w @tora/client",
+    "dev:server": "npm run build -w @tora/shared && npm run dev -w @tora/server",
+    "publish:pages": "npm run build -w @tora/client && node tools/publish-pages.mjs",
+    "test": "npm run build -w @tora/shared && node --test tests/shared.test.mjs",
+    "start": "npm run start -w @tora/server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "embedded-postgres": "^18.4.0-beta.17",
+    "pngjs": "^7.0.0",
+    "prisma": "^6.16.2"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "prisma@6.19.3": true,
+    "@prisma/client@6.19.3": true,
+    "@prisma/engines@6.19.3": true,
+    "msgpackr-extract@3.0.4": true,
+    "@embedded-postgres/windows-x64@18.4.0-beta.17": true
+  }
+}
