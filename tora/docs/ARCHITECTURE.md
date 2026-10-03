@@ -47,7 +47,11 @@ On join, the server loads the character for that account, rejects a second live 
 
 ## Map and art
 
-`tools/generate-assets.mjs` writes an original tileset, character sheets, and a Tiled JSON map. Tile size is 16. The client uses Phaser `pixelArt` and integer camera rounding. Production and development both use the `/tora/` base path so asset URLs do not depend on the site being hosted at `/`.
+The village tiles are still 16px placeholders from `tools/generate-assets.mjs`. Character rendering no longer depends on that generator. `shared/src/art.ts` and `assets/manifest/avatar.json` describe a 48×64 sheet: four directions as rows, idle/walk/run as columns. `Avatar` stacks body, hair, and weapon layers and plays the same clip on each. Final anime sheets replace the PNGs without changing simulation code. See `docs/ART_PIPELINE.md`.
+
+The UI is Turkish and uses Noto Sans plus Source Serif 4. Press Start 2P is no longer the interface font. Tile textures stay nearest-neighbor; character sheets use linear filtering.
+
+Shift sets a `running` boolean. The server applies `RUN_SPEED_MULTIPLIER`. The client cannot send a speed value. Production and development both use the `/tora/` base path so asset URLs do not depend on the site being hosted at `/`.
 
 Collision comes from the `collision` tile layer. Blocked tiles are non-zero. The shared hitbox is the character's feet.
 

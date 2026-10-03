@@ -19,6 +19,7 @@ export interface PlayerSnapshot {
   y: number;
   facing: string;
   moving: boolean;
+  running: boolean;
   gender: string;
   hairStyle: string;
   hairColor: string;
@@ -47,7 +48,7 @@ export class VillageConnection {
       const room = await client.joinOrCreate("village", { token, characterId }, VillageState);
       return new VillageConnection(room);
     } catch (error) {
-      if (error instanceof MatchMakeError) throw new Error(error.message || "Could not enter Tora Village.");
+      if (error instanceof MatchMakeError) throw new Error(error.message || "Tora Köyü'ne girilemedi.");
       throw error;
     }
   }
@@ -63,6 +64,7 @@ export class VillageConnection {
         this.stops.push(callbacks(player).listen("y", () => publish(false)));
         this.stops.push(callbacks(player).listen("facing", () => publish(false)));
         this.stops.push(callbacks(player).listen("moving", () => publish(false)));
+        this.stops.push(callbacks(player).listen("running", () => publish(false)));
       }, true),
     );
     this.stops.push(players.onRemove((_player, sessionId) => handlers.onPlayerRemove(sessionId)));
@@ -95,6 +97,7 @@ function snapshot(sessionId: string, player: NetPlayerState): PlayerSnapshot {
     y: player.y,
     facing: player.facing,
     moving: player.moving,
+    running: player.running,
     gender: isBodyType(player.gender) ? player.gender : "female",
     hairStyle: isHairStyle(player.hairStyle) ? player.hairStyle : "short",
     hairColor: player.hairColor,

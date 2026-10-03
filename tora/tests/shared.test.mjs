@@ -30,4 +30,10 @@ test("movement stays on walkable tiles and does not speed up on diagonals", () =
   for (let index = 0; index < 5; index += 1) body = stepMovement(body, input, 0.2, open);
   const distance = Math.hypot(body.x - 80, body.y - 80);
   assert.ok(Math.abs(distance - 39) < 0.2);
+
+  let running = { x: 80, y: 80, facing: "down", moving: false };
+  const sprint = { up: false, down: true, left: false, right: true, running: true };
+  for (let index = 0; index < 5; index += 1) running = stepMovement(running, sprint, 0.2, open);
+  const sprintDistance = Math.hypot(running.x - 80, running.y - 80);
+  assert.ok(Math.abs(sprintDistance - 60.45) < 0.2);
 });

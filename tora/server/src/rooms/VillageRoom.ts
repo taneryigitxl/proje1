@@ -64,32 +64,32 @@ export class VillageRoom extends Room<VillageRoomState, unknown, unknown, AuthCh
   }
 
   async onAuth(_client: Client, options: JoinOptions): Promise<AuthCharacter> {
-    if (!databaseReady) throw new Error("The world server cannot reach its database.");
+    if (!databaseReady) throw new Error("Dünya sunucusu veritabanına ulaşamıyor.");
     const token = typeof options?.token === "string" ? options.token : "";
     const characterId = typeof options?.characterId === "string" ? options.characterId : "";
-    if (!token || !characterId) throw new Error("You need to log in.");
+    if (!token || !characterId) throw new Error("Önce giriş yapmalısın.");
 
     let accountId = "";
     try {
       accountId = verifyToken(token);
     } catch {
-      throw new Error("Your session expired. Please log in again.");
+      throw new Error("Oturumun sona erdi. Tekrar giriş yap.");
     }
 
     const character = await prisma.character.findFirst({ where: { id: characterId, accountId } });
-    if (!character) throw new Error("Character not found.");
+    if (!character) throw new Error("Karakter bulunamadı.");
     await prisma.character.update({ where: { id: character.id }, data: { lastLogin: new Date() } });
     return toAuthCharacter(character);
   }
 
   onJoin(client: Client, _options: JoinOptions, auth?: AuthCharacter): void {
-    if (!auth) throw new Error("Authentication failed.");
+    if (!auth) throw new Error("Giriş doğrulanamadı.");
     this.owners.set(auth.id, client.sessionId);
 
     for (const existing of this.clients) {
       if (existing.sessionId === client.sessionId) continue;
       const other = this.state.players.get(existing.sessionId);
-      if (other?.characterId === auth.id) existing.leave(4001, "Signed in from another session.");
+      if (other?.characterId === auth.id) existing.leave(4001, "Bu karakter başka bir oturumda açıldı.");
     }
 
     const { collision, spawn } = loadVillageMap();
@@ -107,7 +107,7 @@ export class VillageRoom extends Room<VillageRoomState, unknown, unknown, AuthCh
     player.hairColor = auth.hairColor;
     player.level = auth.level;
     this.state.players.set(client.sessionId, player);
-    this.broadcast("system", { text: `${auth.name} entered Tora Village.` } satisfies SystemBroadcast, { except: client });
+    this.broadcast("system", { text: `${auth.name} Tora Köyü'ne girdi.` } satisfies SystemBroadcast, { except: client });
     logger.info(`Joined Tora Village: ${auth.name}`, client.sessionId);
   }
 
@@ -123,7 +123,7 @@ export class VillageRoom extends Room<VillageRoomState, unknown, unknown, AuthCh
       this.owners.delete(player.characterId);
       await this.savePlayer(player);
     }
-    this.broadcast("system", { text: `${player.name} left Tora Village.` } satisfies SystemBroadcast);
+    this.broadcast("system", { text: `${player.name} Tora Köyü'nden ayrıldı.` } satisfies SystemBroadcast);
     logger.info(`Left Tora Village (${consented ? "consented" : "dropped"})`, client.sessionId);
   }
 
@@ -142,6 +142,7 @@ export class VillageRoom extends Room<VillageRoomState, unknown, unknown, AuthCh
       player.y = next.y;
       player.facing = next.facing;
       player.moving = next.moving;
+      player.running = next.moving && input.running;
     });
   }
 
@@ -157,14 +158,14 @@ export class VillageRoom extends Room<VillageRoomState, unknown, unknown, AuthCh
     const parsed = parseChatCommand(raw);
     if (parsed.kind === "empty") return;
     if (parsed.kind === "unknown") {
-      client.send("system", { text: "Only /say is available right now." } satisfies SystemBroadcast);
+      client.send("system", { text: "Şu anda yalnızca /say kullanılabilir." } satisfies SystemBroadcast);
       return;
     }
 
     const paced = this.chatCooldown.allow(client.sessionId, 1, CHAT_MIN_INTERVAL_MS);
     const burst = paced && this.chatCooldown.allow(`${client.sessionId}:burst`, CHAT_BURST_LIMIT, CHAT_BURST_WINDOW_MS);
     if (!paced || !burst) {
-      client.send("system", { text: "You are speaking too quickly." } satisfies SystemBroadcast);
+      client.send("system", { text: "Çok hızlı yazıyorsun." } satisfies SystemBroadcast);
       return;
     }
 

@@ -31,7 +31,7 @@ export async function startServer(): Promise<void> {
       limit: 40,
       standardHeaders: true,
       legacyHeaders: false,
-      message: { error: "Too many attempts. Wait a moment and try again." },
+      message: { error: "Çok fazla deneme. Biraz bekleyip tekrar dene." },
     }),
   );
   app.get("/health", (_req, res) => {

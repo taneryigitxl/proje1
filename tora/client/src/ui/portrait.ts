@@ -23,18 +23,18 @@ export async function drawPortrait(
   const context = canvas.getContext("2d");
   if (!context) return;
   const [body, hair] = await Promise.all([
-    loadImage(`characters/body-${appearance.gender}.png`),
-    loadImage(`characters/hair-${appearance.hairStyle}.png`),
+    loadImage(`characters/body/${appearance.gender}.png`),
+    loadImage(`characters/hair/${appearance.hairStyle}.png`),
   ]);
   canvas.width = 48;
-  canvas.height = 72;
-  context.imageSmoothingEnabled = false;
+  canvas.height = 64;
+  context.imageSmoothingEnabled = true;
   context.clearRect(0, 0, canvas.width, canvas.height);
-  context.drawImage(body, 0, 0, 16, 24, 0, 0, 48, 72);
+  context.drawImage(body, 0, 0, 48, 64, 0, 0, 48, 64);
   context.fillStyle = appearance.hairColor;
   context.globalCompositeOperation = "source-over";
   const hairCanvas = tint(hair, appearance.hairColor);
-  context.drawImage(hairCanvas, 0, 0, 16, 24, 0, 0, 48, 72);
+  context.drawImage(hairCanvas, 0, 0, 48, 64, 0, 0, 48, 64);
 }
 
 function tint(source: HTMLImageElement, color: string): HTMLCanvasElement {

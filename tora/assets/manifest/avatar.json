@@ -1,0 +1,47 @@
+{
+  "status": "placeholder",
+  "note": "Replace these sheets with final anime art that uses the same grid. Do not treat this generator as the art pipeline.",
+  "frameWidth": 48,
+  "frameHeight": 64,
+  "columns": 16,
+  "directions": [
+    "down",
+    "up",
+    "right",
+    "left"
+  ],
+  "displayScale": 0.5,
+  "anchor": {
+    "x": 0.5,
+    "y": 1
+  },
+  "filter": "linear",
+  "clips": {
+    "idle": {
+      "column": 0,
+      "frames": 4
+    },
+    "walk": {
+      "column": 4,
+      "frames": 6
+    },
+    "run": {
+      "column": 10,
+      "frames": 6
+    }
+  },
+  "layers": {
+    "body": [
+      "characters/body/female.png",
+      "characters/body/male.png"
+    ],
+    "hair": [
+      "characters/hair/short.png",
+      "characters/hair/long.png",
+      "characters/hair/tied.png"
+    ],
+    "weapon": [
+      "characters/weapon/starter-sword.png"
+    ]
+  }
+}

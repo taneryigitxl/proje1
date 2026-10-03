@@ -1,4 +1,4 @@
-import { PLAYER_HIT_HEIGHT, PLAYER_HIT_WIDTH, PLAYER_SPEED } from "./constants.js";
+import { PLAYER_HIT_HEIGHT, PLAYER_HIT_WIDTH, PLAYER_SPEED, RUN_SPEED_MULTIPLIER } from "./constants.js";
 import type { Direction } from "./direction.js";
 
 export interface InputState {
@@ -6,6 +6,7 @@ export interface InputState {
   down: boolean;
   left: boolean;
   right: boolean;
+  running: boolean;
 }
 
 export interface BodyState {
@@ -27,6 +28,7 @@ export const EMPTY_INPUT: InputState = {
   down: false,
   left: false,
   right: false,
+  running: false,
 };
 
 export function isBlockedTile(map: CollisionMap, tileX: number, tileY: number): boolean {
@@ -72,7 +74,7 @@ export function stepMovement(body: BodyState, input: InputState, dtSeconds: numb
   dy /= length;
 
   const dt = Math.min(Math.max(dtSeconds, 0), 0.1);
-  const distance = PLAYER_SPEED * dt;
+  const distance = PLAYER_SPEED * (input.running ? RUN_SPEED_MULTIPLIER : 1) * dt;
   let facing: Direction = body.facing;
   if (Math.abs(dx) > Math.abs(dy)) facing = dx < 0 ? "left" : "right";
   else if (dy !== 0) facing = dy < 0 ? "up" : "down";
@@ -100,5 +102,6 @@ export function readInput(message: unknown): InputState | null {
     down: candidate.down === true,
     left: candidate.left === true,
     right: candidate.right === true,
+    running: candidate.running === true,
   };
 }

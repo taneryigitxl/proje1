@@ -1,9 +1,15 @@
 import Phaser from "phaser";
 import {
+  AVATAR_FRAME_HEIGHT,
+  AVATAR_FRAME_WIDTH,
+  BODY_TYPES,
+  EMPTY_INPUT,
+  HAIR_STYLES,
   INPUT_HEARTBEAT_MS,
   isBodyType,
   isDirection,
   isHairStyle,
+  locomotionFromInput,
   markersFromTiled,
   stepMovement,
   type BodyState,
@@ -17,8 +23,6 @@ import { RemotePlayer } from "../entities/RemotePlayer";
 import type { GameEntry } from "../game/types";
 import { VillageConnection, type PlayerSnapshot } from "../network/VillageConnection";
 import { NameplateLayer } from "../ui/NameplateLayer";
-
-const EMPTY_INPUT: InputState = { up: false, down: false, left: false, right: false };
 
 export class VillageScene extends Phaser.Scene {
   private entry!: GameEntry;
@@ -50,12 +54,14 @@ export class VillageScene extends Phaser.Scene {
   preload(): void {
     this.load.tilemapTiledJSON("village", assetUrl("maps/tora-village.json"));
     this.load.image("tiles", assetUrl("tilesets/village.png"));
-    const frame = { frameWidth: 16, frameHeight: 24 };
-    this.load.spritesheet("body-female", assetUrl("characters/body-female.png"), frame);
-    this.load.spritesheet("body-male", assetUrl("characters/body-male.png"), frame);
-    this.load.spritesheet("hair-short", assetUrl("characters/hair-short.png"), frame);
-    this.load.spritesheet("hair-long", assetUrl("characters/hair-long.png"), frame);
-    this.load.spritesheet("hair-tied", assetUrl("characters/hair-tied.png"), frame);
+    const frame = { frameWidth: AVATAR_FRAME_WIDTH, frameHeight: AVATAR_FRAME_HEIGHT };
+    for (const gender of BODY_TYPES) {
+      this.load.spritesheet(`body-${gender}`, assetUrl(`characters/body/${gender}.png`), frame);
+    }
+    for (const style of HAIR_STYLES) {
+      this.load.spritesheet(`hair-${style}`, assetUrl(`characters/hair/${style}.png`), frame);
+    }
+    this.load.spritesheet("weapon-starter-sword", assetUrl("characters/weapon/starter-sword.png"), frame);
     this.load.on(Phaser.Loader.Events.FILE_LOAD_ERROR, (file: { key: string }) => {
       this.registry.set("loadError", file.key);
     });
@@ -63,18 +69,18 @@ export class VillageScene extends Phaser.Scene {
 
   create(): void {
     const entry = this.game.registry.get("entry") as GameEntry | undefined;
-    if (!entry) throw new Error("TORA was opened without a character.");
+    if (!entry) throw new Error("TORA karakter olmadan açıldı.");
     this.entry = entry;
     const failed = this.registry.get("loadError") as string | undefined;
     if (failed) {
-      entry.onDisconnect("Tora Village could not be loaded. Refresh and try again.", false);
+      entry.onDisconnect("Tora Köyü yüklenemedi. Sayfayı yenileyip tekrar dene.", false);
       return;
     }
 
     try {
       this.buildWorld();
     } catch (error) {
-      entry.onDisconnect(error instanceof Error ? error.message : "Tora Village could not be loaded.", false);
+      entry.onDisconnect(error instanceof Error ? error.message : "Tora Köyü yüklenemedi.", false);
       return;
     }
 
@@ -100,7 +106,7 @@ export class VillageScene extends Phaser.Scene {
     this.body = stepMovement(this.body, input, dt, this.collision);
     if (this.connection) this.correctPrediction(dt);
     this.avatar.setPosition(this.body.x, this.body.y);
-    this.avatar.play(this.body.facing, this.body.moving);
+    this.avatar.play(this.body.facing, locomotionFromInput(this.body.moving, input.running));
     this.publishInput(input);
     for (const remote of this.remotes.values()) remote.update(dt);
     this.placeNameplates();
@@ -111,7 +117,7 @@ export class VillageScene extends Phaser.Scene {
     const tiled = readTiled(this.cache.tilemap.get("village"));
     const map = this.make.tilemap({ key: "village" });
     const tiles = map.addTilesetImage("tora-village", "tiles");
-    if (!tiles) throw new Error("The village tileset failed to load.");
+    if (!tiles) throw new Error("Köy karoları yüklenemedi.");
     const ground = requireLayer(map, "ground", tiles);
     const water = requireLayer(map, "water", tiles);
     const decoration = requireLayer(map, "decoration", tiles);
@@ -136,6 +142,7 @@ export class VillageScene extends Phaser.Scene {
       gender: character.gender,
       hairStyle: character.hairStyle,
       hairColor: character.hairColor,
+      weapon: "weapon-starter-sword",
     };
     this.body = {
       x: character.positionX,
@@ -157,9 +164,9 @@ export class VillageScene extends Phaser.Scene {
         hairColor: marker.id === "elder" ? "#cfc6be" : marker.id === "blacksmith" ? "#3b2416" : "#d7b15a",
       };
       const avatar = new Avatar(this, villagerAppearance, marker.x, marker.y);
-      avatar.play(marker.facing ?? "down", false);
+      avatar.play(marker.facing ?? "down", "idle");
       avatar.setPosition(marker.x, marker.y);
-      this.nameplates.upsert(`npc:${marker.id}`, marker.name, true);
+      this.nameplates.upsert(`npc:${marker.id}`, npcName(marker.id, marker.name), true);
       this.villagers.push({ id: marker.id, avatar, x: marker.x, y: marker.y });
     }
 
@@ -172,7 +179,7 @@ export class VillageScene extends Phaser.Scene {
     this.scale.on(Phaser.Scale.Events.RESIZE, this.onResize, this);
 
     const keyboard = this.input.keyboard;
-    if (!keyboard) throw new Error("Keyboard input is unavailable in this browser.");
+    if (!keyboard) throw new Error("Bu tarayıcıda klavye kullanılamıyor.");
     keyboard.addCapture([
       Phaser.Input.Keyboard.KeyCodes.W,
       Phaser.Input.Keyboard.KeyCodes.A,
@@ -183,6 +190,7 @@ export class VillageScene extends Phaser.Scene {
       Phaser.Input.Keyboard.KeyCodes.LEFT,
       Phaser.Input.Keyboard.KeyCodes.RIGHT,
       Phaser.Input.Keyboard.KeyCodes.SPACE,
+      Phaser.Input.Keyboard.KeyCodes.SHIFT,
     ]);
     this.keys = keyboard.addKeys({
       up: Phaser.Input.Keyboard.KeyCodes.W,
@@ -193,6 +201,7 @@ export class VillageScene extends Phaser.Scene {
       arrowDown: Phaser.Input.Keyboard.KeyCodes.DOWN,
       arrowLeft: Phaser.Input.Keyboard.KeyCodes.LEFT,
       arrowRight: Phaser.Input.Keyboard.KeyCodes.RIGHT,
+      run: Phaser.Input.Keyboard.KeyCodes.SHIFT,
     }) as Record<string, Phaser.Input.Keyboard.Key>;
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -220,7 +229,7 @@ export class VillageScene extends Phaser.Scene {
           this.closed = true;
           const replaced = code === 4001;
           this.entry.onDisconnect(
-            replaced ? "This character signed in from another session." : "The connection to Tora Village was lost.",
+            replaced ? "Bu karakter başka bir oturumda açıldı." : "Tora dünyasıyla bağlantı kesildi.",
             !replaced,
           );
         },
@@ -228,7 +237,7 @@ export class VillageScene extends Phaser.Scene {
       this.entry.onReady();
       this.entry.onOnline(1);
     } catch (error) {
-      this.entry.onDisconnect(error instanceof Error ? error.message : "Could not enter Tora Village.", true);
+      this.entry.onDisconnect(error instanceof Error ? error.message : "Tora Köyü'ne girilemedi.", true);
     }
   }
 
@@ -268,12 +277,13 @@ export class VillageScene extends Phaser.Scene {
       down: down(this.keys.down) || down(this.keys.arrowDown),
       left: down(this.keys.left) || down(this.keys.arrowLeft),
       right: down(this.keys.right) || down(this.keys.arrowRight),
+      running: down(this.keys.run),
     };
   }
 
   private publishInput(input: InputState): void {
     if (!this.connection || this.closed) return;
-    const key = `${input.up}:${input.down}:${input.left}:${input.right}`;
+    const key = `${input.up}:${input.down}:${input.left}:${input.right}:${input.running}`;
     const now = performance.now();
     if (key === this.lastInputKey && now - this.lastInputAt < INPUT_HEARTBEAT_MS) return;
     this.lastInputKey = key;
@@ -305,14 +315,14 @@ export class VillageScene extends Phaser.Scene {
   }
 
   private placeNameplates(): void {
-    const local = this.screenOf(this.body.x, this.body.y - 26);
+    const local = this.screenOf(this.body.x, this.body.y - 40);
     this.nameplates.move(this.entry.character.id, local.x, local.y);
     for (const remote of this.remotes.values()) {
-      const point = this.screenOf(remote.displayX, remote.displayY - 26);
+      const point = this.screenOf(remote.displayX, remote.displayY - 40);
       this.nameplates.move(remote.sessionId, point.x, point.y);
     }
     for (const villager of this.villagers) {
-      const point = this.screenOf(villager.x, villager.y - 26);
+      const point = this.screenOf(villager.x, villager.y - 40);
       this.nameplates.move(`npc:${villager.id}`, point.x, point.y);
     }
   }
@@ -375,19 +385,19 @@ function zoomFor(width: number, height: number): number {
 
 function requireLayer(map: Phaser.Tilemaps.Tilemap, name: string, tiles: Phaser.Tilemaps.Tileset): Phaser.Tilemaps.TilemapLayer {
   const layer = map.createLayer(name, tiles, 0, 0);
-  if (!layer) throw new Error(`Tora Village is missing the ${name} layer.`);
+  if (!layer) throw new Error(`Tora Köyü haritasında ${name} katmanı yok.`);
   return layer;
 }
 
 function readTiled(cached: unknown): TiledMap {
   if (cached && typeof cached === "object" && "layers" in cached) return cached as TiledMap;
   if (cached && typeof cached === "object" && "data" in cached) return (cached as { data: TiledMap }).data;
-  throw new Error("Tora Village map data was not available.");
+  throw new Error("Tora Köyü harita verisi bulunamadı.");
 }
 
 function collisionFromTilemap(map: Phaser.Tilemaps.Tilemap): CollisionMap {
   const layer = map.getLayer("collision")?.data;
-  if (!layer) throw new Error("Tora Village is missing collision data.");
+  if (!layer) throw new Error("Tora Köyü çarpışma katmanı eksik.");
   const blocked = new Uint8Array(map.width * map.height);
   for (let y = 0; y < map.height; y += 1) {
     for (let x = 0; x < map.width; x += 1) {
@@ -420,10 +430,22 @@ function colorForTile(gid: number): string {
   return "#5aaa3c";
 }
 
+function npcName(id: string, fallback: string): string {
+  const names: Record<string, string> = {
+    elder: "Köy Büyüğü",
+    blacksmith: "Demirci",
+    merchant: "Tüccar",
+    banker: "Veznedar",
+    innkeeper: "Hancı",
+  };
+  return names[id] ?? fallback;
+}
+
 function appearanceFrom(player: PlayerSnapshot): AvatarAppearance {
   return {
     gender: isBodyType(player.gender) ? player.gender : "female",
     hairStyle: isHairStyle(player.hairStyle) ? player.hairStyle : "short",
     hairColor: player.hairColor,
+    weapon: "weapon-starter-sword",
   };
 }

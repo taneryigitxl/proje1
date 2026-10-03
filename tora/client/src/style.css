@@ -1,9 +1,9 @@
 :root {
   color: #f4e7cf;
   background: #142033;
-  font-family: "Press Start 2P", monospace;
-  font-size: 10px;
-  line-height: 1.6;
+  font-family: "Noto Sans", "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.45;
 }
 
 * { box-sizing: border-box; }
@@ -27,10 +27,8 @@ button { cursor: pointer; }
   inset: 0;
 }
 
-#game-root canvas {
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
-}
+#game-root canvas { image-rendering: auto; }
+h1, h2, .eyebrow { font-family: "Source Serif 4", Georgia, serif; }
 
 #nameplate-layer { z-index: 3; pointer-events: none; }
 #hud { z-index: 4; pointer-events: none; }
@@ -95,7 +93,7 @@ h2 { font-size: 16px; }
   box-shadow: 0 0 0 1px #1a140e;
 }
 
-label, fieldset { display: grid; gap: 6px; margin: 0 0 12px; font-size: 8px; color: #e0b15a; }
+label, fieldset { display: grid; gap: 6px; margin: 0 0 12px; font-size: 13px; color: #e0b15a; }
 fieldset { border: 0; padding: 0; }
 input {
   background: #140f0c;
@@ -108,22 +106,22 @@ input {
 
 #create-portrait, #select-portrait, #hud-portrait {
   width: 48px;
-  height: 72px;
-  image-rendering: pixelated;
+  height: 64px;
+  image-rendering: auto;
   background: #1a140e;
 }
 
 #character-card, .player-card { display: flex; gap: 14px; align-items: center; }
 #character-card { margin-bottom: 16px; padding: 12px; background: #1d1712; }
-#select-meta, #hud-level, #online-count { display: block; color: #d9c7a4; font-size: 8px; }
+#select-meta, #hud-level, #online-count { display: block; color: #d9c7a4; font-size: 13px; }
 
-.player-card, .minimap-panel, .chat-panel, .hotbar, .gold-panel, .hud-actions {
+.player-card, .minimap-panel, .chat-panel, .hotbar, .gold-panel, .hud-actions, .menu-bar {
   position: absolute;
   pointer-events: auto;
 }
 .player-card { top: 16px; left: 16px; padding: 10px; width: 320px; }
 .minimap-panel { top: 16px; right: 16px; padding: 8px; }
-#minimap { display: block; width: 168px; height: 112px; background: #142033; image-rendering: pixelated; }
+#minimap { display: block; width: 168px; height: 112px; background: #142033; }
 .chat-panel { left: 16px; bottom: 16px; width: min(420px, 36vw); padding: 8px; }
 #chat-log { height: 132px; overflow: auto; margin-bottom: 8px; }
 #chat-log p { margin: 0 0 8px; word-break: break-word; }
@@ -147,7 +145,7 @@ input {
   background: #1a140e;
   box-shadow: inset 0 0 0 2px #6b5438;
   color: #e0b15a;
-  font-size: 8px;
+  font-size: 12px;
 }
 .gold-panel {
   right: 16px;
@@ -165,7 +163,7 @@ input {
 }
 .hud-actions { right: 16px; bottom: 62px; padding: 8px; }
 .bars { display: grid; gap: 4px; margin-top: 6px; width: 210px; }
-.bar { position: relative; height: 14px; background: #140f0c; box-shadow: inset 0 0 0 2px #3a2e24; }
+.bar { position: relative; height: 18px; background: #140f0c; box-shadow: inset 0 0 0 2px #3a2e24; }
 .bar span { display: block; height: 100%; }
 .hp span { background: #c44536; }
 .mp span { background: #3d7ec9; }
@@ -173,8 +171,8 @@ input {
   position: absolute;
   inset: 0;
   text-align: center;
-  font-size: 8px;
-  line-height: 14px;
+  font-size: 12px;
+  line-height: 18px;
   color: #fff6e4;
 }
 
@@ -205,8 +203,8 @@ input {
 }
 .nameplate-name {
   color: #fff8e8;
-  font-size: 8px;
-  text-shadow: 1px 1px 0 #1a140e, -1px 0 0 #1a140e, 0 1px 0 #1a140e;
+  font-size: 13px;
+  text-shadow: 0 1px 2px #1a140e;
   white-space: nowrap;
 }
 .nameplate.npc .nameplate-name { color: #d7ecff; }
@@ -215,12 +213,63 @@ input {
   padding: 4px 6px;
   background: #f4e7cf;
   color: #24180f;
-  font-size: 8px;
-  line-height: 1.4;
+  font-size: 13px;
+  line-height: 1.35;
   box-shadow: 0 0 0 2px #24180f;
 }
 
+.menu-bar {
+  left: 16px;
+  top: 148px;
+  display: grid;
+  gap: 6px;
+}
+.menu-bar button, .chat-tabs button, .game-panel header button {
+  border: 0;
+  background: #3c2e22;
+  box-shadow: inset 0 0 0 2px #1a140e;
+  padding: 8px 10px;
+}
+.chat-tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+.chat-tabs button.active { background: #8d4a32; color: #fff6e4; }
+.chat-tabs button:disabled { opacity: 0.45; }
+#panel-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+#panel-layer[hidden] { display: none; }
+.game-panel {
+  pointer-events: auto;
+  width: min(560px, calc(100% - 32px));
+  max-height: min(72vh, 680px);
+  overflow: auto;
+  padding: 16px 18px 20px;
+  background: rgba(20, 14, 10, 0.94);
+  box-shadow: inset 0 0 0 2px #e0b15a, 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+.game-panel header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.game-panel h2 { margin: 0; font-size: 28px; }
+.panel-body { display: grid; gap: 10px; margin-top: 12px; }
+.inventory-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
+.inventory-grid div {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: end start;
+  padding: 4px;
+  background: #140f0c;
+  box-shadow: inset 0 0 0 2px #6b5438;
+  color: #e0b15a;
+  font-size: 11px;
+}
+.control-list { margin: 0; padding-left: 18px; }
+label input[type="range"] { width: 100%; }
+
 @media (max-width: 900px) {
   .chat-panel { width: min(420px, calc(100% - 32px)); }
-  .hotbar { display: none; }
+  .hotbar div { width: 34px; height: 34px; }
+  .menu-bar { top: auto; bottom: 86px; }
 }

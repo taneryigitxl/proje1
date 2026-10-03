@@ -10,7 +10,7 @@
     "database"
   ],
   "scripts": {
-    "assets": "node tools/generate-assets.mjs",
+    "assets": "node tools/generate-assets.mjs && node tools/generate-avatar-sheets.mjs",
     "build": "npm run build -w @tora/shared && npm run build -w @tora/server && npm run build -w @tora/client",
     "db:generate": "prisma generate --schema database/prisma/schema.prisma",
     "db:push": "prisma db push --schema database/prisma/schema.prisma",

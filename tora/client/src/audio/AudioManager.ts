@@ -1,4 +1,4 @@
-export type AudioChannel = "music" | "environment" | "ui" | "combat" | "gathering";
+export type AudioChannel = "music" | "environment" | "ui" | "combat" | "skill" | "monster" | "gathering";
 
 const STORAGE_KEY = "tora.audio";
 
@@ -7,6 +7,8 @@ const DEFAULT_VOLUMES: Record<AudioChannel, number> = {
   environment: 0.7,
   ui: 0.8,
   combat: 0.8,
+  skill: 0.8,
+  monster: 0.75,
   gathering: 0.7,
 };
 

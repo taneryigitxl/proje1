@@ -1,5 +1,5 @@
 import type Phaser from "phaser";
-import { isDirection, type Direction } from "@tora/shared";
+import { isDirection, locomotionFromInput, type Direction } from "@tora/shared";
 import { Avatar, type AvatarAppearance } from "./Avatar";
 
 export class RemotePlayer {
@@ -12,6 +12,7 @@ export class RemotePlayer {
   targetY: number;
   facing: Direction = "down";
   moving = false;
+  running = false;
 
   constructor(scene: Phaser.Scene, sessionId: string, name: string, appearance: AvatarAppearance, x: number, y: number) {
     this.sessionId = sessionId;
@@ -23,11 +24,12 @@ export class RemotePlayer {
     this.avatar = new Avatar(scene, appearance, x, y);
   }
 
-  apply(state: { x: number; y: number; facing: string; moving: boolean; name: string }): void {
+  apply(state: { x: number; y: number; facing: string; moving: boolean; running: boolean; name: string }): void {
     this.targetX = state.x;
     this.targetY = state.y;
     this.facing = isDirection(state.facing) ? state.facing : this.facing;
     this.moving = state.moving;
+    this.running = state.running;
     this.name = state.name;
   }
 
@@ -41,7 +43,7 @@ export class RemotePlayer {
       this.displayY = this.targetY;
     }
     this.avatar.setPosition(this.displayX, this.displayY);
-    this.avatar.play(this.facing, this.moving || distance > 1.25);
+    this.avatar.play(this.facing, locomotionFromInput(this.moving || distance > 1.25, this.running));
   }
 
   destroy(): void {

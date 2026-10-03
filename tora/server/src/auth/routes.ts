@@ -20,13 +20,13 @@ export const authRouter = Router();
 
 authRouter.post("/register", async (req, res) => {
   if (!databaseReady) {
-    sendError(res, 503, "The world server cannot reach its database. Try again shortly.");
+    sendError(res, 503, "Dünya sunucusu veritabanına ulaşamıyor. Biraz sonra tekrar dene.");
     return;
   }
 
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) {
-    sendError(res, 400, "Check the form and try again.");
+    sendError(res, 400, "Formu kontrol edip tekrar dene.");
     return;
   }
 
@@ -37,7 +37,7 @@ authRouter.post("/register", async (req, res) => {
   const emailError = validateEmail(email);
   const passwordError = validatePassword(password);
   if (usernameError || emailError || passwordError) {
-    sendError(res, 400, usernameError ?? emailError ?? passwordError ?? "Check the form and try again.");
+    sendError(res, 400, usernameError ?? emailError ?? passwordError ?? "Formu kontrol edip tekrar dene.");
     return;
   }
 
@@ -58,11 +58,11 @@ authRouter.post("/register", async (req, res) => {
   } catch (error) {
     const target = uniqueConstraint(error);
     if (target?.includes("email")) {
-      sendError(res, 409, "An account with that email already exists.");
+      sendError(res, 409, "Bu e-posta ile bir hesap zaten var.");
       return;
     }
     if (target) {
-      sendError(res, 409, "That username is already taken.");
+      sendError(res, 409, "Bu kullanıcı adı alınmış.");
       return;
     }
     throw error;
@@ -71,13 +71,13 @@ authRouter.post("/register", async (req, res) => {
 
 authRouter.post("/login", async (req, res) => {
   if (!databaseReady) {
-    sendError(res, 503, "The world server cannot reach its database. Try again shortly.");
+    sendError(res, 503, "Dünya sunucusu veritabanına ulaşamıyor. Biraz sonra tekrar dene.");
     return;
   }
 
   const parsed = credentialsSchema.safeParse(req.body);
   if (!parsed.success) {
-    sendError(res, 401, "Invalid username or password.");
+    sendError(res, 401, "Kullanıcı adı veya şifre hatalı.");
     return;
   }
 
@@ -85,7 +85,7 @@ authRouter.post("/login", async (req, res) => {
   const account = await prisma.account.findUnique({ where: { usernameKey: username } });
   const valid = await verifyPassword(parsed.data.password, account?.passwordHash ?? null);
   if (!account || !valid) {
-    sendError(res, 401, "Invalid username or password.");
+    sendError(res, 401, "Kullanıcı adı veya şifre hatalı.");
     return;
   }
 
@@ -102,7 +102,7 @@ authRouter.post("/logout", (_req, res) => {
 authRouter.get("/me", requireAccount, async (_req, res) => {
   const account = await prisma.account.findUnique({ where: { id: accountId(res) } });
   if (!account) {
-    sendError(res, 401, "Your session expired. Please log in again.");
+    sendError(res, 401, "Oturumun sona erdi. Tekrar giriş yap.");
     return;
   }
   res.json({ account: { id: account.id, username: account.username, email: account.email } });

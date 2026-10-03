@@ -8,6 +8,7 @@ export const NetPlayer = schema(
     y: { type: "number", default: 0 },
     facing: { type: "string", default: "down" },
     moving: { type: "boolean", default: false },
+    running: { type: "boolean", default: false },
     gender: { type: "string", default: "female" },
     hairStyle: { type: "string", default: "short" },
     hairColor: { type: "string", default: "#3b2416" },

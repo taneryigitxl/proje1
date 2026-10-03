@@ -1,4 +1,5 @@
 export * from "./appearance.js";
+export * from "./art.js";
 export * from "./chat.js";
 export * from "./constants.js";
 export * from "./direction.js";

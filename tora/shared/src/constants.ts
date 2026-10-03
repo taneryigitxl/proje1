@@ -1,6 +1,7 @@
 export const TILE_SIZE = 16;
 export const MAP_ID = "tora-village";
 export const PLAYER_SPEED = 78;
+export const RUN_SPEED_MULTIPLIER = 1.55;
 export const PLAYER_HIT_WIDTH = 10;
 export const PLAYER_HIT_HEIGHT = 8;
 export const SIM_TICK_MS = 50;

@@ -9,7 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@fontsource/press-start-2p": "^5.2.6",
+    "@fontsource/noto-sans": "^5.2.5",
+    "@fontsource/source-serif-4": "^5.2.5",
     "@tora/shared": "*",
     "colyseus.js": "^0.16.0",
     "phaser": "^3.90.0"

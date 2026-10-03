@@ -21,6 +21,7 @@ import {
 } from "../api";
 import { createGame } from "../game/createGame";
 import type { GameEntry } from "../game/types";
+import { createPanels, type PanelId } from "./panels";
 import { drawPortrait } from "./portrait";
 
 const TOKEN_KEY = "tora.session";
@@ -91,14 +92,38 @@ export function boot(): void {
   });
   chatInput.addEventListener("focus", () => entry?.typing(true));
   chatInput.addEventListener("blur", () => entry?.typing(false));
+  const panels = createPanels(() => character);
+  const panelKeys: Record<string, PanelId> = {
+    KeyC: "character",
+    KeyI: "inventory",
+    KeyK: "skills",
+    KeyQ: "quests",
+    KeyM: "map",
+  };
+  document.querySelectorAll<HTMLButtonElement>("[data-panel]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.panel;
+      if (id === "character" || id === "inventory" || id === "skills" || id === "quests" || id === "map" || id === "settings" || id === "guild") {
+        panels.toggle(id);
+      }
+    });
+  });
   window.addEventListener("keydown", (event) => {
     if (hud.hidden) return;
-    if (event.key === "Escape" && document.activeElement === chatInput) {
-      chatInput.blur();
+    const typing = document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement;
+    if (event.key === "Escape") {
+      if (document.activeElement === chatInput) chatInput.blur();
+      else if (panels.isOpen()) panels.close();
       return;
     }
-    if (event.key !== "Enter" || event.repeat || document.activeElement === chatInput) return;
-    if (document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement) return;
+    if (typing) return;
+    const panel = panelKeys[event.code];
+    if (panel) {
+      event.preventDefault();
+      panels.toggle(panel);
+      return;
+    }
+    if (event.key !== "Enter" || event.repeat) return;
     event.preventDefault();
     chatInput.focus();
   });
@@ -186,7 +211,7 @@ export function boot(): void {
       createForm.hidden = true;
       characterCard.hidden = false;
       requireElement<HTMLElement>("select-name").textContent = character.name;
-      requireElement<HTMLElement>("select-meta").textContent = `Level ${character.level} · ${character.gold} gold`;
+      requireElement<HTMLElement>("select-meta").textContent = `Seviye ${character.level} · ${character.gold} altın`;
       const portrait = requireElement<HTMLCanvasElement>("select-portrait");
       await drawPortrait(portrait, character);
     } catch (error) {
@@ -247,12 +272,12 @@ export function boot(): void {
       character: active,
       onReady: () => appendChat({
         name: "",
-        text: offline ? "Admin test mode. Movement stays in this browser." : "You arrive in Tora Village.",
+        text: offline ? "Yönetici test modu. Hareket yalnızca bu tarayıcıda kalır." : "Tora Köyü'ne vardın.",
         system: true,
       }),
       onChat: (line) => appendChat(line),
       onOnline: (count) => {
-        requireElement<HTMLElement>("online-count").textContent = `${count} online`;
+        requireElement<HTMLElement>("online-count").textContent = `${count} çevrimiçi`;
       },
       onDisconnect: (text, canReconnect) => {
         requireElement<HTMLElement>("disconnect-text").textContent = text;
@@ -295,7 +320,7 @@ export function boot(): void {
 
   function paintHud(next: PublicCharacter): void {
     requireElement<HTMLElement>("hud-name").textContent = next.name;
-    requireElement<HTMLElement>("hud-level").textContent = `Level ${next.level}`;
+    requireElement<HTMLElement>("hud-level").textContent = `Seviye ${next.level}`;
     requireElement<HTMLElement>("hp-text").textContent = `${next.currentHealth} / ${next.maxHealth}`;
     requireElement<HTMLElement>("mp-text").textContent = `${next.currentMana} / ${next.maxMana}`;
     requireElement<HTMLElement>("hp-fill").style.width = `${barWidth(next.currentHealth, next.maxHealth)}%`;
@@ -327,11 +352,11 @@ export function boot(): void {
     mountChoices("body-options", BODY_TYPES, body, (value) => {
       body = value;
       void refreshPortrait();
-    }, (value) => (value === "female" ? "Feminine" : "Masculine"));
+    }, (value) => (value === "female" ? "Kadın" : "Erkek"));
     mountChoices("hair-options", HAIR_STYLES, hairStyle, (value) => {
       hairStyle = value;
       void refreshPortrait();
-    }, (value) => value[0]?.toUpperCase() + value.slice(1));
+    }, (value) => (value === "short" ? "Kısa" : value === "long" ? "Uzun" : "Bağlı"));
     const colors = requireElement<HTMLElement>("color-options");
     colors.replaceChildren();
     for (const color of HAIR_COLORS) {
@@ -378,7 +403,7 @@ export function boot(): void {
   }
 
   function syncMute(): void {
-    muteButton.textContent = audio.muted ? "Sound off" : "Sound on";
+    muteButton.textContent = audio.muted ? "Ses kapalı" : "Ses açık";
     muteButton.classList.toggle("active", !audio.muted);
   }
 }
@@ -391,7 +416,7 @@ function requireElement<T extends HTMLElement>(id: string): T {
 
 function messageOf(error: unknown): string {
   if (error instanceof ApiError || error instanceof Error) return error.message;
-  return "Something went wrong. Please try again.";
+  return "Bir şeyler ters gitti. Tekrar dene.";
 }
 
 function adminCharacter(): PublicCharacter {

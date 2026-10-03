@@ -2,7 +2,7 @@ import { httpUrlFromGameServer } from "@tora/shared";
 
 export function gameServerUrl(): string {
   const url = import.meta.env.VITE_GAME_SERVER_URL?.trim();
-  if (!url) throw new Error("The game server address is not configured.");
+  if (!url) throw new Error("Oyun sunucusu adresi ayarlı değil.");
   return url;
 }
 

@@ -21,12 +21,12 @@ export async function api<T>(path: string, options: RequestInit = {}, token?: st
   try {
     response = await fetch(apiUrl(path), { ...options, headers });
   } catch {
-    throw new ApiError("Could not reach the TORA server.");
+    throw new ApiError("TORA sunucusuna ulaşılamadı.");
   }
 
   const payload = (await response.json().catch(() => ({}))) as T & ErrorPayload;
   if (!response.ok) {
-    throw new ApiError(typeof payload.error === "string" ? payload.error : "The server rejected that request.");
+    throw new ApiError(typeof payload.error === "string" ? payload.error : "Sunucu bu isteği kabul etmedi.");
   }
   return payload;
 }

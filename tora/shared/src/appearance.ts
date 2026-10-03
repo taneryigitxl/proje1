@@ -5,11 +5,11 @@ export const HAIR_STYLES = ["short", "long", "tied"] as const;
 export type HairStyle = (typeof HAIR_STYLES)[number];
 
 export const HAIR_COLORS = [
-  { id: "brown", label: "Brown", hex: "#3b2416" },
-  { id: "black", label: "Black", hex: "#1c1c1c" },
-  { id: "blonde", label: "Blonde", hex: "#d7b15a" },
-  { id: "auburn", label: "Auburn", hex: "#8f3d32" },
-  { id: "silver", label: "Silver", hex: "#cfc6be" },
+  { id: "brown", label: "Kahverengi", hex: "#3b2416" },
+  { id: "black", label: "Siyah", hex: "#1c1c1c" },
+  { id: "blonde", label: "Sarı", hex: "#d7b15a" },
+  { id: "auburn", label: "Kızıl", hex: "#8f3d32" },
+  { id: "silver", label: "Gümüş", hex: "#cfc6be" },
 ] as const;
 
 export type HairColorId = (typeof HAIR_COLORS)[number]["id"];

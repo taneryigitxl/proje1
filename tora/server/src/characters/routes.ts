@@ -36,7 +36,7 @@ characterRouter.get("/", async (_req, res) => {
 characterRouter.post("/", async (req, res) => {
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) {
-    sendError(res, 400, "Check the character form and try again.");
+    sendError(res, 400, "Karakter formunu kontrol edip tekrar dene.");
     return;
   }
 
@@ -49,14 +49,14 @@ characterRouter.post("/", async (req, res) => {
     hairColor: hairColor ?? parsed.data.hairColor,
   });
   if (nameError || appearanceError || !hairColor) {
-    sendError(res, 400, nameError ?? appearanceError ?? "Choose a hair color.");
+    sendError(res, 400, nameError ?? appearanceError ?? "Bir saç rengi seç.");
     return;
   }
 
   const ownerId = accountId(res);
   const existing = await prisma.character.count({ where: { accountId: ownerId } });
   if (existing >= 1) {
-    sendError(res, 409, "This account already has a character.");
+    sendError(res, 409, "Bu hesapta zaten bir karakter var.");
     return;
   }
 
@@ -86,7 +86,7 @@ characterRouter.post("/", async (req, res) => {
     res.status(201).json({ character: toPublicCharacter(character) });
   } catch (error) {
     if (uniqueConstraint(error)?.includes("name")) {
-      sendError(res, 409, "That character name is already taken.");
+      sendError(res, 409, "Bu karakter adı alınmış.");
       return;
     }
     throw error;
