@@ -24,6 +24,13 @@ export interface PublicCharacter {
   positionX: number;
   positionY: number;
   facing: Direction;
+  classId: string;
+  strength: number;
+  dexterity: number;
+  intellect: number;
+  vitality: number;
+  statPoints: number;
+  weaponId: string;
 }
 
 export interface ChatBroadcast {

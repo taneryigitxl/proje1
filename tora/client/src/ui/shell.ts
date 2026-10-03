@@ -1,11 +1,12 @@
 import {
   BODY_TYPES,
+  CLASS_IDS,
+  CLASSES,
   HAIR_COLORS,
   HAIR_STYLES,
   MAP_ID,
-  STARTING_HEALTH,
-  STARTING_MANA,
   type BodyType,
+  type ClassId,
   type HairStyle,
   type PublicCharacter,
 } from "@tora/shared";
@@ -22,6 +23,7 @@ import {
 import { createGame } from "../game/createGame";
 import type { GameEntry } from "../game/types";
 import { createPanels, type PanelId } from "./panels";
+import { setSessionBag } from "./session";
 import { drawPortrait } from "./portrait";
 
 const TOKEN_KEY = "tora.session";
@@ -46,6 +48,7 @@ export function boot(): void {
   let character: PublicCharacter | null = null;
   let entry: GameEntry | null = null;
   let game: PhaserGame | null = null;
+  let classId: ClassId = "warrior";
   let body: BodyType = "female";
   let hairStyle: HairStyle = "short";
   let hairColor: string = HAIR_COLORS[0].hex;
@@ -211,7 +214,8 @@ export function boot(): void {
       createForm.hidden = true;
       characterCard.hidden = false;
       requireElement<HTMLElement>("select-name").textContent = character.name;
-      requireElement<HTMLElement>("select-meta").textContent = `Seviye ${character.level} · ${character.gold} altın`;
+      const className = CLASSES[character.classId as ClassId]?.name ?? character.classId;
+      requireElement<HTMLElement>("select-meta").textContent = `${className} · Seviye ${character.level} · ${character.gold} altın`;
       const portrait = requireElement<HTMLCanvasElement>("select-portrait");
       await drawPortrait(portrait, character);
     } catch (error) {
@@ -228,6 +232,7 @@ export function boot(): void {
         gender: body,
         hairStyle,
         hairColor,
+        classId,
       });
       character = result.character;
       await showCharacters();
@@ -287,7 +292,21 @@ export function boot(): void {
       typing: () => undefined,
       sendChat: () => undefined,
       leaveWorld: async () => undefined,
+      onBag: (payload) => {
+        const bag = payload as { items?: Array<{ itemId: string; quantity: number; equipped: boolean }>; quest?: string };
+        setSessionBag(bag.items ?? [], bag.quest ?? "");
+      },
     };
+    if (offline) {
+      const klass = CLASSES[active.classId as ClassId] ?? CLASSES.warrior;
+      setSessionBag([
+        { itemId: klass.weaponId, quantity: 1, equipped: true },
+        { itemId: "moon-sword", quantity: 1, equipped: false },
+        { itemId: "travel-armor", quantity: 1, equipped: true },
+        { itemId: "small-potion", quantity: 5, equipped: false },
+        { itemId: "guard-armor", quantity: 1, equipped: false },
+      ], "Eğitim: yeşil slime yen");
+    }
     game = createGame(entry);
   }
 
@@ -320,7 +339,8 @@ export function boot(): void {
 
   function paintHud(next: PublicCharacter): void {
     requireElement<HTMLElement>("hud-name").textContent = next.name;
-    requireElement<HTMLElement>("hud-level").textContent = `Seviye ${next.level}`;
+    const className = CLASSES[next.classId as ClassId]?.name ?? "Savaşçı";
+    requireElement<HTMLElement>("hud-level").textContent = `${className} · Seviye ${next.level}`;
     requireElement<HTMLElement>("hp-text").textContent = `${next.currentHealth} / ${next.maxHealth}`;
     requireElement<HTMLElement>("mp-text").textContent = `${next.currentMana} / ${next.maxMana}`;
     requireElement<HTMLElement>("hp-fill").style.width = `${barWidth(next.currentHealth, next.maxHealth)}%`;
@@ -349,6 +369,9 @@ export function boot(): void {
   }
 
   function renderChoices(): void {
+    mountChoices("class-options", CLASS_IDS, classId, (value) => {
+      classId = value;
+    }, (value) => CLASSES[value].name);
     mountChoices("body-options", BODY_TYPES, body, (value) => {
       body = value;
       void refreshPortrait();
@@ -429,14 +452,21 @@ function adminCharacter(): PublicCharacter {
     level: 1,
     experience: 0,
     gold: 0,
-    currentHealth: STARTING_HEALTH,
-    maxHealth: STARTING_HEALTH,
-    currentMana: STARTING_MANA,
-    maxMana: STARTING_MANA,
+    currentHealth: 140,
+    maxHealth: 140,
+    currentMana: 40,
+    maxMana: 40,
     mapId: MAP_ID,
     positionX: 32 * 16 + 8,
     positionY: 26 * 16 + 14,
     facing: "down",
+    classId: "warrior",
+    strength: 12,
+    dexterity: 6,
+    intellect: 3,
+    vitality: 11,
+    statPoints: 0,
+    weaponId: "rusty-sword",
   };
 }
 

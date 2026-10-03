@@ -1,22 +1,36 @@
 import type { Direction } from "./direction.js";
 
 /** Placeholder sheets use this grid. Final anime sheets must match it or ship a new manifest. */
-export const AVATAR_FRAME_WIDTH = 48;
-export const AVATAR_FRAME_HEIGHT = 64;
-export const AVATAR_DISPLAY_SCALE = 0.5;
+export const AVATAR_FRAME_WIDTH = 64;
+export const AVATAR_FRAME_HEIGHT = 80;
+export const AVATAR_DISPLAY_SCALE = 1;
 export const AVATAR_ANCHOR_X = 0.5;
 export const AVATAR_ANCHOR_Y = 1;
-export const FRAMES_PER_DIRECTION = 16;
+export const FRAMES_PER_DIRECTION = 32;
 
 export const DIRECTION_ROWS: readonly Direction[] = ["down", "up", "right", "left"];
 
 export const LOCOMOTION_CLIPS = {
   idle: { start: 0, count: 4, frameRate: 6 },
-  walk: { start: 4, count: 6, frameRate: 10 },
-  run: { start: 10, count: 6, frameRate: 14 },
+  walk: { start: 4, count: 4, frameRate: 8 },
+  run: { start: 8, count: 4, frameRate: 12 },
+  attack: { start: 12, count: 6, frameRate: 16 },
+  skill: { start: 18, count: 6, frameRate: 14 },
+  hit: { start: 24, count: 3, frameRate: 12 },
+  death: { start: 27, count: 5, frameRate: 8 },
 } as const;
 
 export type LocomotionClip = keyof typeof LOCOMOTION_CLIPS;
+
+export const ACTION_PRIORITY: Record<LocomotionClip, number> = {
+  death: 100,
+  hit: 80,
+  skill: 60,
+  attack: 60,
+  run: 10,
+  walk: 10,
+  idle: 0,
+};
 
 export const ACTION_CLIPS = ["attack", "cast", "skill", "hit", "dodge", "dead", "mount"] as const;
 export type ActionClip = (typeof ACTION_CLIPS)[number];

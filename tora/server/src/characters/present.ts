@@ -1,7 +1,7 @@
 import type { Character } from "@prisma/client";
-import { isBodyType, isDirection, isHairStyle, type PublicCharacter } from "@tora/shared";
+import { ITEMS, isBodyType, isDirection, isHairStyle, type PublicCharacter } from "@tora/shared";
 
-export function toPublicCharacter(character: Character): PublicCharacter {
+export function toPublicCharacter(character: Character & { items?: Array<{ equipped: boolean; itemId: string }> }): PublicCharacter {
   if (!isBodyType(character.gender) || !isHairStyle(character.hairStyle) || !isDirection(character.facing)) {
     throw new Error(`Character ${character.id} is missing appearance data.`);
   }
@@ -23,5 +23,12 @@ export function toPublicCharacter(character: Character): PublicCharacter {
     positionX: character.positionX,
     positionY: character.positionY,
     facing: character.facing,
+    classId: character.classId,
+    strength: character.strength,
+    dexterity: character.dexterity,
+    intellect: character.intellect,
+    vitality: character.vitality,
+    statPoints: character.statPoints,
+    weaponId: character.items?.find((item) => item.equipped && ITEMS[item.itemId]?.kind === "weapon")?.itemId ?? "rusty-sword",
   };
 }

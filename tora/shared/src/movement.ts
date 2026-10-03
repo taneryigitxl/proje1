@@ -57,7 +57,7 @@ export function isWalkable(map: CollisionMap, x: number, y: number): boolean {
   return !bodyOverlapsSolid(map, x, y);
 }
 
-export function stepMovement(body: BodyState, input: InputState, dtSeconds: number, map: CollisionMap): BodyState {
+export function stepMovement(body: BodyState, input: InputState, dtSeconds: number, map: CollisionMap, speedScale = 1): BodyState {
   let dx = 0;
   let dy = 0;
   if (input.left) dx -= 1;
@@ -74,7 +74,7 @@ export function stepMovement(body: BodyState, input: InputState, dtSeconds: numb
   dy /= length;
 
   const dt = Math.min(Math.max(dtSeconds, 0), 0.1);
-  const distance = PLAYER_SPEED * (input.running ? RUN_SPEED_MULTIPLIER : 1) * dt;
+  const distance = PLAYER_SPEED * (input.running ? RUN_SPEED_MULTIPLIER : 1) * speedScale * dt;
   let facing: Direction = body.facing;
   if (Math.abs(dx) > Math.abs(dy)) facing = dx < 0 ? "left" : "right";
   else if (dy !== 0) facing = dy < 0 ? "up" : "down";

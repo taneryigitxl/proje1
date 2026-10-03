@@ -17,4 +17,5 @@ export interface GameEntry {
   typing: (typing: boolean) => void;
   sendChat: (text: string) => void;
   leaveWorld: () => Promise<void>;
+  onBag?: (payload: unknown) => void;
 }

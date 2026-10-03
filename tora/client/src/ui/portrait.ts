@@ -1,53 +1,65 @@
-import type { BodyType, HairStyle } from "@tora/shared";
-import { assetUrl } from "../config";
-
-const images = new Map<string, Promise<HTMLImageElement>>();
-
-function loadImage(file: string): Promise<HTMLImageElement> {
-  const cached = images.get(file);
-  if (cached) return cached;
-  const pending = new Promise<HTMLImageElement>((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error(`Could not load ${file}`));
-    image.src = assetUrl(file);
-  });
-  images.set(file, pending);
-  return pending;
-}
+const CLASS_CLOTH: Record<string, string> = {
+  warrior: "#7a3038",
+  ninja: "#243044",
+  mage: "#3c2d78",
+  shaman: "#1d655c",
+};
 
 export async function drawPortrait(
   canvas: HTMLCanvasElement,
-  appearance: { gender: BodyType; hairStyle: HairStyle; hairColor: string },
+  appearance: { classId?: string; hairColor?: string; gender?: string; hairStyle?: string },
 ): Promise<void> {
   const context = canvas.getContext("2d");
   if (!context) return;
-  const [body, hair] = await Promise.all([
-    loadImage(`characters/body/${appearance.gender}.png`),
-    loadImage(`characters/hair/${appearance.hairStyle}.png`),
-  ]);
-  canvas.width = 48;
-  canvas.height = 64;
-  context.imageSmoothingEnabled = true;
-  context.clearRect(0, 0, canvas.width, canvas.height);
-  context.drawImage(body, 0, 0, 48, 64, 0, 0, 48, 64);
-  context.fillStyle = appearance.hairColor;
-  context.globalCompositeOperation = "source-over";
-  const hairCanvas = tint(hair, appearance.hairColor);
-  context.drawImage(hairCanvas, 0, 0, 48, 64, 0, 0, 48, 64);
-}
-
-function tint(source: HTMLImageElement, color: string): HTMLCanvasElement {
-  const canvas = document.createElement("canvas");
-  canvas.width = 16;
-  canvas.height = 24;
-  const context = canvas.getContext("2d");
-  if (!context) return canvas;
-  context.drawImage(source, 0, 0, 16, 24, 0, 0, 16, 24);
-  context.globalCompositeOperation = "multiply";
-  context.fillStyle = color;
-  context.fillRect(0, 0, 16, 24);
-  context.globalCompositeOperation = "destination-in";
-  context.drawImage(source, 0, 0, 16, 24, 0, 0, 16, 24);
-  return canvas;
+  canvas.width = 64;
+  canvas.height = 80;
+  context.clearRect(0, 0, 64, 80);
+  const cloth = CLASS_CLOTH[appearance.classId ?? "warrior"] ?? "#7a3038";
+  context.fillStyle = "rgba(0,0,0,0.25)";
+  context.beginPath();
+  context.ellipse(32, 74, 16, 5, 0, 0, Math.PI * 2);
+  context.fill();
+  context.fillStyle = cloth;
+  context.beginPath();
+  context.moveTo(16, 78);
+  context.lineTo(48, 78);
+  context.lineTo(44, 48);
+  context.lineTo(20, 48);
+  context.fill();
+  if (appearance.classId === "warrior") {
+    context.fillStyle = "#e0b15a";
+    context.fillRect(12, 46, 8, 10);
+    context.fillRect(44, 46, 8, 10);
+  } else if (appearance.classId === "mage") {
+    context.fillStyle = "#d7c4ff";
+    context.beginPath();
+    context.moveTo(32, 8);
+    context.lineTo(22, 28);
+    context.lineTo(42, 28);
+    context.fill();
+  } else if (appearance.classId === "shaman") {
+    context.fillStyle = "#f0d48a";
+    context.fillRect(18, 22, 4, 12);
+    context.fillRect(42, 22, 4, 12);
+  }
+  context.fillStyle = "#f3c7a8";
+  context.beginPath();
+  context.ellipse(32, 38, 12, 14, 0, 0, Math.PI * 2);
+  context.fill();
+  context.fillStyle = appearance.hairColor || "#3b2416";
+  context.beginPath();
+  context.ellipse(32, 30, 13, 10, 0, Math.PI, 0);
+  context.fill();
+  if (appearance.classId === "ninja") {
+    context.fillStyle = "#111820";
+    context.fillRect(22, 38, 20, 5);
+  }
+  context.fillStyle = "#1c1420";
+  context.beginPath();
+  context.ellipse(27, 38, 1.6, 2, 0, 0, Math.PI * 2);
+  context.ellipse(37, 38, 1.6, 2, 0, 0, Math.PI * 2);
+  context.fill();
+  context.fillStyle = "#fff";
+  context.fillRect(28, 37, 1, 1);
+  context.fillRect(38, 37, 1, 1);
 }

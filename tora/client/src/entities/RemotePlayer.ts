@@ -1,5 +1,5 @@
 import type Phaser from "phaser";
-import { isDirection, locomotionFromInput, type Direction } from "@tora/shared";
+import { ITEMS, isDirection, locomotionFromInput, type Direction, type LocomotionClip } from "@tora/shared";
 import { Avatar, type AvatarAppearance } from "./Avatar";
 
 export class RemotePlayer {
@@ -24,13 +24,19 @@ export class RemotePlayer {
     this.avatar = new Avatar(scene, appearance, x, y);
   }
 
-  apply(state: { x: number; y: number; facing: string; moving: boolean; running: boolean; name: string }): void {
+  apply(state: { x: number; y: number; facing: string; moving: boolean; running: boolean; name: string; weaponId?: string; armorId?: string; anim?: string; mounted?: boolean }): void {
     this.targetX = state.x;
     this.targetY = state.y;
     this.facing = isDirection(state.facing) ? state.facing : this.facing;
     this.moving = state.moving;
     this.running = state.running;
     this.name = state.name;
+    if (state.weaponId) this.avatar.setWeapon(ITEMS[state.weaponId]?.texture);
+    if (state.armorId) this.avatar.setArmor(ITEMS[state.armorId]?.texture);
+    this.avatar.setMounted(Boolean(state.mounted), state.moving);
+    if (state.anim === "attack" || state.anim === "skill" || state.anim === "hit" || state.anim === "death") {
+      this.avatar.play(this.facing, state.anim as LocomotionClip);
+    }
   }
 
   update(dt: number): void {

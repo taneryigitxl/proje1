@@ -1,4 +1,5 @@
-import type { PublicCharacter } from "@tora/shared";
+import { CLASSES, ITEMS, derivedStats, type ClassId, type PublicCharacter } from "@tora/shared";
+import { sessionBag } from "./session";
 import { audio, type AudioChannel } from "../audio/AudioManager";
 
 export type PanelId = "character" | "inventory" | "skills" | "quests" | "map" | "settings" | "guild";
@@ -73,6 +74,9 @@ export function createPanels(getCharacter: () => PublicCharacter | null): {
     open = id;
     const panel = windows.get(id)!;
     if (id === "character") fillCharacter(panel.querySelector(".panel-body")!, getCharacter());
+    if (id === "inventory") fillInventory(panel.querySelector(".panel-body")!);
+    if (id === "skills") fillSkills(panel.querySelector(".panel-body")!, getCharacter());
+    if (id === "quests") fillQuests(panel.querySelector(".panel-body")!);
     panel.hidden = false;
     layer.hidden = false;
   }
@@ -81,21 +85,9 @@ export function createPanels(getCharacter: () => PublicCharacter | null): {
 }
 
 function fillStatic(windows: Map<PanelId, HTMLElement>): void {
-  const inventory = windows.get("inventory")!.querySelector(".panel-body")!;
-  inventory.append(note("Eşya tanımları bir sonraki aşamada bu ızgaraya bağlanacak. Slotlar hazır."));
-  const grid = document.createElement("div");
-  grid.className = "inventory-grid";
-  for (let slot = 1; slot <= 40; slot += 1) {
-    const cell = document.createElement("div");
-    cell.textContent = String(slot);
-    grid.append(cell);
-  }
-  inventory.append(grid);
-
-  windows.get("skills")!.querySelector(".panel-body")!.append(
-    note("Yetenekler, bekleme süresi ve sürükle-bırak kısayol çubuğu savaş aşamasında bağlanacak."),
-  );
-  windows.get("quests")!.querySelector(".panel-body")!.append(note("Görev defteri henüz boş."));
+  windows.get("inventory")!.querySelector(".panel-body")!.id = "inventory-body";
+  windows.get("skills")!.querySelector(".panel-body")!.id = "skills-body";
+  windows.get("quests")!.querySelector(".panel-body")!.id = "quests-body";
   windows.get("map")!.querySelector(".panel-body")!.append(note("Dünya haritası bir sonraki harita ile açılacak. Şimdilik sağ üstteki küçük haritayı kullan."));
   windows.get("guild")!.querySelector(".panel-body")!.append(note("Lonca kurma ve üyelik henüz açık değil."));
 
@@ -118,6 +110,16 @@ function fillStatic(windows: Map<PanelId, HTMLElement>): void {
     controls.append(item);
   }
   settings.append(controls);
+  const sky = document.createElement("div");
+  sky.className = "sky-row";
+  for (const [id, label] of [["day", "Gündüz"], ["dusk", "Akşam"], ["night", "Gece"]] as const) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = label;
+    button.addEventListener("click", () => document.dispatchEvent(new CustomEvent("tora-sky", { detail: id })));
+    sky.append(button);
+  }
+  settings.append(sky);
   for (const channel of VOLUME_CHANNELS) {
     const label = document.createElement("label");
     label.textContent = channel.label;
@@ -139,19 +141,78 @@ function fillCharacter(body: HTMLElement, character: PublicCharacter | null): vo
     body.append(note("Önce dünyaya gir."));
     return;
   }
+  const classId = (character.classId || "warrior") as ClassId;
+  const klass = CLASSES[classId] ?? CLASSES.warrior;
+  const derived = derivedStats({
+    strength: character.strength,
+    dexterity: character.dexterity,
+    intellect: character.intellect,
+    vitality: character.vitality,
+    weaponId: character.weaponId,
+    armorId: "travel-armor",
+    classId,
+  }, false);
   const lines = [
-    character.name,
-    `Seviye ${character.level}`,
+    `${character.name}`,
+    `${klass.name} · Seviye ${character.level}`,
     `Can ${character.currentHealth} / ${character.maxHealth}`,
     `Mana ${character.currentMana} / ${character.maxMana}`,
+    `Güç ${character.strength}`,
+    `Çeviklik ${character.dexterity}`,
+    `Zeka ${character.intellect}`,
+    `Dayanıklılık ${character.vitality}`,
+    `Saldırı ${derived.attackMin}-${derived.attackMax}`,
+    `Savunma ${derived.defense}`,
+    `Kritik %${Math.round(derived.critChance * 100)}`,
+    `Hareket ${derived.moveSpeed.toFixed(2)}`,
     `Altın ${character.gold}`,
-    "Stat puanları ve sınıf seçimi bir sonraki aşamada eklenecek.",
   ];
+  const slots = document.createElement("div");
+  slots.className = "equip-grid";
+  for (const label of ["Silah", "Zırh", "Kask", "Eldiven", "Ayakkabı", "Kolye", "Yüzük", "Binek"]) {
+    const cell = document.createElement("div");
+    cell.className = "item-slot";
+    const armorItem = sessionBag.items.find((item) => item.equipped && ITEMS[item.itemId]?.kind === "armor");
+    const worn = label === "Silah" ? ITEMS[character.weaponId]?.name ?? "Boş" : label === "Zırh" ? ITEMS[armorItem?.itemId ?? ""]?.name ?? "Boş" : "Boş";
+    cell.textContent = `${label}\n${worn}`;
+    slots.append(cell);
+  }
+  body.append(slots);
   for (const line of lines) {
     const row = document.createElement("p");
     row.textContent = line;
     body.append(row);
   }
+}
+
+function fillInventory(body: HTMLElement): void {
+  body.replaceChildren();
+  const grid = document.createElement("div");
+  grid.className = "inventory-grid";
+  const items = sessionBag.items.length ? sessionBag.items : [];
+  for (const item of items) {
+    const def = ITEMS[item.itemId];
+    const cell = document.createElement("button");
+    cell.type = "button";
+    cell.className = `item-slot${def?.rarity === "Nadir" ? " rare" : ""}${item.equipped ? " equipped" : ""}`;
+    cell.textContent = def?.name ?? item.itemId;
+    cell.title = def ? `${def.name}\n${def.kind === "weapon" ? `Saldırı ${def.attackMin}-${def.attackMax}` : def.kind === "potion" ? `İyileştirme ${def.heal}` : `Savunma ${def.defense}`}\n${item.equipped ? "Kuşanıldı" : `x${item.quantity}`}` : item.itemId;
+    cell.addEventListener("dblclick", () => document.dispatchEvent(new CustomEvent("tora-equip", { detail: item.itemId })));
+    grid.append(cell);
+  }
+  body.append(grid);
+}
+
+function fillSkills(body: HTMLElement, character: PublicCharacter | null): void {
+  body.replaceChildren();
+  const classId = (character?.classId || "warrior") as ClassId;
+  const klass = CLASSES[classId] ?? CLASSES.warrior;
+  body.append(note(`${klass.name}: 1 saldırı, 2 ${klass.skills[0]}, 3 ${klass.skills[1]}. H binek, 4 iksir.`));
+}
+
+function fillQuests(body: HTMLElement): void {
+  body.replaceChildren();
+  body.append(note(sessionBag.quest || "Eğitim: yeşil slime yen."));
 }
 
 function note(text: string): HTMLParagraphElement {

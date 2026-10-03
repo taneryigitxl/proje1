@@ -64,7 +64,7 @@ export function listCharacters(token: string): Promise<{ characters: PublicChara
 
 export function createCharacter(
   token: string,
-  input: { name: string; gender: string; hairStyle: string; hairColor: string },
+  input: { name: string; gender: string; hairStyle: string; hairColor: string; classId: string },
 ): Promise<{ character: PublicCharacter }> {
   return api("/api/characters", { method: "POST", body: JSON.stringify(input) }, token);
 }

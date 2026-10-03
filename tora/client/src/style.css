@@ -128,6 +128,18 @@ input {
 #chat-log b { color: #f2d48a; }
 #chat-log .system { color: #9fb7a4; }
 #chat-input { width: 100%; }
+.target-frame {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 180px;
+  padding: 6px 12px;
+  text-align: center;
+  color: #f4e7cf;
+  background: rgba(18, 12, 8, 0.72);
+  border: 1px solid rgba(212, 175, 106, 0.45);
+}
 .hotbar {
   left: 50%;
   bottom: 16px;
@@ -137,16 +149,63 @@ input {
   padding: 8px;
 }
 .hotbar div {
-  width: 42px;
-  height: 42px;
-  display: grid;
-  place-items: end start;
-  padding: 4px;
-  background: #1a140e;
-  box-shadow: inset 0 0 0 2px #6b5438;
-  color: #e0b15a;
-  font-size: 12px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  overflow: hidden;
+  border: 1px solid rgba(214, 176, 106, 0.55);
+  background:
+    radial-gradient(circle at 50% 30%, rgba(86, 64, 42, 0.55), rgba(16, 10, 8, 0.88));
+  box-shadow: inset 0 0 0 1px rgba(255, 220, 160, 0.12);
 }
+.hotbar div img {
+  width: 32px;
+  height: 32px;
+  image-rendering: auto;
+}
+.hotbar div i {
+  position: absolute;
+  left: 3px;
+  top: 1px;
+  font-style: normal;
+  font-size: 10px;
+  color: #f0d7a4;
+}
+.hotbar div b {
+  position: absolute;
+  inset: auto 0 2px;
+  text-align: center;
+  font-size: 11px;
+}
+.hotbar div.cooling::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: conic-gradient(rgba(8, 6, 4, 0.72) var(--sweep), transparent 0);
+  pointer-events: none;
+}
+.hotbar div.ready {
+  box-shadow: inset 0 0 0 1px rgba(255, 214, 120, 0.35);
+}
+.item-slot {
+  min-height: 54px;
+  border: 1px solid rgba(214, 176, 106, 0.4);
+  background: rgba(12, 9, 8, 0.72);
+  color: #f4e7cf;
+  font-size: 11px;
+}
+.item-slot.rare { border-color: #7eb6ff; }
+.item-slot.equipped { outline: 1px solid #e0b15a; }
+.equip-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 64px);
+  gap: 8px;
+  margin-top: 8px;
+}
+.sky-row { display: flex; gap: 8px; }
 .gold-panel {
   right: 16px;
   bottom: 16px;

@@ -1,12 +1,13 @@
 import {
+  CLASSES,
   MAP_ID,
-  STARTING_HEALTH,
-  STARTING_MANA,
   hairColorHex,
+  isClassId,
   normalizeCharacterName,
   validateAppearance,
   validateCharacterName,
 } from "@tora/shared";
+import { starterItems } from "../systems/fighters.js";
 import { Router } from "express";
 import { z } from "zod";
 import { accountId, requireAccount } from "../auth/middleware.js";
@@ -20,6 +21,7 @@ const createSchema = z.object({
   gender: z.string(),
   hairStyle: z.string(),
   hairColor: z.string(),
+  classId: z.string(),
 });
 
 export const characterRouter = Router();
@@ -28,6 +30,7 @@ characterRouter.use(requireAccount);
 characterRouter.get("/", async (_req, res) => {
   const characters = await prisma.character.findMany({
     where: { accountId: accountId(res) },
+    include: { items: true },
     orderBy: { createdAt: "asc" },
   });
   res.json({ characters: characters.map(toPublicCharacter) });
@@ -48,10 +51,12 @@ characterRouter.post("/", async (req, res) => {
     hairStyle: parsed.data.hairStyle,
     hairColor: hairColor ?? parsed.data.hairColor,
   });
-  if (nameError || appearanceError || !hairColor) {
-    sendError(res, 400, nameError ?? appearanceError ?? "Bir saç rengi seç.");
+  const classId = isClassId(parsed.data.classId) ? parsed.data.classId : null;
+  if (nameError || appearanceError || !hairColor || !classId) {
+    sendError(res, 400, nameError ?? appearanceError ?? "Bir sınıf seç.");
     return;
   }
+  const classDef = CLASSES[classId];
 
   const ownerId = accountId(res);
   const existing = await prisma.character.count({ where: { accountId: ownerId } });
@@ -73,15 +78,22 @@ characterRouter.post("/", async (req, res) => {
         level: 1,
         experience: 0,
         gold: 0,
-        currentHealth: STARTING_HEALTH,
-        maxHealth: STARTING_HEALTH,
-        currentMana: STARTING_MANA,
-        maxMana: STARTING_MANA,
+        classId,
+        strength: classDef.strength,
+        dexterity: classDef.dexterity,
+        intellect: classDef.intellect,
+        vitality: classDef.vitality,
+        currentHealth: classDef.maxHealth,
+        maxHealth: classDef.maxHealth,
+        currentMana: classDef.maxMana,
+        maxMana: classDef.maxMana,
         mapId: MAP_ID,
         positionX: spawn.x,
         positionY: spawn.y,
         facing: "down",
+        items: { create: starterItems("", classId).map(({ itemId, slot, quantity, equipped }) => ({ itemId, slot, quantity, equipped })) },
       },
+      include: { items: true },
     });
     res.status(201).json({ character: toPublicCharacter(character) });
   } catch (error) {

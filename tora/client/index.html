@@ -25,6 +25,7 @@
           </div>
         </header>
 
+        <div id="target-frame" class="target-frame"></div>
         <aside class="minimap-panel">
           <canvas id="minimap" width="168" height="112" aria-label="Küçük harita"></canvas>
           <span id="online-count">1 çevrimiçi</span>
@@ -46,15 +47,15 @@
         </section>
 
         <footer class="hotbar" aria-label="Kısayol çubuğu">
-          <div data-slot="1">1</div>
-          <div data-slot="2">2</div>
-          <div data-slot="3">3</div>
-          <div data-slot="4">4</div>
-          <div data-slot="5">5</div>
-          <div data-slot="6">6</div>
-          <div data-slot="7">7</div>
-          <div data-slot="8">8</div>
-          <div data-slot="9">9</div>
+          <div data-slot="1"><img alt="" /><b></b><i>1</i></div>
+          <div data-slot="2"><img alt="" /><b></b><i>2</i></div>
+          <div data-slot="3"><img alt="" /><b></b><i>3</i></div>
+          <div data-slot="4"><img alt="" /><b></b><i>4</i></div>
+          <div data-slot="5"><img alt="" /><b></b><i>5</i></div>
+          <div data-slot="6"><img alt="" /><b></b><i>6</i></div>
+          <div data-slot="7"><img alt="" /><b></b><i>7</i></div>
+          <div data-slot="8"><img alt="" /><b></b><i>8</i></div>
+          <div data-slot="9"><img alt="" /><b></b><i>9</i></div>
         </footer>
 
         <div class="gold-panel"><i></i><span>Altın</span><b id="gold-text">0</b></div>
@@ -121,6 +122,10 @@
           </div>
           <form id="create-form">
             <label>İsim<input id="character-name" name="name" maxlength="16" required /></label>
+            <fieldset>
+              <legend>Sınıf</legend>
+              <div id="class-options" class="choice-row"></div>
+            </fieldset>
             <fieldset>
               <legend>Cinsiyet</legend>
               <div id="body-options" class="choice-row"></div>

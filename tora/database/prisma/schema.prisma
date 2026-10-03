@@ -38,8 +38,27 @@ model Character {
   positionX     Float
   positionY     Float
   facing        String   @default("down")
+  classId       String   @default("warrior")
+  strength      Int      @default(8)
+  dexterity     Int      @default(5)
+  intellect     Int      @default(4)
+  vitality      Int      @default(8)
+  statPoints    Int      @default(0)
   createdAt     DateTime @default(now())
   lastLogin     DateTime @default(now())
+  items         InventoryItem[]
 
   @@index([accountId])
+}
+
+model InventoryItem {
+  id          String    @id @default(cuid())
+  characterId String
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  itemId      String
+  slot        Int
+  quantity    Int       @default(1)
+  equipped    Boolean   @default(false)
+
+  @@unique([characterId, slot])
 }

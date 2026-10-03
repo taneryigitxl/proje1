@@ -193,11 +193,13 @@ function drawCobble(png, id) {
 }
 
 function drawWater(png, id, frame) {
-  fillTile(png, id, frame === 0 ? C.waterA : C.waterB);
-  for (let y = 2 + frame; y < 16; y += 5) {
+  fillTile(png, id, frame === 0 ? C.waterA : C.waterD);
+  const shift = frame === 0 ? 0 : 6;
+  for (let y = 1; y < 16; y += 4) {
     for (let x = 0; x < 16; x += 1) {
-      if ((x + y + frame) % 5 < 2) px(png, id, x, y, C.waterC);
-      if ((x + frame * 3) % 7 === 0) px(png, id, x, y + 1, C.waterD);
+      const wave = (x + shift) % 8 < 3;
+      if (wave && y + (frame === 0 ? 0 : 1) < 16) px(png, id, x, y + (frame === 0 ? 0 : 1), C.waterC);
+      if ((x + shift) % 9 === 0) px(png, id, x, (y + 2) % 16, "#d7f4ff");
     }
   }
 }
