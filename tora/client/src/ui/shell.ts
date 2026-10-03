@@ -2,6 +2,9 @@ import {
   BODY_TYPES,
   HAIR_COLORS,
   HAIR_STYLES,
+  MAP_ID,
+  STARTING_HEALTH,
+  STARTING_MANA,
   type BodyType,
   type HairStyle,
   type PublicCharacter,
@@ -50,6 +53,7 @@ export function boot(): void {
   void refreshPortrait();
   syncMute();
 
+  document.getElementById("admin-test")?.addEventListener("click", () => startAdminTest());
   document.getElementById("show-login")?.addEventListener("click", () => showAuthMode("login"));
   document.getElementById("show-register")?.addEventListener("click", () => showAuthMode("register"));
   loginForm.addEventListener("submit", (event) => {
@@ -207,6 +211,14 @@ export function boot(): void {
     }
   }
 
+  function startAdminTest(): void {
+    token = null;
+    sessionStorage.removeItem(TOKEN_KEY);
+    character = adminCharacter();
+    disconnect.hidden = true;
+    openWorld(character, "", true);
+  }
+
   async function enterWorld(next: PublicCharacter): Promise<void> {
     if (!token) return;
     characterError.textContent = "";
@@ -219,18 +231,25 @@ export function boot(): void {
       return;
     }
 
+    openWorld(character, token, false);
+  }
+
+  function openWorld(active: PublicCharacter, activeToken: string, offline: boolean): void {
     destroyGame();
     authScreen.hidden = true;
     characterScreen.hidden = true;
     hud.hidden = false;
-    paintHud(character);
+    paintHud(active);
     clearChat();
-    const active = character;
-    const activeToken = token;
     entry = {
       token: activeToken,
+      offline,
       character: active,
-      onReady: () => appendChat({ name: "", text: "You arrive in Tora Village.", system: true }),
+      onReady: () => appendChat({
+        name: "",
+        text: offline ? "Admin test mode. Movement stays in this browser." : "You arrive in Tora Village.",
+        system: true,
+      }),
       onChat: (line) => appendChat(line),
       onOnline: (count) => {
         requireElement<HTMLElement>("online-count").textContent = `${count} online`;
@@ -373,6 +392,27 @@ function requireElement<T extends HTMLElement>(id: string): T {
 function messageOf(error: unknown): string {
   if (error instanceof ApiError || error instanceof Error) return error.message;
   return "Something went wrong. Please try again.";
+}
+
+function adminCharacter(): PublicCharacter {
+  return {
+    id: "admin-test",
+    name: "Admin",
+    gender: "female",
+    hairStyle: "short",
+    hairColor: HAIR_COLORS[0]?.hex ?? "#3b2416",
+    level: 1,
+    experience: 0,
+    gold: 0,
+    currentHealth: STARTING_HEALTH,
+    maxHealth: STARTING_HEALTH,
+    currentMana: STARTING_MANA,
+    maxMana: STARTING_MANA,
+    mapId: MAP_ID,
+    positionX: 32 * 16 + 8,
+    positionY: 26 * 16 + 14,
+    facing: "down",
+  };
 }
 
 function barWidth(current: number, max: number): number {

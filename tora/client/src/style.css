@@ -68,11 +68,17 @@ h2 { font-size: 16px; }
 .tabs, .choice-row, .hud-actions, #disconnect div { display: flex; gap: 8px; flex-wrap: wrap; }
 
 .tabs { margin: 18px 0; }
-.tabs button, .choice, form button, .hud-actions button, #disconnect button, #enter-world {
+.tabs button, .choice, form button, .hud-actions button, #disconnect button, #enter-world, #admin-test {
   border: 0;
   background: #3c2e22;
   box-shadow: inset 0 0 0 2px #1a140e;
   padding: 10px 12px;
+}
+#admin-test {
+  width: 100%;
+  margin-top: 4px;
+  background: #234236;
+  color: #e7f3ea;
 }
 .tabs button.active, .choice.active, #enter-world, form button[type="submit"] {
   background: #8d4a32;

@@ -8,6 +8,7 @@ export interface ChatLine {
 
 export interface GameEntry {
   token: string;
+  offline?: boolean;
   character: PublicCharacter;
   onReady: () => void;
   onChat: (line: ChatLine) => void;

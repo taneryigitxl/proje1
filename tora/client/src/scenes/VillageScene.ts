@@ -81,6 +81,15 @@ export class VillageScene extends Phaser.Scene {
     entry.typing = (typing) => this.setTyping(typing);
     entry.sendChat = (text) => this.connection?.sendChat(text);
     entry.leaveWorld = () => this.closeRoom();
+    if (entry.offline) {
+      entry.sendChat = (text) => {
+        this.entry.onChat({ name: this.entry.character.name, text, system: false });
+        this.nameplates.bubble(this.entry.character.id, text);
+      };
+      entry.onReady();
+      entry.onOnline(1);
+      return;
+    }
     void this.connect();
   }
 
@@ -89,7 +98,7 @@ export class VillageScene extends Phaser.Scene {
     const dt = Math.min(delta, 50) / 1000;
     const input = this.typing ? EMPTY_INPUT : this.readKeys();
     this.body = stepMovement(this.body, input, dt, this.collision);
-    this.correctPrediction(dt);
+    if (this.connection) this.correctPrediction(dt);
     this.avatar.setPosition(this.body.x, this.body.y);
     this.avatar.play(this.body.facing, this.body.moving);
     this.publishInput(input);
