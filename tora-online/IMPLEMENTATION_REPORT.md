@@ -1,6 +1,6 @@
 # Tora Online — yayın raporu
 
-Tarih: 12 Ekim 2026. Yayın yolu: https://taneryigitxl.github.io/proje1/tora-online/
+Tarih: 12 Ekim 2026. Yayın yolu: https://yigittaner.online/tora-online/
 
 ## Uygulananlar
 
@@ -34,7 +34,7 @@ Quaternius CC0: mevcut kadın ranger, Standard Base Characters rigli başı, iki
 - WebGL2 ayrıca gerçek tarayıcıda açıldı: yerel ilk oyun yüklemesi 1.84 sn; WebGPU son yerel yükleme 1.43 sn. Bu localhost ölçümleri internet/CDN indirme süresi değildir.
 - Aynı konumda kalite profilleri: Low 458, High 3764 görünür çim instance; gölgeler 512/1024/2048, çim culling uzaklığı 15/23/30 m. DPR tavanı 1/1/1.25.
 - Tekrar geçişlerde kaynak sayıları sabit: köy 4 skeleton /114 grup/568 mesh, orman 8/154/504, harabe 6/126/424. Önbellekli localhost geçişleri 0.15–0.23 sn; köy ilk hazırlığı 0.84 sn.
-- Son WebGPU oturumunda uncaught/console hata görülmedi. Üretim URL/asset ve görsel kontrol sonucu yayın sonrası ayrıca kaydedilecek.
+- Son WebGPU oturumunda uncaught/console hata görülmedi. Canlı yayın 17b4428 commit’inden açılarak doğrulandı: src/main.js?v=45, WebGPU, gerçek Combo klibi ve köy sahnesi. 48 benzersiz manifest URL’sinin tamamı HTTP 200; son 38 gözlenen ağ yanıtında hata yok, canlı oturumda console hata/uyarı yok. Canlı ilk oyun yüklemesi bu bağlantıda 4.62 sn. Ekran kanıtı yerelde tora-live-20261012.jpg olarak kaydedildi.
 
 ## Henüz bitmeyen işler
 
