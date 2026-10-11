@@ -1,32 +1,39 @@
 import Phaser from "phaser";
 import {
+  animForEffect,
+  basicAttack,
   CLASSES,
   EMPTY_INPUT,
   INPUT_HEARTBEAT_MS,
   ITEMS,
   MOUNT_SPEED,
   SKILLS,
-  BASIC_ATTACK,
   isClassId,
   isDirection,
   isHairStyle,
   locomotionFromInput,
   markersFromTiled,
   stepMovement,
+  applyDash,
+  applyDodge,
+  DASH_COOLDOWN_MS,
+  DODGE_COOLDOWN_MS,
+  FOREST_GATES,
+  inVillageSafe,
+  skillIcon,
   type BodyState,
   type ClassId,
   type CollisionMap,
   type InputState,
-  type LocomotionClip,
   type TiledMap,
 } from "@tora/shared";
 import { assetUrl } from "../config";
-import { Avatar, registerAvatarAnimations, type AvatarAppearance } from "../entities/Avatar";
+import { AVATAR_HEAD_LIFT, Avatar, registerAvatarAnimations, type AvatarAppearance, type AvatarClip } from "../entities/Avatar";
 import { RemotePlayer } from "../entities/RemotePlayer";
 import type { GameEntry } from "../game/types";
 import { VillageConnection, type PlayerSnapshot } from "../network/VillageConnection";
 import { EffectManager } from "../systems/EffectManager";
-import { LocalWorld } from "../systems/LocalWorld";
+import { LocalWorld, type GroundDrop } from "../systems/LocalWorld";
 import { MobActor } from "../systems/MobActor";
 import { TargetController } from "../systems/TargetController";
 import { NameplateLayer } from "../ui/NameplateLayer";
@@ -55,7 +62,8 @@ export class VillageScene extends Phaser.Scene {
   private effects!: EffectManager;
   private readonly mobActors = new Map<string, MobActor>();
   private readonly targeting = new TargetController();
-  private anim: LocomotionClip = "idle";
+  private anim: AvatarClip | "hit" | "death" = "idle";
+  private readonly waterStrips: Phaser.GameObjects.TileSprite[] = [];
   private health = 100;
   private mana = 50;
   private maxHealth = 100;
@@ -63,6 +71,17 @@ export class VillageScene extends Phaser.Scene {
   private readonly clientCd = new Map<string, number>();
   private readonly lampGlows: Phaser.GameObjects.Image[] = [];
   private tint?: Phaser.GameObjects.Rectangle;
+  private mounted = false;
+  private dashReady = 0;
+  private dodgeReady = 0;
+  private dashPoseUntil = 0;
+  private dashGraceUntil = 0;
+  private gateReady = 0;
+  private shownLevel = 1;
+  private pendingSlot = 0;
+  private targetMark?: Phaser.GameObjects.Ellipse;
+  private readonly remoteDrops: GroundDrop[] = [];
+  private readonly lootSprites = new Map<string, Phaser.GameObjects.Container>();
 
   constructor() {
     super("village");
@@ -75,9 +94,26 @@ export class VillageScene extends Phaser.Scene {
     this.load.spritesheet("hero-classes", assetUrl("illustrated/classes.png"), { frameWidth: 512, frameHeight: 768 });
     this.load.spritesheet("hero-monsters", assetUrl("illustrated/monsters.png"), { frameWidth: 887, frameHeight: 887 });
     this.load.image("mount-horse", assetUrl("illustrated/tora-horse.png"));
+    this.load.image("village-canopy", assetUrl("illustrated/tora-village-canopy.png"));
     this.load.image("guard-armor-overlay", assetUrl("icons/guard-armor.png"));
     this.load.image("rusty-sword-overlay", assetUrl("icons/rusty-sword.png"));
     this.load.image("moon-sword-overlay", assetUrl("icons/moon-sword.png"));
+    this.load.image("daggers-overlay", assetUrl("icons/daggers.png"));
+    this.load.image("staff-overlay", assetUrl("icons/staff.png"));
+    this.load.image("totem-overlay", assetUrl("icons/totem.png"));
+    this.load.image("fx-slash", assetUrl("icons/skill-slash.png"));
+    this.load.image("fx-whirl", assetUrl("icons/skill-whirl.png"));
+    this.load.image("fx-shadow", assetUrl("icons/skill-shadow-cut.png"));
+    this.load.image("fx-rush", assetUrl("icons/skill-rush.png"));
+    this.load.image("fx-fireball", assetUrl("icons/skill-fireball.png"));
+    this.load.image("fx-frost", assetUrl("icons/skill-frost.png"));
+    this.load.image("fx-spirit", assetUrl("icons/skill-spirit.png"));
+    this.load.image("fx-mend", assetUrl("icons/skill-mend.png"));
+    this.load.image("icon-potion", assetUrl("icons/potion.png"));
+    this.load.image("icon-ring", assetUrl("icons/totem.png"));
+    this.load.image("icon-sword", assetUrl("icons/moon-sword.png"));
+    this.load.image("icon-armor", assetUrl("icons/armor.png"));
+    this.load.image("icon-guard", assetUrl("icons/guard-armor.png"));
     this.load.on(Phaser.Loader.Events.FILE_LOAD_ERROR, (file: { key: string }) => {
       this.registry.set("loadError", file.key);
     });
@@ -113,7 +149,8 @@ export class VillageScene extends Phaser.Scene {
       const itemId = (event as CustomEvent<string>).detail;
       if (!itemId) return;
       if (this.local) {
-        this.local.equip(itemId);
+        const rejected = this.local.equip(itemId);
+        if (rejected) this.entry.onChat({ name: "", text: rejected, system: true });
         this.avatar.setWeapon(ITEMS[this.local.weaponId]?.texture);
         this.avatar.setArmor(ITEMS[this.local.armorId]?.texture);
         this.entry.onBag?.({ items: this.local.items });
@@ -155,25 +192,58 @@ export class VillageScene extends Phaser.Scene {
       this.local.tick(player, dt, now, (fx) => this.showFx(fx));
       this.health = player.health;
       this.mana = player.mana;
-      this.anim = player.anim as LocomotionClip;
+      if (!(this.anim === "dodge" && now <= this.dashPoseUntil)) this.anim = player.anim as AvatarClip;
+      if (this.entry.character.level > this.shownLevel) {
+        this.shownLevel = this.entry.character.level;
+        this.maxHealth = this.entry.character.maxHealth;
+        this.health = this.maxHealth;
+        this.showFx({ effect: "reward", x: this.body.x, y: this.body.y, x2: this.body.x, y2: this.body.y, amount: this.shownLevel, crit: true, name: "Seviye" });
+      }
+      this.maxHealth = this.entry.character.maxHealth;
+      this.maxMana = this.entry.character.maxMana;
+      const picked = this.local.pickup(this.body.x, this.body.y);
+      if (picked.length) this.entry.onBag?.({ items: this.local.items, fighter: { gold: this.entry.character.gold } });
+      for (const drop of picked) {
+        this.showFx({ effect: "reward", x: drop.x, y: drop.y, x2: drop.x, y2: drop.y, amount: drop.gold, crit: false, name: drop.name });
+      }
       this.handleCombat(now);
       for (const mob of this.local.mobs) this.drawMob(mob);
       this.avatar.setWeapon(ITEMS[this.local.weaponId]?.texture ?? "weapon-rusty-sword");
       this.avatar.setArmor(ITEMS[this.local.armorId]?.texture);
       this.avatar.setMounted(this.local.mounted, this.body.moving);
     } else this.handleCombat(now);
-    this.avatar.setPosition(this.body.x, this.body.y);
-    const clip = this.anim === "attack" || this.anim === "skill" || this.anim === "hit" || this.anim === "death"
+    if (this.local && this.anim === "dodge" && now > this.dashPoseUntil) this.anim = "idle";
+    for (const strip of this.waterStrips) strip.tilePositionX -= this.body.moving ? 0.55 : 0.22;
+    const acting = this.anim === "attack" || this.anim === "skill" || this.anim === "cast" || this.anim === "dodge" || this.anim === "hit" || this.anim === "death";
+    const clip: AvatarClip | "hit" | "death" = acting
       ? this.anim
-      : locomotionFromInput(this.body.moving, input.running || this.avatarMounted());
+      : locomotionFromInput(this.body.moving, this.avatarMounted());
     this.avatar.play(this.body.facing, clip);
+    this.avatar.setPosition(this.body.x, this.body.y);
     this.publishInput(input);
     this.paintCooldowns(now);
     this.pushHud();
     for (const actor of this.mobActors.values()) actor.tick(now);
     for (const remote of this.remotes.values()) remote.update(dt);
     this.placeNameplates();
+    this.touchGates(now);
+    this.syncLoot();
     this.drawMinimap();
+    const zoneLabel = document.getElementById("hud-level");
+    if (zoneLabel && this.local) {
+      const classId = isClassId(this.entry.character.classId) ? this.entry.character.classId : "warrior";
+      const zone = inVillageSafe(this.body.x, this.body.y) ? "Tora Köyü" : "Yeşilova Ormanı";
+      zoneLabel.textContent = `${CLASSES[classId].name} · Seviye ${this.entry.character.level} · ${zone}`;
+    }
+    if (this.pendingSlot && this.anim !== "attack" && this.anim !== "skill" && this.anim !== "cast") {
+      const slot = this.pendingSlot;
+      this.pendingSlot = 0;
+      this.activateSlot(slot, now);
+    }
+    if (this.targetMark?.visible) {
+      const pulse = 1 + Math.sin(now * 0.006) * 0.08;
+      this.targetMark.setScale(pulse, 1);
+    }
   }
 
   private buildWorld(): void {
@@ -188,6 +258,9 @@ export class VillageScene extends Phaser.Scene {
     const above = requireLayer(map, "above", tiles);
     for (const layer of [ground, water, decoration, buildings, above]) layer.setVisible(false);
     this.add.image(0, 0, "village-art").setOrigin(0).setDisplaySize(map.widthInPixels, map.heightInPixels).setDepth(0);
+    if (this.textures.exists("village-canopy")) {
+      this.add.image(0, 0, "village-canopy").setOrigin(0).setDisplaySize(map.widthInPixels, map.heightInPixels).setDepth(5000);
+    }
 
     this.collision = collisionFromTilemap(map);
     this.mapWidth = map.width;
@@ -213,6 +286,7 @@ export class VillageScene extends Phaser.Scene {
     this.serverX = this.body.x;
     this.serverY = this.body.y;
     this.avatar = new Avatar(this, appearance, this.body.x, this.body.y);
+    this.targetMark = this.add.ellipse(0, 0, 58, 16, 0xffe7a8, 0.16).setStrokeStyle(2, 0xfff1c4, 0.95).setVisible(false);
     this.nameplates = new NameplateLayer();
     this.nameplates.upsert(character.id, character.name);
 
@@ -232,6 +306,7 @@ export class VillageScene extends Phaser.Scene {
     }
 
     this.animateWater();
+    this.placeGates();
     this.bindSky();
     this.dressHotbar();
 
@@ -256,6 +331,8 @@ export class VillageScene extends Phaser.Scene {
       Phaser.Input.Keyboard.KeyCodes.RIGHT,
       Phaser.Input.Keyboard.KeyCodes.SPACE,
       Phaser.Input.Keyboard.KeyCodes.SHIFT,
+      Phaser.Input.Keyboard.KeyCodes.Q,
+      Phaser.Input.Keyboard.KeyCodes.FOUR,
     ]);
     this.keys = keyboard.addKeys({
       up: Phaser.Input.Keyboard.KeyCodes.W,
@@ -267,13 +344,37 @@ export class VillageScene extends Phaser.Scene {
       arrowLeft: Phaser.Input.Keyboard.KeyCodes.LEFT,
       arrowRight: Phaser.Input.Keyboard.KeyCodes.RIGHT,
       run: Phaser.Input.Keyboard.KeyCodes.SHIFT,
-      attack: Phaser.Input.Keyboard.KeyCodes.SPACE,
+      dodge: Phaser.Input.Keyboard.KeyCodes.SPACE,
       one: Phaser.Input.Keyboard.KeyCodes.ONE,
       two: Phaser.Input.Keyboard.KeyCodes.TWO,
       three: Phaser.Input.Keyboard.KeyCodes.THREE,
+      four: Phaser.Input.Keyboard.KeyCodes.FOUR,
       mount: Phaser.Input.Keyboard.KeyCodes.H,
-      potion: Phaser.Input.Keyboard.KeyCodes.FOUR,
+      potion: Phaser.Input.Keyboard.KeyCodes.Q,
     }) as Record<string, Phaser.Input.Keyboard.Key>;
+    this.shownLevel = this.entry.character.level;
+    this.input.mouse?.disableContextMenu();
+    this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+      if (this.typing) return;
+      this.pickTarget(pointer);
+      if (pointer.rightButtonDown()) this.activateSlot(2, this.time.now);
+      else if (this.targeting.targetId) this.activateSlot(1, this.time.now);
+    });
+    const unlock = (event: Event) => {
+      const nodeId = (event as CustomEvent<string>).detail;
+      if (!nodeId) return;
+      if (this.local) {
+        const error = this.local.unlock(nodeId);
+        if (error) this.entry.onChat({ name: "Sistem", text: error, system: true });
+        else {
+          this.maxHealth = this.entry.character.maxHealth;
+          this.maxMana = this.entry.character.maxMana;
+          this.entry.onBag?.({ items: this.local.items });
+        }
+      } else this.connection?.sendNode(nodeId);
+    };
+    document.addEventListener("tora-node", unlock);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => document.removeEventListener("tora-node", unlock));
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.scale.off(Phaser.Scale.Events.RESIZE, this.onResize, this);
@@ -298,16 +399,23 @@ export class VillageScene extends Phaser.Scene {
 
   private dressHotbar(): void {
     const classId = isClassId(this.entry.character.classId) ? this.entry.character.classId : "warrior";
+    const skills = CLASSES[classId].skills;
     const files = [
-      "icons/skill-slash.png",
-      `icons/skill-${CLASSES[classId].skills[0]}.png`,
-      `icons/skill-${CLASSES[classId].skills[1]}.png`,
-      "icons/potion.png",
+      skillIcon("basic"),
+      skills[0] ? skillIcon(skills[0]) : "",
+      skills[1] ? skillIcon(skills[1]) : "",
+      skills[2] ? skillIcon(skills[2]) : "",
       "illustrated/tora-horse.png",
+      "",
+      "icons/potion.png",
     ];
-    document.querySelectorAll<HTMLImageElement>(".hotbar img").forEach((img, index) => {
+    const hints = ["1", "2", "3", "4", "H", "Shift", "Q"];
+    document.querySelectorAll<HTMLElement>(".hotbar [data-slot]").forEach((slot, index) => {
       const file = files[index];
-      if (file) img.src = assetUrl(file);
+      const img = slot.querySelector("img");
+      if (img && file) img.src = assetUrl(file);
+      const hint = slot.querySelector("i");
+      if (hint && hints[index]) hint.textContent = hints[index];
     });
   }
 
@@ -326,38 +434,98 @@ export class VillageScene extends Phaser.Scene {
   }
 
   private animateWater(): void {
+    const canvas = this.textures.createCanvas("water-shimmer", 160, 28);
+    if (canvas) {
+      const context = canvas.context;
+      context.clearRect(0, 0, 160, 28);
+      context.fillStyle = "rgba(214, 244, 255, 0.72)";
+      for (const [x, y] of [[24, 14], [78, 12], [124, 16]] as const) {
+        context.beginPath();
+        context.ellipse(x, y, 22, 4, 0, 0, Math.PI * 2);
+        context.fill();
+      }
+      canvas.refresh();
+    }
     const pools = [
-      { x: 83, y: 130, w: 75, h: 100 },
-      { x: 93, y: 301, w: 85, h: 75 },
-      { x: 975, y: 396, w: 36, h: 75 },
+      { x: 6, y: 4, w: 250, h: 470 },
+      { x: 888, y: 320, w: 124, h: 176 },
     ];
     for (const pool of pools) {
-      for (let i = 0; i < 8; i += 1) {
-        const x = pool.x + (i * 43 % pool.w);
-        const y = pool.y + (i * 59 % pool.h);
-        const ripple = this.add.ellipse(x, y, 10 + i % 3 * 4, 2, 0xd7f8ff, 0).setDepth(1);
-        this.tweens.add({ targets: ripple, alpha: { from: 0, to: 0.55 }, scaleX: { from: 0.6, to: 1.5 }, duration: 1100 + i * 90, delay: i * 170, yoyo: true, repeat: -1 });
+      if (this.textures.exists("water-shimmer")) {
+        const strip = this.add.tileSprite(pool.x, pool.y + pool.h * 0.35, pool.w, 16, "water-shimmer").setOrigin(0).setDepth(2).setAlpha(0.55);
+        this.waterStrips.push(strip);
+      }
+      for (let i = 0; i < 7; i += 1) {
+        const x = pool.x + (i * 37 % pool.w);
+        const y = pool.y + (i * 53 % pool.h);
+        const ripple = this.add.ellipse(x, y, 14 + (i % 3) * 6, 3, 0xd7f8ff, 0).setDepth(2);
+        this.tweens.add({ targets: ripple, alpha: { from: 0, to: 0.62 }, scaleX: { from: 0.5, to: 1.7 }, duration: 980 + i * 110, delay: i * 140, yoyo: true, repeat: -1 });
       }
     }
+  }
+
+  private tryDash(now: number): void {
+    if (this.health <= 0 || now < this.dashReady) return;
+    const input = this.typing ? EMPTY_INPUT : this.readKeys();
+    const next = applyDash(this.body, input, this.collision);
+    if (next.x === this.body.x && next.y === this.body.y) return;
+    const fromX = this.body.x;
+    const fromY = this.body.y;
+    this.dashReady = now + DASH_COOLDOWN_MS;
+    this.dashPoseUntil = now + 210;
+    this.dashGraceUntil = now + 280;
+    this.body = next;
+    this.anim = "dodge";
+    this.avatar.play(next.facing, "dodge", true);
+    this.showFx({ effect: "dash", x: fromX, y: fromY, x2: next.x, y2: next.y, amount: 0, crit: false, name: "" });
+    if (!this.local) this.connection?.sendDash(input);
+  }
+
+  private tryDodge(now: number): void {
+    if (this.health <= 0 || now < this.dodgeReady) return;
+    const input = this.typing ? EMPTY_INPUT : this.readKeys();
+    const next = applyDodge(this.body, input, this.collision);
+    if (next.x === this.body.x && next.y === this.body.y) return;
+    const fromX = this.body.x;
+    const fromY = this.body.y;
+    this.dodgeReady = now + DODGE_COOLDOWN_MS;
+    this.dashPoseUntil = now + 180;
+    this.dashGraceUntil = now + 240;
+    this.body = next;
+    this.anim = "dodge";
+    this.avatar.play(next.facing, "dodge", true);
+    this.showFx({ effect: "dash", x: fromX, y: fromY, x2: next.x, y2: next.y, amount: 0, crit: false, name: "" });
+    if (!this.local) this.connection?.sendDodge(input);
   }
 
   private handleCombat(now: number): void {
     if (this.typing || !this.keys) return;
     const just = (key: string) => Phaser.Input.Keyboard.JustDown(this.keys[key]!);
     if (just("mount")) this.activateSlot(5, now);
-    if (just("potion")) this.activateSlot(4, now);
-    const skillIndex = just("one") || just("attack") ? 1 : just("two") ? 2 : just("three") ? 3 : -1;
-    if (skillIndex > 0) this.activateSlot(skillIndex, now);
+    if (just("run")) this.tryDash(now);
+    if (just("dodge")) this.tryDodge(now);
+    if (just("potion")) this.activateSlot(7, now);
+    if (just("one")) this.activateSlot(1, now);
+    if (just("two")) this.activateSlot(2, now);
+    if (just("three")) this.activateSlot(3, now);
+    if (just("four")) this.activateSlot(4, now);
   }
 
   private activateSlot(slot: number, now: number): void {
     if (this.typing) return;
-    if (slot === 5) {
-      if (this.local) this.local.mounted = !this.local.mounted;
-      else this.connection?.sendMount();
+    if (slot >= 1 && slot <= 4 && (this.anim === "attack" || this.anim === "skill" || this.anim === "cast")) {
+      this.pendingSlot = slot;
       return;
     }
-    if (slot === 4) {
+    if (slot === 5) {
+      if (this.local) this.local.mounted = !this.local.mounted;
+      else {
+        this.mounted = !this.mounted;
+        this.connection?.sendMount();
+      }
+      return;
+    }
+    if (slot === 7) {
       if (this.local) {
         const player = { health: this.health, maxHealth: this.maxHealth };
         if (this.local.usePotion(player)) {
@@ -371,7 +539,7 @@ export class VillageScene extends Phaser.Scene {
       return;
     }
     const targetId = this.targeting.targetId;
-    if (slot < 1 || slot > 3 || !targetId) return;
+    if (slot < 1 || slot > 4 || !targetId) return;
     const classId = isClassId(this.entry.character.classId) ? this.entry.character.classId : "warrior";
     const skillId = slot === 1 ? "basic" : CLASSES[classId].skills[slot - 2];
     if (!skillId) return;
@@ -381,18 +549,21 @@ export class VillageScene extends Phaser.Scene {
       const dy = target.y - this.body.y;
       this.body.facing = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? "left" : "right") : (dy < 0 ? "up" : "down");
     }
-    this.avatar.play(this.body.facing, skillId === "basic" ? "attack" : "skill", true);
+    const effect = skillId === "basic" ? basicAttack(classId).effect : SKILLS[skillId]?.effect ?? "slash";
+    this.avatar.play(this.body.facing, animForEffect(effect), true);
     if (this.local) {
       const player = { x: this.body.x, y: this.body.y, facing: this.body.facing, health: this.health, maxHealth: this.maxHealth, mana: this.mana, anim: this.anim };
       if (skillId === "basic") this.local.attack(targetId, player, now, (fx) => this.showFx(fx));
       else this.local.skill(skillId, targetId, player, now, (fx) => this.showFx(fx));
       this.health = player.health;
       this.mana = player.mana;
+      this.body.x = player.x;
+      this.body.y = player.y;
       this.body.facing = isDirection(player.facing) ? player.facing : this.body.facing;
-      this.anim = player.anim as LocomotionClip;
+      this.anim = player.anim as AvatarClip;
     } else if (skillId === "basic") {
       this.connection?.sendAttack(targetId);
-      this.clientCd.set("basic", now + BASIC_ATTACK.cooldown);
+      this.clientCd.set("basic", now + basicAttack(classId).cooldown);
     } else {
       this.connection?.sendSkill(skillId, targetId);
       this.clientCd.set(skillId, now + (SKILLS[skillId]?.cooldown ?? 1000));
@@ -416,7 +587,13 @@ export class VillageScene extends Phaser.Scene {
       actor = new MobActor(this, mob.kind, mob.x, mob.y);
       this.mobActors.set(mob.id, actor);
     }
-    actor.sync(mob.x, mob.y, mob.anim, mob.facing, mob.alive);
+    actor.sync(mob.x, mob.y, mob.anim, mob.facing, mob.alive, mob.health, mob.maxHealth);
+    const selected = mob.id === this.targeting.targetId && mob.alive;
+    actor.setSelected(selected, `${mob.name}  Sv.${mob.level}  ${Math.max(0, Math.round(mob.health))}/${mob.maxHealth}`);
+    if (this.targetMark) {
+      if (selected) this.targetMark.setPosition(mob.x, mob.y - 2).setVisible(true).setDepth(mob.y - 2);
+      else if (!this.targeting.targetId) this.targetMark.setVisible(false);
+    }
     if (mob.id === this.targeting.targetId) {
       const frame = document.getElementById("target-frame");
       if (frame) frame.textContent = `${mob.name}  Sv.${mob.level}  ${Math.max(0, mob.health)}/${mob.maxHealth}`;
@@ -424,19 +601,25 @@ export class VillageScene extends Phaser.Scene {
   }
 
   private avatarMounted(): boolean {
-    return Boolean(this.local?.mounted);
+    return this.local ? this.local.mounted : this.mounted;
   }
 
   private paintCooldowns(now: number): void {
     const slots = document.querySelectorAll<HTMLElement>(".hotbar [data-slot]");
     const classId = isClassId(this.entry.character.classId) ? this.entry.character.classId : "warrior";
-    const ids = ["basic", ...CLASSES[classId].skills, "small-potion"];
-    const totals = [650, ...CLASSES[classId].skills.map((id) => SKILLS[id]?.cooldown ?? 1000), 400];
-    slots.forEach((slot, index) => {
-      const id = ids[index];
-      if (!id) return;
-      const left = this.local ? this.local.ready(id === "small-potion" ? "potion" : id, now) : Math.max(0, (this.clientCd.get(id) ?? 0) - now);
-      const total = totals[index] ?? 1000;
+    const skills = CLASSES[classId].skills;
+    const bound = new Map<number, { id: string; total: number }>([
+      [1, { id: "basic", total: basicAttack(classId).cooldown }],
+      [7, { id: "potion", total: 400 }],
+    ]);
+    skills.forEach((id, index) => bound.set(index + 2, { id, total: SKILLS[id]?.cooldown ?? 1000 }));
+    slots.forEach((slot) => {
+      const index = Number(slot.dataset.slot);
+      const entry = bound.get(index);
+      if (!entry) return;
+      const id = entry.id;
+      const left = this.local ? this.local.ready(id === "potion" ? "potion" : id, now) : Math.max(0, (this.clientCd.get(id === "potion" ? "small-potion" : id) ?? 0) - now);
+      const total = entry.total;
       const sweep = left > 0 ? Math.round((left / total) * 360) : 0;
       slot.style.setProperty("--sweep", `${sweep}deg`);
       slot.classList.toggle("cooling", left > 0);
@@ -444,6 +627,17 @@ export class VillageScene extends Phaser.Scene {
       const label = slot.querySelector("b");
       if (label) label.textContent = left > 0 ? (left / 1000).toFixed(1) : "";
     });
+    const dashLeft = Math.max(0, this.dashReady - now);
+    const dashSlot = document.querySelector<HTMLElement>(".hotbar [data-slot=\"6\"]");
+    if (dashSlot) {
+      const sweep = dashLeft > 0 ? Math.round((dashLeft / DASH_COOLDOWN_MS) * 360) : 0;
+      dashSlot.style.setProperty("--sweep", `${sweep}deg`);
+      dashSlot.classList.toggle("cooling", dashLeft > 0);
+      const label = dashSlot.querySelector("b");
+      if (label) label.textContent = dashLeft > 0 ? (dashLeft / 1000).toFixed(1) : "";
+      const hint = dashSlot.querySelector("i");
+      if (hint) hint.textContent = "Shift";
+    }
   }
 
   private pushHud(): void {
@@ -469,14 +663,15 @@ export class VillageScene extends Phaser.Scene {
         },
         onSystem: (message) => this.entry.onChat({ name: "", text: message.text, system: true }),
         onMob: (mob) => this.drawMob(mob),
-        onFx: (fx) => {
-          this.showFx(fx);
-          if (Math.hypot(fx.x - this.body.x, fx.y - this.body.y) < 22 &&
-              (fx.effect === "slash" || fx.effect === "spin" || fx.effect === "shadow" || fx.effect === "rush")) {
-            this.avatar.play(this.body.facing, "attack", true);
-          }
-        },
+        onFx: (fx) => this.showFx(fx),
         onBag: (payload) => this.entry.onBag?.(payload),
+        onLoot: (drop) => {
+          if (!this.remoteDrops.some((entry) => entry.id === drop.id)) this.remoteDrops.push(drop);
+        },
+        onLootGone: (id) => {
+          const index = this.remoteDrops.findIndex((entry) => entry.id === id);
+          if (index >= 0) this.remoteDrops.splice(index, 1);
+        },
         onLeave: (code) => {
           if (this.closed) return;
           this.closed = true;
@@ -515,8 +710,9 @@ export class VillageScene extends Phaser.Scene {
       }
       this.avatar.setWeapon(ITEMS[player.weaponId]?.texture);
       this.avatar.setArmor(ITEMS[player.armorId]?.texture);
+      this.mounted = player.mounted;
       this.avatar.setMounted(player.mounted, player.moving);
-      this.anim = player.anim as LocomotionClip;
+      this.anim = player.anim as AvatarClip;
       if (revived) this.avatar.play(this.body.facing, "idle", true);
       if (added) {
         this.body.x = player.x;
@@ -550,7 +746,7 @@ export class VillageScene extends Phaser.Scene {
       down: down(this.keys.down) || down(this.keys.arrowDown),
       left: down(this.keys.left) || down(this.keys.arrowLeft),
       right: down(this.keys.right) || down(this.keys.arrowRight),
-      running: down(this.keys.run),
+      running: false,
     };
     return this.targeting.movement(manual, this.body);
   }
@@ -568,6 +764,7 @@ export class VillageScene extends Phaser.Scene {
 
   private correctPrediction(dt: number): void {
     const distance = Math.hypot(this.serverX - this.body.x, this.serverY - this.body.y);
+    if (this.time.now < this.dashGraceUntil && distance < 70) return;
     if (distance > 96) {
       this.body.x = this.serverX;
       this.body.y = this.serverY;
@@ -589,14 +786,14 @@ export class VillageScene extends Phaser.Scene {
   }
 
   private placeNameplates(): void {
-    const local = this.screenOf(this.body.x, this.body.y - 103);
+    const local = this.screenOf(this.body.x, this.body.y - AVATAR_HEAD_LIFT);
     this.nameplates.move(this.entry.character.id, local.x, local.y);
     for (const remote of this.remotes.values()) {
-      const point = this.screenOf(remote.displayX, remote.displayY - 103);
+      const point = this.screenOf(remote.displayX, remote.displayY - AVATAR_HEAD_LIFT);
       this.nameplates.move(remote.sessionId, point.x, point.y);
     }
     for (const villager of this.villagers) {
-      const point = this.screenOf(villager.x, villager.y - 103);
+      const point = this.screenOf(villager.x, villager.y - AVATAR_HEAD_LIFT);
       this.nameplates.move(`npc:${villager.id}`, point.x, point.y);
     }
   }
@@ -609,6 +806,82 @@ export class VillageScene extends Phaser.Scene {
       x: canvas.left - (parent?.left ?? canvas.left) + (x - camera.worldView.x) * camera.zoom,
       y: canvas.top - (parent?.top ?? canvas.top) + (y - camera.worldView.y) * camera.zoom,
     };
+  }
+
+  private placeGates(): void {
+    for (const gate of FOREST_GATES) {
+      const ring = this.add.ellipse(gate.x, gate.y, 46, 18, 0x8fd7ff, 0.18).setStrokeStyle(2, 0xf6e7b2, 0.9).setDepth(gate.y);
+      this.tweens.add({ targets: ring, alpha: { from: 0.35, to: 0.85 }, duration: 900, yoyo: true, repeat: -1 });
+      this.add.text(gate.x, gate.y - 22, gate.label, {
+        fontFamily: "Source Serif 4, Georgia, serif",
+        fontSize: "13px",
+        color: "#fff6df",
+        stroke: "#1a120c",
+        strokeThickness: 3,
+      }).setOrigin(0.5, 1).setDepth(gate.y + 2);
+    }
+  }
+
+  private touchGates(now: number): void {
+    if (now < this.gateReady || this.health <= 0) return;
+    for (const gate of FOREST_GATES) {
+      if (Math.hypot(this.body.x - gate.x, this.body.y - gate.y) > 28) continue;
+      const spot = { x: gate.toX, y: gate.toY };
+      this.body.x = spot.x;
+      this.body.y = spot.y;
+      this.serverX = spot.x;
+      this.serverY = spot.y;
+      this.gateReady = now + 700;
+      break;
+    }
+  }
+
+  private syncLoot(): void {
+    const drops = this.local ? this.local.drops : this.remoteDrops;
+    const seen = new Set<string>();
+    for (const drop of drops) {
+      seen.add(drop.id);
+      let view = this.lootSprites.get(drop.id);
+      if (!view) {
+        const key = drop.itemId.includes("ring") ? "icon-ring"
+          : drop.itemId.includes("armor") && drop.itemId.includes("guard") ? "icon-guard"
+          : drop.itemId.includes("armor") ? "icon-armor"
+          : drop.itemId.includes("potion") ? "icon-potion"
+          : drop.itemId ? "icon-sword"
+          : "";
+        view = this.add.container(drop.x, drop.y);
+        const glow = this.add.circle(0, 0, 12, drop.itemId ? 0x7ec8ff : 0xffd36a, 0.35);
+        view.add(glow);
+        if (key && this.textures.exists(key)) {
+          const icon = this.add.image(0, -6, key).setDisplaySize(22, 22);
+          view.add(icon);
+        }
+        const label = this.add.text(0, -20, drop.name, {
+          fontFamily: "Source Serif 4, Georgia, serif",
+          fontSize: "11px",
+          color: drop.itemId ? "#d7ecff" : "#ffe08a",
+          stroke: "#1a120c",
+          strokeThickness: 3,
+        }).setOrigin(0.5, 1);
+        view.add(label);
+        this.lootSprites.set(drop.id, view);
+      }
+      view.setPosition(drop.x, drop.y).setDepth(drop.y + 3);
+    }
+    for (const [id, view] of this.lootSprites) {
+      if (seen.has(id)) continue;
+      view.destroy();
+      this.lootSprites.delete(id);
+    }
+    if (!this.local) {
+      for (const drop of this.remoteDrops) {
+        const owner = (drop as GroundDrop & { ownerId?: string }).ownerId;
+        if (owner && owner !== this.entry.character.id) continue;
+        if (Math.hypot(drop.x - this.body.x, drop.y - this.body.y) > 46) continue;
+        this.connection?.sendPickup(drop.id);
+        this.remoteDrops.splice(this.remoteDrops.indexOf(drop), 1);
+      }
+    }
   }
 
   private drawMinimap(): void {
@@ -633,6 +906,11 @@ export class VillageScene extends Phaser.Scene {
       context.arc(offsetX + (x / 16) * scale, offsetY + (y / 16) * scale, 2.5, 0, Math.PI * 2);
       context.fill();
     };
+    for (const gate of FOREST_GATES) dot(gate.x, gate.y, "#8fd7ff");
+    for (const actor of this.mobActors.values()) {
+      if (!actor.alive) continue;
+      dot(actor.sprite.x, actor.sprite.y, actor.sprite.texture.key === "hero-classes" ? "#e7b2ff" : "#ff8d7a");
+    }
     for (const villager of this.villagers) dot(villager.x, villager.y, "#f4e7cf");
     for (const remote of this.remotes.values()) dot(remote.displayX, remote.displayY, "#f2d48a");
     dot(this.body.x, this.body.y, "#fff8e8");
@@ -653,8 +931,9 @@ function down(key: Phaser.Input.Keyboard.Key | undefined): boolean {
   return Boolean(key?.isDown);
 }
 
-function zoomFor(width: number, _height: number): number {
-  return Math.max(1.6, width / 1024);
+function zoomFor(width: number, height: number): number {
+  const fit = Math.min(width / 1280, height / 820);
+  return Math.max(0.82, Math.min(1.12, fit));
 }
 
 function requireLayer(map: Phaser.Tilemaps.Tilemap, name: string, tiles: Phaser.Tilemaps.Tileset): Phaser.Tilemaps.TilemapLayer {

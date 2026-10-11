@@ -1,6 +1,11 @@
 import { PLAYER_HIT_HEIGHT, PLAYER_HIT_WIDTH, PLAYER_SPEED, RUN_SPEED_MULTIPLIER } from "./constants.js";
 import type { Direction } from "./direction.js";
 
+export const DASH_DISTANCE = 46;
+export const DASH_COOLDOWN_MS = 900;
+export const DODGE_DISTANCE = 32;
+export const DODGE_COOLDOWN_MS = 700;
+
 export interface InputState {
   up: boolean;
   down: boolean;
@@ -92,6 +97,59 @@ export function stepMovement(body: BodyState, input: InputState, dtSeconds: numb
     facing,
     moving: x !== body.x || y !== body.y,
   };
+}
+
+export function applyDash(body: BodyState, input: InputState, map: CollisionMap): BodyState {
+  return applyBurst(body, input, map, DASH_DISTANCE);
+}
+
+export function applyDodge(body: BodyState, input: InputState, map: CollisionMap): BodyState {
+  return applyBurst(body, input, map, DODGE_DISTANCE);
+}
+
+export function applyBurst(body: BodyState, input: InputState, map: CollisionMap, distance: number): BodyState {
+  let dx = 0;
+  let dy = 0;
+  if (input.left) dx -= 1;
+  if (input.right) dx += 1;
+  if (input.up) dy -= 1;
+  if (input.down) dy += 1;
+  if (dx === 0 && dy === 0) {
+    if (body.facing === "left") dx = -1;
+    else if (body.facing === "right") dx = 1;
+    else if (body.facing === "up") dy = -1;
+    else dy = 1;
+  }
+  const length = Math.hypot(dx, dy) || 1;
+  dx /= length;
+  dy /= length;
+  let facing: Direction = body.facing;
+  if (Math.abs(dx) > Math.abs(dy)) facing = dx < 0 ? "left" : "right";
+  else if (dy !== 0) facing = dy < 0 ? "up" : "down";
+
+  let x = body.x;
+  let y = body.y;
+  const steps = 5;
+  const step = distance / steps;
+  for (let index = 0; index < steps; index += 1) {
+    const nextX = x + dx * step;
+    const nextY = y + dy * step;
+    if (!bodyOverlapsSolid(map, nextX, y)) x = nextX;
+    if (!bodyOverlapsSolid(map, x, nextY)) y = nextY;
+  }
+  return { x, y, facing, moving: false };
+}
+
+export function nearestWalkable(map: CollisionMap, x: number, y: number): { x: number; y: number } {
+  if (isWalkable(map, x, y)) return { x, y };
+  for (let radius = 12; radius <= 180; radius += 12) {
+    for (let step = 0; step < 12; step += 1) {
+      const angle = (Math.PI * 2 * step) / 12;
+      const point = { x: x + Math.cos(angle) * radius, y: y + Math.sin(angle) * radius };
+      if (isWalkable(map, point.x, point.y)) return point;
+    }
+  }
+  return { x, y };
 }
 
 export function readInput(message: unknown): InputState | null {

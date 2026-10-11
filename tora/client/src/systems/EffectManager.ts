@@ -1,175 +1,171 @@
 import Phaser from "phaser";
 import type { FxEvent } from "./LocalWorld";
 
+const FX_TEXTURE: Record<string, string> = {
+  slash: "fx-slash",
+  spin: "fx-whirl",
+  shadow: "fx-shadow",
+  rush: "fx-rush",
+  fire: "fx-fireball",
+  fireball: "fx-fireball",
+  frost: "fx-frost",
+  spirit: "fx-spirit",
+  heal: "fx-mend",
+  mend: "fx-mend",
+};
+
 export class EffectManager {
-  private readonly sparks: Phaser.GameObjects.Arc[] = [];
   private readonly labels: Phaser.GameObjects.Text[] = [];
 
   constructor(private readonly scene: Phaser.Scene) {}
 
   play(fx: FxEvent): void {
-    if (fx.effect === "slash" || fx.effect === "spin") this.slash(fx);
-    else if (fx.effect === "shadow" || fx.effect === "rush") this.shadow(fx);
-    else if (fx.effect === "fire" || fx.effect === "fireball") this.projectile(fx, 0xff5a1f, 0xffd27a, true);
-    else if (fx.effect === "frost") this.projectile(fx, 0x7ecbff, 0xe8f7ff, false);
-    else if (fx.effect === "spirit") this.spirit(fx);
-    else if (fx.effect === "heal" || fx.effect === "mend") this.heal(fx);
+    const key = FX_TEXTURE[fx.effect];
+    if (fx.effect === "slash") this.impact(fx, key, 0xfff1c9);
+    else if (fx.effect === "spin") this.burst(key, fx.x, fx.y - 28, 128);
+    else if (fx.effect === "shadow" || fx.effect === "rush") this.dash(fx, key);
+    else if (fx.effect === "fire" || fx.effect === "fireball" || fx.effect === "frost" || fx.effect === "spirit") this.projectile(fx, key);
+    else if (fx.effect === "heal" || fx.effect === "mend") this.heal(fx, key);
+    else if (fx.effect === "dash") this.dashTrail(fx);
+    else if (fx.effect === "leap") this.impact(fx, "fx-slash", 0xffe7b0);
+    else if (fx.effect === "meteor") this.burst("fx-fireball", fx.x2, fx.y2 - 20, 110);
     else if (fx.effect === "reward") this.reward(fx);
-    else this.spark(fx.x2, fx.y2 - 16, 0xfff1c2);
+    else this.impact(fx, "fx-slash", 0xfff6ea);
     if (fx.amount) this.number(fx);
-    if (fx.effect === "slash" || fx.effect === "spin" || fx.effect === "fire" || fx.effect === "fireball") {
-      this.scene.cameras.main.shake(60, 0.0022);
+    if (fx.effect === "slash" || fx.effect === "spin" || fx.effect === "leap" || fx.effect === "fire" || fx.effect === "fireball" || fx.effect === "meteor") {
+      this.scene.cameras.main.shake(70, 0.0024);
     }
   }
 
-  private slash(fx: FxEvent): void {
-    const g = this.scene.add.graphics().setDepth(fx.y + 8);
-    const spin = fx.effect === "spin";
-    g.lineStyle(spin ? 5 : 3, spin ? 0xffb15a : 0xff6a3a, 0.95);
-    g.beginPath();
-    g.arc(fx.x, fx.y - 30, spin ? 30 : 20, spin ? 0 : -0.6, spin ? Math.PI * 2 : 1.35);
-    g.strokePath();
-    g.lineStyle(spin ? 2 : 1, 0xfff3d2, 0.8);
-    g.beginPath();
-    g.arc(fx.x, fx.y - 30, spin ? 22 : 14, spin ? 0.4 : -0.2, spin ? 5 : 1.1);
-    g.strokePath();
-    this.scene.tweens.add({ targets: g, alpha: 0, scaleX: 1.25, scaleY: 1.25, duration: 160, onComplete: () => g.destroy() });
-    this.spark(fx.x2, fx.y2 - 18, 0xffe2b0);
-    this.spark(fx.x2 + 6, fx.y2 - 12, 0xfff8e8);
+  private impact(fx: FxEvent, key: string | undefined, flash: number): void {
+    const x = fx.x2;
+    const y = fx.y2 - 22;
+    if (key && this.scene.textures.exists(key)) {
+      const hit = this.scene.add.image(x, y, key).setDisplaySize(72, 72).setDepth(y + 30).setAngle(Math.atan2(fx.y2 - fx.y, fx.x2 - fx.x) * 180 / Math.PI);
+      this.scene.tweens.add({ targets: hit, scaleX: hit.scaleX * 1.35, scaleY: hit.scaleY * 1.35, alpha: 0, duration: 220, ease: "Cubic.easeOut", onComplete: () => hit.destroy() });
+    }
+    const ring = this.scene.add.circle(x, y, 8, flash, 0.85).setDepth(y + 28);
+    this.scene.tweens.add({ targets: ring, scale: 2.4, alpha: 0, duration: 180, onComplete: () => ring.destroy() });
   }
 
-  private shadow(fx: FxEvent): void {
-    const ghost = this.scene.add.ellipse(fx.x, fx.y - 24, 16, 28, 0x6a4cff, 0.45).setDepth(fx.y);
+  private burst(key: string | undefined, x: number, y: number, size: number): void {
+    if (!key || !this.scene.textures.exists(key)) return;
+    const art = this.scene.add.image(x, y, key).setDisplaySize(size * 0.7, size * 0.7).setDepth(y + 24);
     this.scene.tweens.add({
-      targets: ghost,
-      x: fx.x2,
+      targets: art,
+      displayWidth: size,
+      displayHeight: size,
+      angle: 180,
       alpha: 0,
-      duration: 140,
-      onComplete: () => ghost.destroy(),
+      duration: 420,
+      ease: "Cubic.easeOut",
+      onComplete: () => art.destroy(),
     });
-    const cut = this.scene.add.graphics().setDepth(fx.y2 + 6);
-    cut.lineStyle(2, 0xb9a6ff, 0.9);
-    cut.beginPath();
-    cut.moveTo(fx.x2 - 10, fx.y2 - 28);
-    cut.lineTo(fx.x2 + 8, fx.y2 - 8);
-    cut.strokePath();
-    this.scene.tweens.add({ targets: cut, alpha: 0, duration: 180, onComplete: () => cut.destroy() });
   }
 
-  private projectile(fx: FxEvent, core: number, hot: number, fire: boolean): void {
-    const startY = fx.y - 29;
-    const endY = fx.y2 - 18;
-    const pulse = this.scene.add.circle(fx.x, startY, 5, hot, 0.55).setDepth(fx.y + 7);
-    pulse.setStrokeStyle(2, core, 0.9);
-    this.scene.tweens.add({ targets: pulse, scale: 3, alpha: 0, duration: 330, onComplete: () => pulse.destroy() });
-    const bolt = this.borrowSpark(fx.x, startY, fire ? 8 : 6, hot);
-    const glow = this.scene.add.circle(fx.x, startY, fire ? 17 : 14, core, 0.24).setDepth(fx.y + 5);
-    const trail = this.scene.add.graphics().setDepth(fx.y + 4);
-    const length = Math.hypot(fx.x2 - fx.x, endY - startY) || 1;
-    const nx = (fx.x2 - fx.x) / length;
-    const ny = (endY - startY) / length;
+  private dash(fx: FxEvent, key: string | undefined): void {
+    if (!key || !this.scene.textures.exists(key)) return;
+    const art = this.scene.add.image(fx.x, fx.y - 28, key).setDisplaySize(64, 64).setDepth(fx.y + 12);
+    art.setAngle(Math.atan2(fx.y2 - fx.y, fx.x2 - fx.x) * 180 / Math.PI);
+    this.scene.tweens.add({
+      targets: art,
+      x: fx.x2,
+      y: fx.y2 - 18,
+      alpha: 0.15,
+      duration: fx.effect === "rush" ? 160 : 200,
+      onComplete: () => {
+        art.destroy();
+        this.impact(fx, key, 0xd9ccff);
+      },
+    });
+  }
+
+  private projectile(fx: FxEvent, key: string | undefined): void {
+    if (!key || !this.scene.textures.exists(key)) return;
+    const startY = fx.y - 40;
+    const endY = fx.y2 - 20;
+    const bolt = this.scene.add.image(fx.x, startY, key).setDisplaySize(48, 48).setDepth(startY + 20);
+    const angle = Math.atan2(endY - startY, fx.x2 - fx.x);
+    bolt.setRotation(angle);
+    const trail: Phaser.GameObjects.Image[] = [];
     this.scene.tweens.add({
       targets: bolt,
       x: fx.x2,
       y: endY,
-      duration: 440,
+      duration: fx.effect === "spirit" ? 280 : 360,
       ease: "Cubic.easeIn",
-      onUpdate: () => {
-        glow.setPosition(bolt.x, bolt.y);
-        trail.fillStyle(core, fire ? 0.38 : 0.28);
-        trail.fillCircle(bolt.x - nx * 7, bolt.y - ny * 7, fire ? 6 : 4);
-        trail.fillStyle(hot, 0.7);
-        trail.fillCircle(bolt.x - nx * 15, bolt.y - ny * 15, fire ? 3 : 2);
+      onUpdate: (tween) => {
+        const progress = tween.progress;
+        if (fx.effect === "spirit") bolt.y = startY + (endY - startY) * progress + Math.sin(progress * Math.PI * 4) * 14;
+        if (fx.effect === "frost") bolt.angle += 9;
+        if (trail.length > 5) trail.shift()?.destroy();
+        const ghost = this.scene.add.image(bolt.x, bolt.y, key).setDisplaySize(fx.effect === "frost" ? 22 : 28, fx.effect === "frost" ? 22 : 28).setAlpha(0.4).setDepth(bolt.y).setRotation(bolt.rotation);
+        if (fx.effect === "frost") ghost.setTint(0xd7f4ff);
+        trail.push(ghost);
+        this.scene.tweens.add({ targets: ghost, alpha: 0, duration: 180, onComplete: () => ghost.destroy() });
       },
       onComplete: () => {
-        this.releaseSpark(bolt);
-        glow.destroy();
-        this.scene.tweens.add({ targets: trail, alpha: 0, duration: 260, onComplete: () => trail.destroy() });
-        const burst = this.scene.add.circle(fx.x2, endY, fire ? 10 : 7, hot, 0.9).setDepth(fx.y2 + 8);
-        const ring = this.scene.add.circle(fx.x2, endY, fire ? 9 : 7, core, 0.18).setDepth(fx.y2 + 7);
-        ring.setStrokeStyle(fire ? 3 : 2, hot, 0.9);
-        this.scene.tweens.add({ targets: burst, scale: fire ? 2.8 : 2.1, alpha: 0, duration: 350, onComplete: () => burst.destroy() });
-        this.scene.tweens.add({ targets: ring, scale: fire ? 3.5 : 3, alpha: 0, duration: 480, onComplete: () => ring.destroy() });
-        for (let i = 0; i < 8; i += 1) {
-          const angle = i * Math.PI / 4 + (fire ? 0.2 : 0);
-          const shard = this.scene.add.circle(fx.x2, endY, fire ? 2.6 : 1.8, i % 2 ? hot : core, 0.95).setDepth(fx.y2 + 9);
-          this.scene.tweens.add({ targets: shard, x: fx.x2 + Math.cos(angle) * (fire ? 29 : 25), y: endY + Math.sin(angle) * (fire ? 29 : 25), alpha: 0, duration: fire ? 390 : 460, onComplete: () => shard.destroy() });
-        }
+        bolt.destroy();
+        const boom = this.scene.add.image(fx.x2, endY, key).setDisplaySize(36, 36).setDepth(endY + 24);
+        this.scene.tweens.add({
+          targets: boom,
+          displayWidth: fx.effect === "fire" || fx.effect === "fireball" ? 110 : 88,
+          displayHeight: fx.effect === "fire" || fx.effect === "fireball" ? 110 : 88,
+          alpha: 0,
+          duration: 280,
+          onComplete: () => boom.destroy(),
+        });
       },
     });
   }
 
-  private spirit(fx: FxEvent): void {
-    const mote = this.borrowSpark(fx.x, fx.y - 30, 5, 0xf0d48a);
-    this.scene.tweens.add({
-      targets: mote,
-      x: fx.x2,
-      y: fx.y2 - 20,
-      duration: 220,
-      onComplete: () => {
-        this.releaseSpark(mote);
-        const aura = this.scene.add.ellipse(fx.x2, fx.y2 - 18, 10, 18, 0x7ee0d2, 0.7).setDepth(fx.y2 + 6);
-        this.scene.tweens.add({ targets: aura, y: fx.y2 - 36, alpha: 0, duration: 260, onComplete: () => aura.destroy() });
-      },
-    });
+  private dashTrail(fx: FxEvent): void {
+    const key = this.scene.textures.exists("fx-shadow") ? "fx-shadow" : "fx-rush";
+    if (!this.scene.textures.exists(key)) return;
+    for (let index = 0; index < 4; index += 1) {
+      const t = index / 3;
+      const ghost = this.scene.add.image(
+        fx.x + (fx.x2 - fx.x) * t,
+        fx.y - 36 + (fx.y2 - fx.y) * t,
+        key,
+      ).setDisplaySize(42, 42).setAlpha(0.42 - index * 0.08).setDepth(fx.y + 6);
+      this.scene.tweens.add({ targets: ghost, alpha: 0, duration: 180 + index * 30, onComplete: () => ghost.destroy() });
+    }
   }
 
-  private heal(fx: FxEvent): void {
-    const ring = this.scene.add.ellipse(fx.x, fx.y - 8, 22, 10, 0xf2d37a, 0.35).setDepth(fx.y);
-    const glow = this.scene.add.circle(fx.x, fx.y - 28, 10, 0x9dffc2, 0.55).setDepth(fx.y + 4);
-    this.scene.tweens.add({ targets: ring, scaleX: 1.8, alpha: 0, duration: 320, onComplete: () => ring.destroy() });
-    this.scene.tweens.add({ targets: glow, y: fx.y - 48, alpha: 0, duration: 360, onComplete: () => glow.destroy() });
+  private heal(fx: FxEvent, key: string | undefined): void {
+    if (!key || !this.scene.textures.exists(key)) return;
+    const art = this.scene.add.image(fx.x, fx.y - 20, key).setDisplaySize(70, 70).setDepth(fx.y + 16).setAlpha(0.95);
+    this.scene.tweens.add({ targets: art, y: fx.y - 58, alpha: 0, displayWidth: 96, displayHeight: 96, duration: 520, onComplete: () => art.destroy() });
   }
 
   private reward(fx: FxEvent): void {
-    const coin = this.scene.add.circle(fx.x2, fx.y2 - 22, 5, 0xffd36a, 0.9).setDepth(fx.y2 + 8);
+    const coin = this.scene.add.circle(fx.x2, fx.y2 - 22, 5, 0xffd36a, 0.95).setDepth(fx.y2 + 8);
     coin.setStrokeStyle(2, 0xfff7cf, 0.95);
-    this.scene.tweens.add({ targets: coin, y: fx.y2 - 42, scale: 1.6, alpha: 0, duration: 550, onComplete: () => coin.destroy() });
-  }
-
-  private spark(x: number, y: number, color: number): void {
-    const dot = this.borrowSpark(x, y, 3, color);
-    this.scene.tweens.add({
-      targets: dot,
-      y: y - 10,
-      alpha: 0,
-      duration: 140,
-      onComplete: () => this.releaseSpark(dot),
-    });
+    this.scene.tweens.add({ targets: coin, y: fx.y2 - 46, scale: 1.5, alpha: 0, duration: 560, onComplete: () => coin.destroy() });
   }
 
   private number(fx: FxEvent): void {
     const label = this.labels.pop() ?? this.scene.add.text(0, 0, "", {
-      fontFamily: "Noto Sans, sans-serif",
-      fontSize: "14px",
+      fontFamily: "Source Serif 4, Georgia, serif",
+      fontSize: "18px",
       stroke: "#1a120c",
-      strokeThickness: 3,
+      strokeThickness: 4,
     }).setOrigin(0.5).setDepth(200000);
     const heal = fx.effect === "heal" || fx.effect === "mend";
     const reward = fx.effect === "reward";
-    label.setText(reward ? `+${fx.amount} ALTIN` : `${fx.crit ? "KRİT " : ""}${heal ? "+" : ""}${fx.amount}`);
+    label.setText(reward ? `+${fx.amount} Altın` : `${fx.crit ? "KRİTİK " : ""}${heal ? "+" : ""}${fx.amount}`);
     label.setColor(fx.crit || reward ? "#ffd36a" : heal ? "#9dffb0" : "#fff4ea");
-    label.setPosition(fx.x2, fx.y2 - 36).setAlpha(1).setVisible(true);
+    label.setPosition(fx.x2, fx.y2 - 42).setAlpha(1).setVisible(true).setScale(fx.crit ? 1.15 : 1);
     this.scene.tweens.add({
       targets: label,
-      y: fx.y2 - 62,
+      y: fx.y2 - 74,
       alpha: 0,
-      duration: 680,
+      duration: 720,
       onComplete: () => {
         label.setVisible(false);
         this.labels.push(label);
       },
     });
-  }
-
-  private borrowSpark(x: number, y: number, radius: number, color: number): Phaser.GameObjects.Arc {
-    const dot = this.sparks.pop() ?? this.scene.add.circle(0, 0, radius, color, 1);
-    dot.setPosition(x, y).setRadius(radius).setFillStyle(color, 1).setAlpha(1).setVisible(true).setDepth(y + 6);
-    return dot;
-  }
-
-  private releaseSpark(dot: Phaser.GameObjects.Arc): void {
-    dot.setVisible(false);
-    this.sparks.push(dot);
   }
 }

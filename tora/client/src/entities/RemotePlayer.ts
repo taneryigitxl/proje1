@@ -1,6 +1,6 @@
 import type Phaser from "phaser";
-import { ITEMS, isDirection, locomotionFromInput, type Direction, type LocomotionClip } from "@tora/shared";
-import { Avatar, type AvatarAppearance } from "./Avatar";
+import { ITEMS, isDirection, locomotionFromInput, type Direction } from "@tora/shared";
+import { Avatar, type AvatarAppearance, type AvatarClip } from "./Avatar";
 
 export class RemotePlayer {
   readonly sessionId: string;
@@ -38,8 +38,8 @@ export class RemotePlayer {
     if (state.weaponId) this.avatar.setWeapon(ITEMS[state.weaponId]?.texture);
     if (state.armorId) this.avatar.setArmor(ITEMS[state.armorId]?.texture);
     this.avatar.setMounted(Boolean(state.mounted), state.moving);
-    if (state.anim === "attack" || state.anim === "skill" || state.anim === "hit" || state.anim === "death") {
-      this.avatar.play(this.facing, state.anim as LocomotionClip);
+    if (state.anim === "attack" || state.anim === "skill" || state.anim === "cast" || state.anim === "dodge" || state.anim === "hit" || state.anim === "death") {
+      this.avatar.play(this.facing, state.anim as AvatarClip);
     }
   }
 
@@ -52,8 +52,8 @@ export class RemotePlayer {
       this.displayX = this.targetX;
       this.displayY = this.targetY;
     }
-    this.avatar.setPosition(this.displayX, this.displayY);
     this.avatar.play(this.facing, this.alive ? locomotionFromInput(this.moving || distance > 1.25, this.running) : "death");
+    this.avatar.setPosition(this.displayX, this.displayY);
   }
 
   destroy(): void {

@@ -58,6 +58,8 @@ interface ConnectionHandlers {
   onMob?: (mob: MobSnapshot) => void;
   onFx?: (fx: { effect: string; x: number; y: number; x2: number; y2: number; amount: number; crit: boolean; name: string; targetId?: string }) => void;
   onBag?: (payload: unknown) => void;
+  onLoot?: (drop: { id: string; itemId: string; gold: number; x: number; y: number; name: string }) => void;
+  onLootGone?: (id: string) => void;
 }
 
 export class VillageConnection {
@@ -119,6 +121,10 @@ export class VillageConnection {
     this.room.onMessage("system", (message: SystemBroadcast) => handlers.onSystem(message));
     this.room.onMessage("fx", (message) => handlers.onFx?.(message));
     this.room.onMessage("bag", (message) => handlers.onBag?.(message));
+    this.room.onMessage("loot", (message) => handlers.onLoot?.(message));
+    this.room.onMessage("loot-gone", (message: { id?: string }) => {
+      if (message?.id) handlers.onLootGone?.(message.id);
+    });
     this.room.onLeave((code) => handlers.onLeave(code));
   }
 
@@ -140,6 +146,22 @@ export class VillageConnection {
 
   sendMount(): void {
     this.room.send("mount", {});
+  }
+
+  sendDash(input: InputState): void {
+    this.room.send("dash", { up: input.up, down: input.down, left: input.left, right: input.right });
+  }
+
+  sendDodge(input: InputState): void {
+    this.room.send("dodge", { up: input.up, down: input.down, left: input.left, right: input.right });
+  }
+
+  sendPickup(id: string): void {
+    this.room.send("pickup", { id });
+  }
+
+  sendNode(nodeId: string): void {
+    this.room.send("node", { nodeId });
   }
 
   sendInput(input: InputState, seq: number): void {

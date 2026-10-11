@@ -5,6 +5,8 @@ import {
   CHAT_BURST_LIMIT,
   CHAT_BURST_WINDOW_MS,
   CHAT_MIN_INTERVAL_MS,
+  DASH_COOLDOWN_MS,
+  DODGE_COOLDOWN_MS,
   EMPTY_INPUT,
   MAP_ID,
   NetPlayer,
@@ -12,6 +14,8 @@ import {
   VillageState,
   isDirection,
   isWalkable,
+  applyDash,
+  applyDodge,
   parseChatCommand,
   readInput,
   stepMovement,
@@ -30,15 +34,18 @@ import {
   bagPayload,
   createMobs,
   equipItem,
+  grantDrop,
   loadFighter,
   playerAttack,
   playerSkill,
   readBag,
   spendStat,
+  unlockNode,
   syncMobs,
   tickMobs,
   useItem,
   type Fighter,
+  type GroundDrop,
   type LiveMob,
 } from "../systems/fighters.js";
 
@@ -68,6 +75,7 @@ export class VillageRoom extends Room<VillageRoomState, unknown, unknown, AuthCh
   private inputCooldown = new Cooldown();
   private fighters = new Map<string, Fighter>();
   private mobs: LiveMob[] = [];
+  private drops: GroundDrop[] = [];
 
   onCreate(): void {
     this.setState(new VillageState());
@@ -85,6 +93,10 @@ export class VillageRoom extends Room<VillageRoomState, unknown, unknown, AuthCh
     this.onMessage("equip", (client, message) => void this.onEquip(client, message));
     this.onMessage("use", (client, message) => void this.onUse(client, message));
     this.onMessage("mount", (client) => this.onMount(client));
+    this.onMessage("dash", (client, message) => this.onDash(client, message));
+    this.onMessage("dodge", (client, message) => this.onDodge(client, message));
+    this.onMessage("pickup", (client, message) => void this.onPickup(client, message));
+    this.onMessage("node", (client, message) => void this.onNode(client, message));
     this.onMessage("stat", (client, message) => void this.onStat(client, message));
   }
 
@@ -209,10 +221,10 @@ export class VillageRoom extends Room<VillageRoomState, unknown, unknown, AuthCh
     const player = this.state.players.get(client.sessionId);
     const fighter = this.fighters.get(client.sessionId);
     if (!player || !fighter || !mobId) return;
-    const previousGold = fighter.gold;
-    const error = playerAttack(mobId, fighter, player, this.mobs, Date.now(), (fx) => this.broadcast("fx", fx));
+    const fresh: GroundDrop[] = [];
+    const error = playerAttack(mobId, fighter, player, this.mobs, Date.now(), (fx) => this.broadcast("fx", fx), fresh);
     if (error) client.send("system", { text: error });
-    if (fighter.gold > previousGold) this.announceReward(client, player, fighter, fighter.gold - previousGold);
+    this.publishDrops(fresh);
     syncMobs(this.state.mobs, this.mobs);
   }
 
@@ -222,11 +234,18 @@ export class VillageRoom extends Room<VillageRoomState, unknown, unknown, AuthCh
     const player = this.state.players.get(client.sessionId);
     const fighter = this.fighters.get(client.sessionId);
     if (!player || !fighter || !skillId) return;
-    const previousGold = fighter.gold;
-    const error = playerSkill(client.sessionId, skillId, mobId, fighter, player, this.mobs, loadVillageMap().collision, Date.now(), (fx) => this.broadcast("fx", fx));
+    const fresh: GroundDrop[] = [];
+    const error = playerSkill(client.sessionId, skillId, mobId, fighter, player, this.mobs, loadVillageMap().collision, Date.now(), (fx) => this.broadcast("fx", fx), fresh);
     if (error) client.send("system", { text: error });
-    if (fighter.gold > previousGold) this.announceReward(client, player, fighter, fighter.gold - previousGold);
+    this.publishDrops(fresh);
     syncMobs(this.state.mobs, this.mobs);
+  }
+
+  private publishDrops(fresh: GroundDrop[]): void {
+    for (const drop of fresh) {
+      this.drops.push(drop);
+      this.broadcast("loot", drop);
+    }
   }
 
   private announceReward(client: Client, player: NetPlayerState, fighter: Fighter, gold: number): void {
@@ -241,7 +260,7 @@ export class VillageRoom extends Room<VillageRoomState, unknown, unknown, AuthCh
     const player = this.state.players.get(client.sessionId);
     const fighter = this.fighters.get(client.sessionId);
     if (!player || !fighter || !itemId) return;
-    const error = await equipItem(player.characterId, fighter, itemId);
+    const error = await equipItem(player.characterId, fighter, itemId, player.level);
     if (error) client.send("system", { text: error });
     player.weaponId = fighter.weaponId;
     player.armorId = fighter.armorId || "travel-armor";
@@ -265,6 +284,93 @@ export class VillageRoom extends Room<VillageRoomState, unknown, unknown, AuthCh
     const player = this.state.players.get(client.sessionId);
     if (!player || player.health <= 0) return;
     player.mounted = !player.mounted;
+  }
+
+  private onDodge(client: Client, message: unknown): void {
+    const player = this.state.players.get(client.sessionId);
+    const fighter = this.fighters.get(client.sessionId);
+    if (!player || !fighter || player.health <= 0) return;
+    const now = Date.now();
+    if (now < fighter.dodgeReady) return;
+    const input = readInput(message) ?? EMPTY_INPUT;
+    const facing = isDirection(player.facing) ? player.facing : "down";
+    const before = { x: player.x, y: player.y, facing, moving: player.moving };
+    const next = applyDodge(before, input, loadVillageMap().collision);
+    if (next.x === before.x && next.y === before.y) return;
+    fighter.dodgeReady = now + DODGE_COOLDOWN_MS;
+    player.x = next.x;
+    player.y = next.y;
+    player.facing = next.facing;
+    player.anim = "dodge";
+    fighter.actionUntil = now + 180;
+    this.broadcast("fx", {
+      effect: "dash",
+      x: before.x,
+      y: before.y,
+      x2: next.x,
+      y2: next.y,
+      amount: 0,
+      crit: false,
+      targetId: client.sessionId,
+      name: "",
+    });
+  }
+
+  private async onPickup(client: Client, message: unknown): Promise<void> {
+    const id = textField(message, "id");
+    const player = this.state.players.get(client.sessionId);
+    const fighter = this.fighters.get(client.sessionId);
+    if (!player || !fighter || !id) return;
+    const index = this.drops.findIndex((drop) => drop.id === id);
+    const drop = index >= 0 ? this.drops[index] : undefined;
+    if (!drop) return;
+    if (drop.ownerId && drop.ownerId !== player.characterId) return;
+    if (Math.hypot(player.x - drop.x, player.y - drop.y) > 64) return;
+    this.drops.splice(index, 1);
+    await grantDrop(player.characterId, fighter, drop);
+    this.broadcast("loot-gone", { id: drop.id });
+    this.announceReward(client, player, fighter, drop.gold);
+  }
+
+  private async onNode(client: Client, message: unknown): Promise<void> {
+    const nodeId = textField(message, "nodeId");
+    const player = this.state.players.get(client.sessionId);
+    const fighter = this.fighters.get(client.sessionId);
+    if (!player || !fighter || !nodeId) return;
+    const error = await unlockNode(player.characterId, fighter, nodeId, player);
+    if (error) client.send("system", { text: error });
+    const items = await readBag(player.characterId);
+    client.send("bag", bagPayload(items, fighter));
+  }
+
+  private onDash(client: Client, message: unknown): void {
+    const player = this.state.players.get(client.sessionId);
+    const fighter = this.fighters.get(client.sessionId);
+    if (!player || !fighter || player.health <= 0) return;
+    const now = Date.now();
+    if (now < fighter.dashReady) return;
+    const input = readInput(message) ?? EMPTY_INPUT;
+    const facing = isDirection(player.facing) ? player.facing : "down";
+    const before = { x: player.x, y: player.y, facing, moving: player.moving };
+    const next = applyDash(before, input, loadVillageMap().collision);
+    if (next.x === before.x && next.y === before.y) return;
+    fighter.dashReady = now + DASH_COOLDOWN_MS;
+    player.x = next.x;
+    player.y = next.y;
+    player.facing = next.facing;
+    player.anim = "dodge";
+    fighter.actionUntil = now + 210;
+    this.broadcast("fx", {
+      effect: "dash",
+      x: before.x,
+      y: before.y,
+      x2: next.x,
+      y2: next.y,
+      amount: 0,
+      crit: false,
+      targetId: client.sessionId,
+      name: "",
+    });
   }
 
   private async onStat(client: Client, message: unknown): Promise<void> {

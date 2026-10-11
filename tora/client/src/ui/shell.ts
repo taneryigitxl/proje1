@@ -100,7 +100,6 @@ export function boot(): void {
     KeyC: "character",
     KeyI: "inventory",
     KeyK: "skills",
-    KeyQ: "quests",
     KeyM: "map",
   };
   document.querySelectorAll<HTMLButtonElement>(".menu-bar button[data-panel]").forEach((button) => {

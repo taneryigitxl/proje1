@@ -1,4 +1,4 @@
-import { CLASSES, ITEMS, SKILLS, derivedStats, type ClassId, type PublicCharacter } from "@tora/shared";
+import { BUILD_NODES, CLASSES, ITEMS, SKILLS, derivedStats, skillIcon, type ClassId, type PublicCharacter } from "@tora/shared";
 import { assetUrl } from "../config";
 import { sessionBag } from "./session";
 import { audio, type AudioChannel } from "../audio/AudioManager";
@@ -110,14 +110,16 @@ function fillStatic(windows: Map<PanelId, HTMLElement>): void {
   const controls = document.createElement("ul");
   controls.className = "control-list";
   for (const line of [
-    "WASD veya yön tuşları — yürü",
-    "Shift — koş",
+    "WASD — yürü, fare — hedef",
+    "Sol tık — saldırı, sağ tık — ilk yetenek",
+    "1-4 — saldırı ve yetenekler",
+    "Shift — atılım, Space — kaçınma",
+    "Q — iksir, H — binek",
     "Enter — sohbet",
     "Esc — sohbet veya paneli kapat",
     "C — karakter",
     "I — envanter",
     "K — yetenekler",
-    "Q — görevler",
     "M — harita",
   ]) {
     const item = document.createElement("li");
@@ -216,10 +218,12 @@ function fillInventory(body: HTMLElement): void {
   grid.className = "inventory-grid";
   const items = sessionBag.items.length ? sessionBag.items : [];
   for (const item of items) {
+    if (item.itemId.startsWith("node:")) continue;
     const def = ITEMS[item.itemId];
     const cell = document.createElement("button");
     cell.type = "button";
-    cell.className = `item-slot${def?.rarity === "Nadir" ? " rare" : ""}${item.equipped ? " equipped" : ""}`;
+    const rare = def?.rarity === "Nadir" || def?.rarity === "Destansı" || def?.rarity === "Efsanevi";
+    cell.className = `item-slot${rare ? " rare" : ""}${def?.rarity === "Sihirli" ? " magic" : ""}${item.equipped ? " equipped" : ""}`;
     if (def) {
       const image = document.createElement("img");
       image.src = assetUrl(def.icon);
@@ -232,7 +236,8 @@ function fillInventory(body: HTMLElement): void {
         cell.append(count);
       }
     } else cell.textContent = item.itemId;
-    cell.title = def ? `${def.name}\n${def.kind === "weapon" ? `Saldırı ${def.attackMin}-${def.attackMax}` : def.kind === "potion" ? `İyileştirme ${def.heal}` : `Savunma ${def.defense}`}\n${item.equipped ? "Kuşanıldı" : `x${item.quantity}`}` : item.itemId;
+    const requirement = def?.classes?.length ? def.classes.map((id) => CLASSES[id].name).join(", ") : "Her sınıf";
+    cell.title = def ? `${def.name} · ${def.rarity}\n${def.description}\n${def.kind === "weapon" ? `Saldırı ${def.attackMin}-${def.attackMax}` : def.kind === "potion" ? `İyileştirme ${def.heal}` : `Savunma ${def.defense}`}\nSeviye ${def.level} · ${requirement}\n${item.equipped ? "Kuşanıldı" : `x${item.quantity}`}` : item.itemId;
     if (def?.kind !== "potion") cell.addEventListener("click", () => document.dispatchEvent(new CustomEvent("tora-equip", { detail: item.itemId })));
     grid.append(cell);
   }
@@ -248,14 +253,14 @@ function fillSkills(body: HTMLElement, character: PublicCharacter | null): void 
   body.replaceChildren();
   const classId = (character?.classId || "warrior") as ClassId;
   const klass = CLASSES[classId] ?? CLASSES.warrior;
-  body.append(note(`${klass.name} · Hedef seçmek için yaratığa tıkla. 1 normal saldırı, 2 ve 3 yetenek, H binek, 4 iksir.`));
+  body.append(note(`${klass.name} · Sol tık saldırı, sağ tık ilk yetenek, 1-4 yetenek, Q iksir, Shift atılım, Space kaçınma.`));
   for (const [index, id] of klass.skills.entries()) {
     const skill = SKILLS[id];
     if (!skill) continue;
     const card = document.createElement("div");
     card.className = "skill-card";
     const image = document.createElement("img");
-    image.src = assetUrl(`icons/skill-${id}.png`);
+    image.src = assetUrl(skillIcon(id));
     image.alt = "";
     const details = document.createElement("div");
     const title = document.createElement("strong");
@@ -264,6 +269,24 @@ function fillSkills(body: HTMLElement, character: PublicCharacter | null): void 
     description.textContent = `${skill.description} · ${skill.mana} mana · ${(skill.cooldown / 1000).toFixed(1)} sn bekleme`;
     details.append(title, description);
     card.append(image, details);
+    body.append(card);
+  }
+  const owned = new Set(sessionBag.items.filter((item) => item.itemId.startsWith("node:")).map((item) => item.itemId.slice(5)));
+  const mine = BUILD_NODES.filter((node) => node.classId === classId);
+  if (mine.length) body.append(note(`Yetenek puanı: ${character?.statPoints ?? 0}`));
+  for (const node of mine) {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "skill-card";
+    card.disabled = owned.has(node.id);
+    const details = document.createElement("div");
+    const title = document.createElement("strong");
+    title.textContent = owned.has(node.id) ? `${node.name} · açık` : node.name;
+    const description = document.createElement("span");
+    description.textContent = node.blurb;
+    details.append(title, description);
+    card.append(details);
+    if (!owned.has(node.id)) card.addEventListener("click", () => document.dispatchEvent(new CustomEvent("tora-node", { detail: node.id })));
     body.append(card);
   }
 }
