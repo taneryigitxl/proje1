@@ -144,7 +144,6 @@ export class VillageScene extends Phaser.Scene {
     this.mana = entry.character.currentMana;
     this.maxHealth = entry.character.maxHealth;
     this.maxMana = entry.character.maxMana;
-    this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => this.pickTarget(pointer));
     const equip = (event: Event) => {
       const itemId = (event as CustomEvent<string>).detail;
       if (!itemId) return;
@@ -576,7 +575,7 @@ export class VillageScene extends Phaser.Scene {
       ? this.local.mobs.filter((mob) => mob.alive)
       : Array.from(this.mobActors, ([id, actor]) => ({ id, x: actor.sprite.x, y: actor.sprite.y, alive: actor.alive })).filter((mob) => mob.alive);
     const classId = isClassId(this.entry.character.classId) ? this.entry.character.classId : "warrior";
-    const best = this.targeting.select(world, mobs, classId);
+    const best = this.targeting.select(world, mobs, classId, this.body, this.collision);
     const frame = document.getElementById("target-frame");
     if (frame) frame.textContent = best ? best : "";
   }
