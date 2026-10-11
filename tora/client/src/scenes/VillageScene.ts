@@ -931,8 +931,9 @@ function down(key: Phaser.Input.Keyboard.Key | undefined): boolean {
 }
 
 function zoomFor(width: number, height: number): number {
-  const fit = Math.min(width / 1280, height / 820);
-  return Math.max(0.82, Math.min(1.12, fit));
+  // Keep the illustrated 1024×768 world covering wide and tall viewports.
+  // The camera follows the player through the cropped dimension.
+  return Math.max(width / 1024, height / 768);
 }
 
 function requireLayer(map: Phaser.Tilemaps.Tilemap, name: string, tiles: Phaser.Tilemaps.Tileset): Phaser.Tilemaps.TilemapLayer {
