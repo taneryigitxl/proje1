@@ -3,6 +3,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      browser_smoke:
+        description: Run the full browser suite before publishing
+        type: boolean
+        default: true
 permissions:
   contents: read
   pages: write
@@ -25,8 +30,10 @@ jobs:
       - run: npm test && npm run build
         working-directory: tora-online
       - run: npx playwright install --with-deps chromium
+        if: github.event_name != 'workflow_dispatch' || inputs.browser_smoke
         working-directory: tora-online
       - run: npm run test:browser
+        if: github.event_name != 'workflow_dispatch' || inputs.browser_smoke
         working-directory: tora-online
       - run: node scripts/package-pages.mjs
       - uses: actions/upload-pages-artifact@v3
