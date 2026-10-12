@@ -1,4 +1,4 @@
-import { ITEM_DEFS } from './InventorySystem.js?v=45';
+import { ITEM_DEFS } from './InventorySystem.js';
 
 export class GlbLoot {
   constructor(scene,inventory,onStatus,navigation,assets) {Object.assign(this,{scene,inventory,onStatus,navigation,assets});this.drops=[];this.generation=0;}

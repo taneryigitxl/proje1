@@ -40,3 +40,11 @@ Creator: Poly Haven. License: CC0-1.0.
 The shipped GLB files were processed with [meshoptimizer/gltfpack](https://github.com/zeux/meshoptimizer) (MIT). The executable is not distributed with the game.
 
 Yeni baş modeli hazırlama: @gltf-transform/core ve functions (MIT), Sharp (Apache-2.0); yalnızca geliştirme bağımlılıkları. Bütün assetler yerelden sunulur, çalışma anında üçüncü taraf indirme yapılmaz.
+
+## 2026 visual and audio update
+
+- UI skill/item atlases, warrior/Ayame/guardian portraits and combat VFX: original assets generated with OpenAI image generation. Exact prompts are in assets/ui/art-prompts.json.
+- Poly Haven pine_sapling_medium, tree_small_02 and rock_moss_set_01: CC0, https://polyhaven.com/license. Models were isolated, centered and reduced to approximately 2,700–20,300 vertices depending on object. Dense leaf/needle geometry was replaced by crossed alpha foliage cards sampled from the original model, using the original diffuse and alpha textures; branches remain mesh geometry, with 1K PBR textures. Sources: https://polyhaven.com/a/pine_sapling_medium, https://polyhaven.com/a/tree_small_02, https://polyhaven.com/a/rock_moss_set_01.
+- Kenney RPG Audio: CC0. https://kenney.nl/assets/rpg-audio. Selected footsteps, knife slices, chop, metal pot and UI metal click, unchanged OGG.
+- Forest Ambience music: TinyWorlds, CC0. https://opengameart.org/content/forest-ambience. Unchanged MP3.
+- Stream and wind recordings: Blender Foundation, YoFrankie! project; uploaded by Lamoot; CC-BY 3.0, https://creativecommons.org/licenses/by/3.0/. https://opengameart.org/content/ambient-mountain-river-wind-and-forest-and-waterfall. Unchanged FLAC (amb_stream.flac and amb_wind_1.flac).

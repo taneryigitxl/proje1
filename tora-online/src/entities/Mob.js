@@ -1,5 +1,5 @@
-import { Entity } from "./Entity.js?v=45";
-import { DamageSystem } from "../combat/DamageSystem.js?v=45";
+import { Entity } from "./Entity.js";
+import { DamageSystem } from "../combat/DamageSystem.js";
 
 export class Mob extends Entity {
   constructor(scene, spawn, index, navigation, onDamage, visual) {
@@ -52,7 +52,7 @@ export class Mob extends Entity {
   update(dt, player) {
     if(this.disposed)return;
     if(this.feetTimer>0){this.feetTimer-=dt;if(this.feetTimer<=0)this.#snapFeetToGround();}
-    if(this.attackWindup>0){this.attackWindup-=dt;if(this.attackWindup<=0 && this.alive && player.alive && BABYLON.Vector3.Distance(this.position,player.position)<2.65){const result=DamageSystem.apply(this,player,this.definition.boss?24:9+this.level*2);if(result)this.onDamage?.(player,result);}}
+    if(this.attackWindup>0){this.attackWindup-=dt;if(this.attackWindup<=0 && this.alive && player.alive && BABYLON.Vector3.Distance(this.position,player.position)<2.65){const result=DamageSystem.apply(this,player,this.definition.boss?24:9+this.level*2);if(result)this.onDamage?.(player,result,this);}}
     if (!this.alive) {
       this.respawnTimer -= dt;
       if(this.respawnTimer<(this.definition.boss?25:9)-2)this.root.setEnabled(false);

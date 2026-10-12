@@ -1,4 +1,5 @@
-import { WeaponSheath } from "../player/WeaponSheath.js?v=45";
+import {TwoHandIK} from "../player/TwoHandIK.js";
+import { WeaponSheath } from "../player/WeaponSheath.js";
 
 export class AssetManager {
   constructor(scene, config, onProgress = () => {}) {
@@ -119,7 +120,9 @@ export class AssetManager {
     };
     const weaponSheath = new WeaponSheath(weaponRoot, skeleton, skinnedMesh, hand, handPose);
 
-    return { root, skeleton, weaponRoot, weaponSheath, animationGroups };
+    const visual={root,skeleton,weaponRoot,weaponSheath,animationGroups};visual.ik=new TwoHandIK(visual,this.scene);
+    visual.weaponMaterials=[...new Set(weaponRoot.getChildMeshes(false).map(m=>m.material).filter(Boolean))];
+    return visual;
   }
 
   async preloadStatics(keys = Object.keys(this.manifest.environment)) {
@@ -156,6 +159,8 @@ export class AssetManager {
     // Measure feet before weapons skew the AABB (weapons were burying mobs)
     const footOffset = this.#estimateFootOffset(root);
     if ((definition.id.includes("orc") || definition.boss)) await this.#attachMobWeapon(root, loaded.skeletons[0], index);
+    if(definition.boss){for(const mesh of root.getChildMeshes(false)){if(!mesh.material)continue;const mat=mesh.material;mat.albedoColor=new BABYLON.Color3(.37,.31,.26);mat.metallic=.55;mat.roughness=.55;}
+      await this.#attachMobWeapon(root,loaded.skeletons[0],index+100);const second=this.scene.getTransformNodeByName("orc-sword-"+(index+100));const left=loaded.skeletons[0].bones.find(b=>/hand_l|lefthand/i.test(b.name));const skin=root.getChildMeshes(false).find(m=>m.skeleton===loaded.skeletons[0]);if(second&&left&&skin){second.attachToBone(left,skin);second.rotation.set(1.1,-.2,-1.4);second.scaling.setAll(.95);}}
     return { root, animationGroups: loaded.animationGroups, definition, footOffset };
   }
 

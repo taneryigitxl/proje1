@@ -1,5 +1,6 @@
-import { EngineRuntime } from "./core/Engine.js?v=45";
-import { Game } from "./core/Game.js?v=45";
+import "../menu.js";
+import { EngineRuntime } from "./core/Engine.js";
+import { Game } from "./core/Game.js";
 
 if (window.__TORA_BOOTSTRAP__) {
   console.warn("[Tora Startup] İkinci bootstrap isteği engellendi; mevcut oyun instance korunuyor.");
@@ -16,7 +17,7 @@ if (window.__TORA_BOOTSTRAP__) {
   let game = null;
   let starting = false;
   let lastQuality = "medium";
-  let lastIdentity = { username: "admin", isAdmin: true };
+  let lastIdentity = { username: "Ayaz", isAdmin: false };
 
   function progress(value, message) {
     const safe = Math.max(0, Math.min(100, Math.round(value)));
@@ -54,8 +55,8 @@ if (window.__TORA_BOOTSTRAP__) {
     }
     lastQuality = quality || lastQuality;
     lastIdentity = {
-      username: identity?.username || "admin",
-      isAdmin: identity?.isAdmin !== false,
+      username: identity?.username || "Ayaz",
+      isAdmin: false,
     };
     starting = true;
     fatal.hidden = true;

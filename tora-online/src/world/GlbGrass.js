@@ -1,3 +1,4 @@
+import {attachGrassWind} from './GrassWind.js';
 /** Static GLB foliage, batched in 8m cells. Buffers are never rebuilt per frame. */
 export class GlbGrass {
   constructor(scene,assets,navigation,heightAt,allowed) {Object.assign(this,{scene,assets,navigation,heightAt,allowed});this.cells=[];this.timer=0;}
@@ -5,6 +6,7 @@ export class GlbGrass {
     const template=await this.assets.getStaticTemplate('grass');template.computeWorldMatrix(true);
     const sources=template.getChildMeshes(false).filter(m=>m.getTotalVertices()>0);this.max=3600;
     let seed=6789;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+    for(const source of sources)if(source.material)attachGrassWind(source.material);
     const groups=new Map();
     for(let i=0;i<7200;i++) {
       const x=(random()-.5)*48,z=(random()-.5)*48;if(!this.allowed(x,z))continue;

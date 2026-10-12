@@ -1,21 +1,27 @@
-# Tora Online — izometrik oyun dilimi
-
-Babylon.js prototipinin mevcut modüler yapısı ve giriş ekranı korunarak geliştirilmiştir. Statik GitHub Pages yolu: /proje1/tora-online/.
+# Tora Online
+Tarayıcıda çalışan izometrik Doğu fantezisi RPG demosu. Üç bölge, dokuz yetenek, NPC görevleri, envanter, mağaza, loot ve bu tarayıcıda kalan kayıtlar içerir.
 
 ## Çalıştırma
+Node.js 22 veya daha yeni bir sürüm:
+```powershell
+npm ci
+npm run dev
+npm test
+npm run build
+npm run test:browser
+npm run test:soak
+```
+Windows tarayıcı testi varsayılan olarak kurulu Edge'i kullanır. Diğer sistemlerde önce `npx playwright install chromium` çalıştır. `SMOKE_CHANNEL` ile kurulu Chrome/Edge seçilebilir; sabit executable yolu yoktur.
 
-Bu klasörde npm ci ve npm run dev çalıştırın. npm run build yerel vendor, kaynaklar ve assetlerle dist/ üretir. npm test oynanış regresyonlarını, npm run validate modül ve GLB bütünlüğünü kontrol eder.
+## Oynama
+Profil adını yazıp Diyara Gir'e bas. Şifre veya admin yetkisi yoktur. Kayıtlar bu tarayıcıya aittir.
+Sol tık: yürü / düşmana yaklaş ve saldır. WASD: kamera yönünde hareket. Shift: koş. Space: zıpla. 1–9: yetenek. Tab: hedef değiştir. I: envanter. C: karakter. Escape: paneli kapat / duraklat.
+Sağ sürükle: yatay kamera döndürme. Tekerlek: zoom.
+Ayame'den görevi al; beş yaratığı yen, üç dişi teslim et, Kül Muhafızı'na ilerle.
 
-## Oyna
-
-Mevcut demo girişi: admin / 2850. Sol tık: zemin hareketi veya düşmana yaklaş/saldır; WASD: kamera yönünde hareket; Shift: koşu; Space: zıplama; 1–9: yetenek; I: envanter; C: statlar; Escape: menü. Sağ sürükle: yatay kamera; tekerlek: sınırlı zoom.
-
-Ayame’den görevi al, kuzey kapısından ormana geç, beş yaratığı yen, düşen sandıkları yakın mesafeden topla, üç Kadim Diş’i teslim et; harabe kapısından Kül Muhafızı’na ulaş. Kapı/NPC etiketi ilk tıkta yaklaştırır; yakında ikinci tık etkileşir. Grafik profilleri Escape menüsünden değişir.
-
-WebGPU otomatik denenir; destek/hata halinde WebGL2 kullanılır. WebGL2’yi ayrıca ?renderer=webgl ile test edebilirsin. Kayıtlar cihazdaki tarayıcı localStorage’ında tutulur. Demo girişi gerçek sunucu doğrulaması yapmaz.
-
-## İçerik
-
-45° izometrik kamera, A* rota, rigli kadın/kılıç, üç düşman türü ve mini boss, üç ayrı yüklenen bölge, gerçek GLB çevre/çim/loot, PBR arazi, görev/XP/altın/dükkân/envanter/ekipman ve yerel kayıt.
-
-Asset kaynakları: [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md). Ölçümler ve açık işler: [IMPLEMENTATION_REPORT.md](IMPLEMENTATION_REPORT.md). NetworkAdapter gelecekteki authoritative WebSocket sınırını tanımlar; mevcut sürüm yerel simülasyondur.
+## Yayın
+GitHub Pages workflow oyunu Vite ile hashli JS/CSS ve UI dokularına derler. Yayın paketi testleri, kaynak modülleri, node_modules ve önceki çıktı kopyalarını içermez. Depodaki diğer site sayfaları korunur.
+`dist/` yalnızca üretim çıktısıdır. Asset URL'leri manifestte tanımlıdır.
+Lisanslar: [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+Görsel üretim istemleri: [assets/ui/art-prompts.json](assets/ui/art-prompts.json).
+Test kanıtları ve öncesi/sonrası ekranları: [reports/](reports/).

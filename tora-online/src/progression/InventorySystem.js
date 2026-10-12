@@ -1,30 +1,30 @@
 export const ITEM_DEFS = Object.freeze({
   "rusty-sword": {
-    id: "rusty-sword", name: "Paslı Kılıç", icon: "⚔", type: "weapon", slot: "weapon", rarity: "common",
+    id: "rusty-sword", name: "Paslı Kılıç", type: "weapon", slot: "weapon", rarity: "common",
     description: "Başlangıç kılıcı. Güç +2.", bonuses: { strength: 2 },
   },
   "leather-vest": {
-    id: "leather-vest", name: "Deri Yelek", icon: "🛡", type: "armor", slot: "armor", rarity: "common",
+    id: "leather-vest", name: "Deri Yelek", type: "armor", slot: "armor", rarity: "common",
     description: "Hafif zırh. Canlılık +2.", bonuses: { vitality: 2 },
   },
   "health-potion": {
-    id: "health-potion", name: "Can İksiri", icon: "♥", type: "consumable", rarity: "common",
+    id: "health-potion", name: "Can İksiri", type: "consumable", rarity: "common",
     description: "40 can yeniler.",
   },
   "mana-potion": {
-    id: "mana-potion", name: "Mana İksiri", icon: "◈", type: "consumable", rarity: "common",
+    id: "mana-potion", name: "Mana İksiri", type: "consumable", rarity: "common",
     description: "35 mana yeniler.",
   },
   "wolf-fang": {
-    id: "wolf-fang", name: "Kadim Diş", icon: "◆", type: "material", rarity: "uncommon",
+    id: "wolf-fang", name: "Kadim Diş", type: "material", rarity: "uncommon",
     description: "Görev / craft malzemesi.",
   },
   "torch-oil": {
-    id: "torch-oil", name: "Meşale Yağı", icon: "✦", type: "material", rarity: "common",
+    id: "torch-oil", name: "Meşale Yağı", type: "material", rarity: "common",
     description: "Kamp malzemesi.",
   },
   "iron-blade": {
-    id: "iron-blade", name: "Demir Kılıç", icon: "🗡", type: "weapon", slot: "weapon", rarity: "uncommon",
+    id: "iron-blade", name: "Demir Kılıç", type: "weapon", slot: "weapon", rarity: "uncommon",
     description: "Demirci işi kılıç. Güç +4.", bonuses: { strength: 4 },
   },
 });
@@ -183,6 +183,7 @@ export class InventorySystem {
       }
     }
     this.stats?.setGearBonus?.(this.gearBonus);
+    const visual=this.player?.visual;if(visual?.weaponRoot){visual.weaponRoot.setEnabled(Boolean(this.equipped.weapon));const steel=this.equipped.weapon==="iron-blade";for(const material of visual.weaponMaterials||[]){material.albedoColor=steel?new BABYLON.Color3(.78,.82,.83):new BABYLON.Color3(.58,.43,.28);material.metallic=steel?.88:.5;material.roughness=steel?.28:.82;}for(const mesh of visual.root.getChildMeshes(false)){if(mesh.name.includes("Bracer"))mesh.setEnabled(Boolean(this.equipped.armor));}}
   }
 
   #save() {

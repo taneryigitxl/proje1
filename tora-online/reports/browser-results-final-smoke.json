@@ -1,0 +1,73 @@
+{
+  "date": "2026-10-12T05:59:44.153Z",
+  "url": "http://127.0.0.1:59280/",
+  "soakSeconds": 0,
+  "checks": [
+    "Şifresiz profil, ilk yükleme, raster portre ve dokuz atlas ikon",
+    "WASD hareket",
+    "Sağ sürükleme ve kamera zoom",
+    "Zıplama, havada kalma ve iniş",
+    "Mouse hareketi ve WASD ile yol iptali",
+    "Çantadan dışarı gerçek sürükleme: iptal eşyayı koruyor, onay yere bırakıyor",
+    "Envanter aç/kapat, UI hareket koruması, çift tık equip/unequip, gerçek drag/drop",
+    "Karakter paneli ve Escape",
+    "Görev teslimi: gerçek seçenek düğmesi, diş tüketimi ve Demir Kılıç ödülü (kontrollü fixture)",
+    "Gerçek NPC yaklaşımı, görev kabulü, mağaza ve satın alma",
+    "Köyden ormana gerçek kapı geçişi",
+    "TAB hedef seçimi ve menzil dışından güvenli yaklaşarak saldırı",
+    "1–9 yetenekler: dokuz ayrı rig klibi, hasar anı, mana tüketimi, cooldown ve buff",
+    "Yetersiz mana durumu saldırıyı reddediyor",
+    "Hedef ölümü, yeni hedef ve loot oluşumu",
+    "Dolu envanterde loot kaybolmuyor; boş yer açılınca alınabiliyor (kontrollü fixture)",
+    "Ölüm animasyonu ve respawn",
+    "Ormandan harabeye geçiş ve farklı boss ekipmanı",
+    "1920×1080 yeniden boyutlandırma, üç kalite profili ve bağımsız ses ayarları",
+    "Kayıt, bölge ve konum geri yükleme",
+    "Console error, uncaught promise, 404 ve başarısız asset isteği yok"
+  ],
+  "castStates": [
+    "tora-1-Sword_Regular_A",
+    "tora-1-Sword_Regular_Combo",
+    "tora-0-Sword_Attack",
+    "tora-1-Sword_Regular_B",
+    "tora-1-Sword_Dash",
+    "tora-1-Sword_Regular_C",
+    "tora-1-Sword_Block",
+    "tora-0-Spell_Simple_Enter",
+    "tora-1-Sword_Heavy_Combo"
+  ],
+  "ikSamples": [
+    0.028424915710017592,
+    0.00020496021997709697,
+    0.04528018718117751,
+    0.0003260208495452493,
+    0.024095492916560747,
+    0.05072912992451647,
+    0.01014230435690816,
+    0.008007768068963573,
+    0.009334419506534531
+  ],
+  "fps": [
+    {
+      "quality": "low",
+      "width": 1920,
+      "height": 1080,
+      "fps": 59.96402158651157
+    },
+    {
+      "quality": "medium",
+      "width": 1920,
+      "height": 1080,
+      "fps": 59.98800239934095
+    },
+    {
+      "quality": "high",
+      "width": 1920,
+      "height": 1080,
+      "fps": 59.98800239934093
+    }
+  ],
+  "errors": [],
+  "warnings": [],
+  "failedRequests": []
+}

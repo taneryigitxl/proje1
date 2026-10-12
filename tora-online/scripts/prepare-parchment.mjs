@@ -1,0 +1,1 @@
+import sharp from 'sharp';await sharp('assets/ui/parchment-minimap.png').resize(512,512).webp({quality:78}).toFile('assets/ui/parchment.webp');

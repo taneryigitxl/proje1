@@ -1,4 +1,4 @@
-import { CameraControls } from './CameraControls.js?v=45';
+import { CameraControls } from './CameraControls.js';
 
 /** Fixed 45 degree follow, independent of jumping and attack animations. */
 export class IsometricCamera {

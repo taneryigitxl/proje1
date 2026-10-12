@@ -1,0 +1,312 @@
+{
+  "date": "2026-10-12T05:56:57.373Z",
+  "url": "http://127.0.0.1:55998/",
+  "soakSeconds": 600,
+  "checks": [
+    "Şifresiz profil, ilk yükleme, raster portre ve dokuz atlas ikon",
+    "WASD hareket",
+    "Sağ sürükleme ve kamera zoom",
+    "Zıplama, havada kalma ve iniş",
+    "Mouse hareketi ve WASD ile yol iptali",
+    "Çantadan dışarı gerçek sürükleme: iptal eşyayı koruyor, onay yere bırakıyor",
+    "Envanter aç/kapat, UI hareket koruması, çift tık equip/unequip, gerçek drag/drop",
+    "Karakter paneli ve Escape",
+    "Görev teslimi: gerçek seçenek düğmesi, diş tüketimi ve Demir Kılıç ödülü (kontrollü fixture)",
+    "Gerçek NPC yaklaşımı, görev kabulü, mağaza ve satın alma",
+    "Köyden ormana gerçek kapı geçişi",
+    "TAB hedef seçimi ve menzil dışından güvenli yaklaşarak saldırı",
+    "1–9 yetenekler: dokuz ayrı rig klibi, hasar anı, mana tüketimi, cooldown ve buff",
+    "Yetersiz mana durumu saldırıyı reddediyor",
+    "Hedef ölümü, yeni hedef ve loot oluşumu",
+    "Dolu envanterde loot kaybolmuyor; boş yer açılınca alınabiliyor (kontrollü fixture)",
+    "Ölüm animasyonu ve respawn",
+    "Ormandan harabeye geçiş ve farklı boss ekipmanı",
+    "1920×1080 yeniden boyutlandırma, üç kalite profili ve bağımsız ses ayarları",
+    "Kayıt, bölge ve konum geri yükleme",
+    "600 saniye sürekli gerçek klavye/fare oynanışı; ölüm/respawn dahil kritik hata yok",
+    "Console error, uncaught promise, 404 ve başarısız asset isteği yok"
+  ],
+  "castStates": [
+    "tora-1-Sword_Regular_A",
+    "tora-1-Sword_Regular_Combo",
+    "tora-0-Sword_Attack",
+    "tora-1-Sword_Regular_B",
+    "tora-1-Sword_Dash",
+    "tora-1-Sword_Regular_C",
+    "tora-1-Sword_Block",
+    "tora-0-Spell_Simple_Enter",
+    "tora-1-Sword_Heavy_Combo"
+  ],
+  "ikSamples": [
+    0.13287019081736273,
+    0.00036663244822788567,
+    0.20047346870577126,
+    0.0006713951244127776,
+    0.10844311885720911,
+    0.1671267491107215,
+    0.08440312073850899,
+    0.07004088729588788,
+    0.08124136059975895
+  ],
+  "fps": [
+    {
+      "quality": "low",
+      "width": 1920,
+      "height": 1080,
+      "fps": 59.952038369482906
+    },
+    {
+      "quality": "medium",
+      "width": 1920,
+      "height": 1080,
+      "fps": 60.012002399764384
+    },
+    {
+      "quality": "high",
+      "width": 1920,
+      "height": 1080,
+      "fps": 60.01200239976436
+    },
+    {
+      "alive": true,
+      "health": 184,
+      "region": "forest",
+      "position": [
+        0,
+        0.034914854535606374,
+        -17
+      ],
+      "fps": 60.036021612609815,
+      "failed": false,
+      "quality": "high",
+      "elapsed": 4.618
+    },
+    {
+      "alive": true,
+      "health": 184,
+      "region": "forest",
+      "position": [
+        6.864406107979833,
+        -0.11252050924067283,
+        12.518876449945166
+      ],
+      "fps": 60.01200239976437,
+      "failed": false,
+      "quality": "high",
+      "elapsed": 42.2
+    },
+    {
+      "alive": true,
+      "health": 184,
+      "region": "forest",
+      "position": [
+        4.303086006135206,
+        0.02380007038702182,
+        -5.421123986654705
+      ],
+      "fps": 59.97600959580396,
+      "failed": false,
+      "quality": "high",
+      "elapsed": 78.796
+    },
+    {
+      "alive": true,
+      "health": 24,
+      "region": "forest",
+      "position": [
+        -6.51255585175035,
+        -0.13780275713923992,
+        -6.0737304242602885
+      ],
+      "fps": 59.976009595803966,
+      "failed": false,
+      "quality": "high",
+      "elapsed": 112.778
+    },
+    {
+      "alive": true,
+      "health": 184,
+      "region": "forest",
+      "position": [
+        0.16714784793445794,
+        0.39788580298744386,
+        1.5284722232363033
+      ],
+      "fps": 59.99999999999994,
+      "failed": false,
+      "quality": "high",
+      "elapsed": 151.487
+    },
+    {
+      "alive": true,
+      "health": 158,
+      "region": "forest",
+      "position": [
+        6.6561497729640555,
+        0.16123201523999192,
+        0.3259991368894664
+      ],
+      "fps": 60.01200239976435,
+      "failed": false,
+      "quality": "high",
+      "elapsed": 185.5
+    },
+    {
+      "alive": true,
+      "health": 184,
+      "region": "forest",
+      "position": [
+        -2.2756748901818344,
+        -0.02249655011590982,
+        -8.871529546779739
+      ],
+      "fps": 59.999999999999474,
+      "failed": false,
+      "quality": "high",
+      "elapsed": 224.528
+    },
+    {
+      "alive": true,
+      "health": 184,
+      "region": "forest",
+      "position": [
+        -4.338830940312046,
+        -0.01333072833678977,
+        6.724600887635016
+      ],
+      "fps": 60.036021612609304,
+      "failed": false,
+      "quality": "high",
+      "elapsed": 258.576
+    },
+    {
+      "alive": true,
+      "health": 49,
+      "region": "forest",
+      "position": [
+        -6.250015855376159,
+        -0.13909721826436536,
+        0.6499991855526419
+      ],
+      "fps": 59.99999999999975,
+      "failed": false,
+      "quality": "high",
+      "elapsed": 293.682
+    },
+    {
+      "alive": true,
+      "health": 32,
+      "region": "forest",
+      "position": [
+        -1.94427992910027,
+        -0.035380958178501246,
+        1.3361084500157743
+      ],
+      "fps": 59.999999999999865,
+      "failed": false,
+      "quality": "high",
+      "elapsed": 331.281
+    },
+    {
+      "alive": true,
+      "health": 184,
+      "region": "forest",
+      "position": [
+        -3.0794328508072857,
+        -0.11086131197612745,
+        -5.644425308281085
+      ],
+      "fps": 59.98800239934122,
+      "failed": false,
+      "quality": "high",
+      "elapsed": 367.88
+    },
+    {
+      "alive": true,
+      "health": 171,
+      "region": "forest",
+      "position": [
+        4.200523625107004,
+        0.012993846506539569,
+        9.324627414347898
+      ],
+      "fps": 59.98800240023489,
+      "failed": false,
+      "quality": "high",
+      "elapsed": 401.848
+    },
+    {
+      "alive": true,
+      "health": 51,
+      "region": "forest",
+      "position": [
+        -1.890559304408737,
+        0.014436265592550308,
+        7.27254756986208
+      ],
+      "fps": 59.999999999999794,
+      "failed": false,
+      "quality": "high",
+      "elapsed": 436.965
+    },
+    {
+      "alive": true,
+      "health": 184,
+      "region": "forest",
+      "position": [
+        2.0441530241865253,
+        0.022032404590211333,
+        8.8519524692119
+      ],
+      "fps": 60.01200239976473,
+      "failed": false,
+      "quality": "high",
+      "elapsed": 474.597
+    },
+    {
+      "alive": true,
+      "health": 184,
+      "region": "forest",
+      "position": [
+        0,
+        0.034914854535606374,
+        -17
+      ],
+      "fps": 60.00000000000021,
+      "failed": false,
+      "quality": "high",
+      "elapsed": 513.598
+    },
+    {
+      "alive": true,
+      "health": 184,
+      "region": "forest",
+      "position": [
+        -1.3678772950088263,
+        -0.08558824726334704,
+        -5.053505557640182
+      ],
+      "fps": 59.99999999999991,
+      "failed": false,
+      "quality": "high",
+      "elapsed": 547.606
+    },
+    {
+      "alive": true,
+      "health": 118,
+      "region": "forest",
+      "position": [
+        -8.077518227580642,
+        -0.01993114445067524,
+        7.877655391964156
+      ],
+      "fps": 60.00000000000015,
+      "failed": false,
+      "quality": "high",
+      "elapsed": 582.709
+    }
+  ],
+  "errors": [],
+  "warnings": [],
+  "failedRequests": []
+}

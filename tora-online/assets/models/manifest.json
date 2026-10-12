@@ -89,13 +89,13 @@
     }
   ],
   "environment": {
-    "common-tree": "assets/models/nature/common-tree.glb",
-    "pine": "assets/models/nature/pine.glb",
+    "common-tree": "assets/models/environment/common-tree.glb",
+    "pine": "assets/models/environment/pine.glb",
     "bush": "assets/models/nature/bush.glb",
     "grass": "assets/models/nature/grass.glb",
     "fern": "assets/models/nature/fern.glb",
-    "rock-a": "assets/models/nature/rock-a.glb",
-    "rock-b": "assets/models/nature/rock-b.glb",
+    "rock-a": "assets/models/environment/rock-a.glb",
+    "rock-b": "assets/models/environment/rock-b.glb",
     "plaster-wall": "assets/models/buildings/plaster-wall.glb",
     "round-door-wall": "assets/models/buildings/round-door-wall.glb",
     "window-wall": "assets/models/buildings/window-wall.glb",

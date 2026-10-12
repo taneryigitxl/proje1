@@ -1,4 +1,4 @@
-import { GlbGrass } from './GlbGrass.js?v=45';
+import { GlbGrass } from './GlbGrass.js';
 
 export const REGIONS = Object.freeze({
   village: { name:'Ayaz Köyü', subtitle:'Güvenli bölge · Demirci Ayame', terrain:'grassland', seed:13, spawn:[0,-9], exits:[{id:'forest',x:0,z:19,name:'Sisli Orman'}], mobs:[] },
@@ -15,7 +15,8 @@ export class RegionWorld {
   async build(assets,{id='village'}={}) { this.assets=assets;this.#lighting();return this.load(id); }
   async load(id) {
     if(!REGIONS[id]) throw new Error('Bilinmeyen bölge: '+id);
-    this.clear();this.region=id;this.definition=REGIONS[id];this.navigation.obstacles=[];
+    this.clear();this.region=id;this.definition=REGIONS[id];
+    const moods={village:[.52,.58,.55,1.05,1.35],forest:[.32,.44,.41,.78,1.05],ruins:[.37,.39,.36,.68,1.1]},m=moods[id];this.scene.clearColor=new BABYLON.Color4(m[0],m[1],m[2],1);this.scene.fogColor=new BABYLON.Color3(m[0],m[1],m[2]);this.scene.fogStart=31;this.scene.fogEnd=75;this.hemi.intensity=m[3];this.sun.intensity=m[4];this.navigation.obstacles=[];
     this.navigation.setHeightProvider((x,z)=>this.heightAt(x,z));
     this.navigation.areaAllowed = (x,z)=> !(id==='forest' && Math.abs(z-3)<1.45 && Math.abs(x)>1.6);
     this.#terrain(); await this.#nature();
@@ -70,7 +71,7 @@ export class RegionWorld {
     // Terrain surfaces are geometry; all scenery is licensed GLB.
     const road=BABYLON.MeshBuilder.CreateGround('dirt-road',{width:4.6,height:49,subdivisions:80,updatable:true},this.scene);
     const rp=road.getVerticesData(BABYLON.VertexBuffer.PositionKind);
-    for(let i=0;i<rp.length;i+=3) rp[i+1]=this.heightAt(rp[i],rp[i+2])+.018;
+    const colors=[];for(let i=0;i<rp.length;i+=3){const edge=1-Math.abs(rp[i])/2.3;rp[i+1]=this.heightAt(rp[i],rp[i+2])+.024;colors.push(1,1,1,Math.min(1,Math.max(0,edge*6)));}road.setVerticesData(BABYLON.VertexBuffer.ColorKind,colors);road.hasVertexAlpha=true;
     road.updateVerticesData(BABYLON.VertexBuffer.PositionKind,rp,true); road.refreshBoundingInfo();road.material=this.#material('mud',10);road.material.albedoTexture.uScale=road.material.bumpTexture.uScale=road.material.metallicTexture.uScale=2;road.material.albedoTexture.vScale=road.material.bumpTexture.vScale=road.material.metallicTexture.vScale=20;road.isPickable=false;road.receiveShadows=true;this.roots.push(road);
     if(this.region==='village') {
       const plaza=BABYLON.MeshBuilder.CreateGround('village-plaza',{width:18,height:17},this.scene);plaza.position.z=-2;plaza.position.y=.025;
@@ -82,21 +83,24 @@ export class RegionWorld {
     root.computeWorldMatrix(true);const bounds=root.getHierarchyBoundingVectors(true);
     root.position.y=this.heightAt(x,z)-bounds.min.y+elevation;
     root.getChildMeshes(false).forEach(m=>{if(m instanceof BABYLON.InstancedMesh)m.sourceMesh.receiveShadows=true;else m.receiveShadows=true;m.isPickable=Boolean(metadata);});
+    root.computeWorldMatrix(true);root.metadata={...(root.metadata||{}),occlusionBounds:root.getHierarchyBoundingVectors(true),occlusionMeshes:root.getChildMeshes(false)};
     this.roots.push(root);if(obstacle)this.navigation.addObstacle(x,z,obstacle);
     if(!['grass','fern','bush'].includes(key))this.addShadowCaster(root);
     return root;
   }
   async #nature() {
-    const random=this.#random(this.definition.seed), jobs=[];const count=this.region==='forest'?54:32;
-    for(let i=0;i<count;i++) {
-      const x=(random()-.5)*54,z=(random()-.5)*54;
-      if((this.region==='forest'&&Math.abs(z-3)<2.4) || Math.abs(x)<4 || (this.region==='village'&&Math.abs(x)<15&&Math.abs(z)<16) || (this.region==='ruins'&&Math.abs(x)<12&&Math.abs(z)<18))continue;
-      jobs.push(this.place(i%3?'common-tree':'pine','tree-'+i,x,z,random()*6.28,.72+random()*.32,null,.65));
+    const random=this.#random(this.definition.seed),jobs=[];
+    const groves={village:[[-20,-15],[-22,5],[-17,22],[18,20],[22,-12]],forest:[[-17,-13],[-19,7],[-15,22],[16,-11],[18,12],[12,24]],ruins:[[-20,-12],[-19,18],[20,-8],[21,18]]}[this.region];
+    let index=0;for(const [cx,cz] of groves)for(const [dx,dz] of [[-2,-1],[2,0],[0,3]]){
+      const x=cx+dx+(random()-.5),z=cz+dz+(random()-.5);
+      jobs.push(this.place(this.region==='ruins'||index%3===0?'pine':'common-tree','tree-'+index++,x,z,random()*6.28,.72+random()*.26,null,.65));
     }
-    for(let i=0;i<40;i++) {const x=(random()-.5)*48,z=(random()-.5)*48;if(!this.grassAllowed(x,z))continue;
-      jobs.push(this.place(i%3===0?'rock-a':i%3===1?'fern':'bush','detail-'+i,x,z,random()*6.28,.45+random()*.6,null,i%3===0?.45:0));}
-    // A close ring of tall trees makes the finite region feel enclosed.
-    for(let i=0;i<32;i++){const a=i/32*Math.PI*2,x=Math.cos(a)*30,z=Math.sin(a)*30;jobs.push(this.place(i%2?'pine':'common-tree','border-'+i,x,z,a,1.3,null,0));}
+    const details={village:[[-17,-3],[17,0],[18,13],[-18,14]],forest:[[-12,-5],[11,-8],[-12,13],[13,8],[-8,21]],ruins:[[-14,6],[14,13],[-15,-10],[15,-13]]}[this.region];
+    for(const [x,z]of details){jobs.push(this.place('rock-a','rock-cluster-'+x+'-'+z,x,z,.5,.6,null,.5));jobs.push(this.place('fern','fern-cluster-'+x+'-'+z,x+1.3,z-.5,1,.75));jobs.push(this.place('fern','fern-cluster2-'+x+'-'+z,x-.8,z+1.1,2,.5));}
+    // Irregular distant groves leave the road and combat pockets readable.
+    for(const [x,z]of [[-29,-22],[-31,-10],[-29,8],[-27,27],[-12,31],[9,32],[28,24],[31,9],[30,-13],[22,-28],[-5,-31]]){
+      jobs.push(this.place(index++%2?'pine':'common-tree','border-'+index,x,z,random()*6.28,1.05+random()*.2));
+    }
     await Promise.all(jobs);
   }
   async #house(x,z,index) {
@@ -121,13 +125,14 @@ export class RegionWorld {
     for(let i=0;i<6;i++)await this.place('wood-fence','village-fence-'+i,-15+i*2.1,15,0,.85,null,.4);
   }
   async #river() {
-    const river=BABYLON.MeshBuilder.CreateGround('river-water',{width:53,height:2.8},this.scene);river.position.set(0,-.06,3);
-    const mat=new BABYLON.PBRMaterial('river',this.scene);mat.albedoColor=new BABYLON.Color3(.14,.36,.4);mat.metallic=.1;mat.roughness=.2;mat.alpha=.83;
+    const river=BABYLON.MeshBuilder.CreateGround('river-water',{width:53,height:2.8,subdivisions:24},this.scene);river.position.set(0,-.06,3);
+    const colors=[],vertices=river.getVerticesData(BABYLON.VertexBuffer.PositionKind);for(let i=0;i<vertices.length;i+=3)colors.push(1,1,1,Math.min(1,Math.max(0,(1-Math.abs(vertices[i+2])/1.4)*7)));river.setVerticesData(BABYLON.VertexBuffer.ColorKind,colors);river.hasVertexAlpha=true;
+    const mat=new BABYLON.PBRMaterial('river',this.scene);mat.albedoColor=new BABYLON.Color3(.14,.36,.4);mat.metallic=.1;mat.roughness=.2;mat.alpha=.79;mat.bumpTexture=new BABYLON.Texture("assets/textures/water-normal.png",this.scene);mat.bumpTexture.uScale=14;mat.bumpTexture.vScale=1.5;mat.bumpTexture.level=.32;this.waterMaterial=mat;
     river.material=mat;river.isPickable=false;this.owned.push(mat);this.roots.push(river);
     // Mirrored stone steps form a small arched crossing, with real model rails.
     await Promise.all([this.place('stone-stairs','bridge-south',0,2.1,Math.PI,1.25,null,0,-.6),this.place('stone-stairs','bridge-north',0,3.9,0,1.25,null,0,-.6),
       this.place('wood-fence','bridge-left',-1.5,3,Math.PI/2,1.2,null,.3,.15),this.place('wood-fence','bridge-right',1.5,3,Math.PI/2,1.2,null,.3,.15),
-      this.place('wagon','abandoned-wagon',-9,9,.4,.65,null,1),this.place('chest','forest-chest',8,9,0,.8,{loot:true},.4)]);
+      this.place('rock-a','shore-rock-west',-5,1.5,.4,.7,null,.45),this.place('rock-b','shore-rock-east',7,4.4,.7,.55,null,.4),this.place('fern','shore-fern',-6,1.1,0,.7),this.place('wagon','abandoned-wagon',-9,9,.4,.65,null,1),this.place('chest','forest-chest',8,9,0,.8,{loot:true},.4)]);
   }
   async #ruins() {
     const court=BABYLON.MeshBuilder.CreateGround('ruin-courtyard',{width:18,height:28,subdivisions:40,updatable:true},this.scene);
@@ -155,21 +160,23 @@ export class RegionWorld {
     this.profile=profile;this.quality=name;this.shadowGenerator.getShadowMap().resize(profile.shadows);this.grass?.applyQuality(profile,name);
   }
   update(dt,camera,fps) {
-    this.grass?.update(dt,camera,fps);this.cullTimer+=dt;if(this.cullTimer<.25)return;this.cullTimer=0;
-    const target=camera.target;
-    for(const root of this.roots) {
-      if(root instanceof BABYLON.Mesh || root===this.npc)continue;
-      const distance=Math.hypot(root.position.x-target.x,root.position.z-target.z);root.setEnabled(distance<48);
-      const bounds=root.getHierarchyBoundingVectors(true);
-      const occludes=distance<3.7 && bounds.max.y>target.y+2.5;
-      root.getChildMeshes(false).forEach(m=>m.visibility=occludes?.28:1);
+    this.grass?.update(dt,camera,fps);if(this.waterMaterial){this.waterMaterial.bumpTexture.uOffset+=dt*.012;this.waterMaterial.bumpTexture.vOffset+=dt*.008;}
+    this.cullTimer+=dt;if(this.cullTimer<.08)return;const step=this.cullTimer;this.cullTimer=0;
+    const target=camera.target,direction=target.subtract(camera.position),length=direction.length();direction.normalize();const ray=new BABYLON.Ray(camera.position,direction,Math.max(0,length-.5));
+    for(const root of this.roots){
+      if(root instanceof BABYLON.Mesh||root===this.npc)continue;
+      const distance=Math.hypot(root.position.x-target.x,root.position.z-target.z);root.setEnabled(distance<46);
+      const bounds=root.metadata?.occlusionBounds,meshes=root.metadata?.occlusionMeshes||[];
+      const occludes=bounds&&bounds.max.y>target.y+.4&&ray.intersectsBoxMinMax(bounds.min,bounds.max)&&BABYLON.Vector3.Distance(camera.position,root.position)<length+3;
+      const opacity=occludes?(root.name.includes('tree')||root.name.includes('border')?.28:.18):1;
+      for(let i=0;i<meshes.length;i++){let mesh=meshes[i];if(mesh instanceof BABYLON.InstancedMesh){if(!occludes)continue;const instance=mesh;mesh=instance.sourceMesh.clone(instance.name+'-fade',instance.parent,true);mesh.position.copyFrom(instance.position);mesh.scaling.copyFrom(instance.scaling);mesh.rotation.copyFrom(instance.rotation);mesh.rotationQuaternion=instance.rotationQuaternion?.clone()||null;mesh.setEnabled(true);mesh.isPickable=instance.isPickable;mesh.metadata=instance.metadata;this.shadowGenerator.removeShadowCaster(instance,false);this.shadowGenerator.addShadowCaster(mesh,false);instance.setEnabled(false);meshes[i]=mesh;}mesh.visibility=BABYLON.Scalar.Lerp(mesh.visibility,opacity,Math.min(1,step*8));}
     }
   }
   getGrassStats() { return this.grass?.getStats() || {}; }
   clear() {
     this.grass?.dispose();this.grass=null;
     for(const root of this.roots){root.metadata?.animationGroups?.forEach(g=>g.dispose());root.metadata?.skeletons?.forEach(s=>s.dispose());root.getChildMeshes(false).forEach(m=>this.shadowGenerator?.removeShadowCaster(m,false));root.dispose(false,false);}this.roots=[];
-    for(const mat of this.owned)mat.dispose(false,true);this.owned=[];this.npc=null;
+    for(const mat of this.owned)mat.dispose(false,true);this.owned=[];this.npc=null;this.waterMaterial=null;
   }
   dispose() {this.clear();this.shadowGenerator?.dispose();this.hemi?.dispose();this.sun?.dispose();}
   #random(seed) {return ()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};}

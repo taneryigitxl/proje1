@@ -1,56 +1,19 @@
-(function () {
-  "use strict";
-  const form = document.getElementById("login-form");
-  const button = document.getElementById("start-button");
-  const username = document.getElementById("login-username");
-  const password = document.getElementById("login-password");
-  const quality = document.getElementById("quality-select");
-  const status = document.querySelector("#menu-status span");
-  const allowed = new Set(["low", "medium", "high"]);
-  const key = "tora-quality";
-  const VALID_USER = "admin";
-  const VALID_PASS = "2850";
-
-  function apply(value, announce) {
-    const selected = allowed.has(value) ? value : "medium";
-    document.body.dataset.quality = selected;
-    quality.value = selected;
-    const pauseQuality = document.getElementById("pause-quality");
-    if (pauseQuality) pauseQuality.value = selected;
-    try { localStorage.setItem(key, selected); } catch (_) { /* optional */ }
-    document.dispatchEvent(new CustomEvent("tora:quality", { detail: { quality: selected } }));
-    if (announce) status.textContent = `${selected.toUpperCase()} profil seçildi.`;
-  }
-
-  function validateLogin() {
-    const user = (username?.value || "").trim();
-    const pass = password?.value || "";
-    if (user === VALID_USER && pass === VALID_PASS) return { ok: true, username: user, isAdmin: true };
-    status.textContent = "Giriş reddedildi. Yalnızca admin hesabı kabul edilir.";
-    password?.focus();
-    password?.select?.();
-    return { ok: false };
-  }
-
-  form?.addEventListener("submit", function (event) {
-    event.preventDefault();
-    if (button.disabled) return;
-    const auth = validateLogin();
-    if (!auth.ok) return;
-    button.disabled = true;
-    button.classList.add("is-launching");
-    status.textContent = "Diyar kapısı açılıyor…";
-    document.dispatchEvent(new CustomEvent("tora:enter", {
-      detail: { quality: quality.value, username: auth.username, isAdmin: auth.isAdmin },
-    }));
-  });
-
-  quality.addEventListener("change", (event) => apply(event.target.value, true));
-  let saved = "medium";
-  try { saved = localStorage.getItem(key) || saved; } catch (_) { /* optional */ }
-  apply(saved, false);
-  window.ToraMenu = {
-    applyQuality: apply,
-    unlock: () => { button.disabled = false; button.classList.remove("is-launching"); },
-  };
-})();
+const form=document.getElementById('login-form'),button=document.getElementById('start-button'),username=document.getElementById('login-username'),quality=document.getElementById('quality-select'),status=document.querySelector('#menu-status span');
+const allowed=new Set(['low','medium','high']);
+function apply(value,announce){
+ const selected=allowed.has(value)?value:'medium';document.body.dataset.quality=selected;quality.value=selected;document.getElementById('pause-quality').value=selected;
+ try{localStorage.setItem('tora-quality',selected);}catch{}
+ document.dispatchEvent(new CustomEvent('tora:quality',{detail:{quality:selected}}));
+ if(announce)status.textContent='Görüntü kalitesi güncellendi.';
+}
+form.addEventListener('submit',event=>{
+ event.preventDefault();if(button.disabled)return;const name=username.value.trim();
+ if(name.length<2 || !/^[\p{L}\p{N} _-]+$/u.test(name)){status.textContent='2–24 harf veya rakamdan oluşan bir profil adı yaz.';username.focus();return;}
+ try{localStorage.setItem('tora-profile',name);}catch{}
+ button.disabled=true;status.textContent='Diyar kapısı açılıyor…';
+ document.dispatchEvent(new CustomEvent('tora:enter',{detail:{quality:quality.value,username:name,isAdmin:false}}));
+});
+quality.addEventListener('change',e=>apply(e.target.value,true));
+let saved='medium';try{saved=localStorage.getItem('tora-quality')||saved;username.value=localStorage.getItem('tora-profile')||'Ayaz';}catch{username.value='Ayaz';}
+apply(saved,false);
+window.ToraMenu={applyQuality:apply,unlock:()=>{button.disabled=false;button.classList.remove('is-launching');}};

@@ -1,6 +1,7 @@
-import { SkillBar } from "./SkillBar.js?v=45";
-import { TargetFrame } from "./TargetFrame.js?v=45";
-import { ITEM_DEFS } from "../progression/InventorySystem.js?v=45";
+import { itemArt } from "./Art.js";
+import { SkillBar } from "./SkillBar.js";
+import { TargetFrame } from "./TargetFrame.js";
+import { ITEM_DEFS } from "../progression/InventorySystem.js";
 
 function itemName(id) {
   return ITEM_DEFS[id]?.name || id || "—";
@@ -16,6 +17,7 @@ export class HUD {
     this.stats = stats;
     this.inventory = inventory;
     this.onDropItem = options.onDropItem || null;
+    this.onPanelChange = options.onPanelChange || (()=>{});
     this.root = document.getElementById("hud");
     this.hpBar = document.getElementById("player-hp-bar");
     this.hpText = document.getElementById("player-hp-text");
@@ -104,7 +106,7 @@ export class HUD {
       if (slot) {
         const index = Number(slot.dataset.invSlot);
         if (event.detail === 2) {
-          this.inventory.select(index);
+          this.inventory.selected = index;
           const result = this.inventory.useSelected();
           this.inventoryHint.textContent = result.message;
           if (result.ok) this.setStatus(result.message);
@@ -208,22 +210,14 @@ export class HUD {
 
   syncEntities() {
     for(const node of this.labels.values())node.remove();this.labels.clear();this.minimapMobs.replaceChildren();
-    for(const mob of this.entities.mobs){this.#labelFor(mob);const dot=document.createElement('i');dot.dataset.entityId=mob.id;this.minimapMobs.append(dot);}
+    for(const mob of this.entities.mobs){this.#labelFor(mob);const dot=document.createElement('i');dot.dataset.entityId=mob.id;dot.classList.toggle('boss',Boolean(mob.boss||mob.name.includes('Muhafız')));this.minimapMobs.append(dot);}
   }
   applyIdentity(identity) {
     const name = identity?.username || this.player.name || "Oyuncu";
     this.player.name = name;
     this.player.isAdmin = Boolean(identity?.isAdmin);
     if (this.nameEl) this.nameEl.textContent = name;
-    if (this.portrait) {
-      if (this.player.isAdmin) {
-        this.portrait.classList.add("is-gm");
-        this.portrait.innerHTML = `<span class="gm-badge">GM</span>`;
-      } else {
-        this.portrait.classList.remove("is-gm");
-        this.portrait.innerHTML = `<span class="player-initial">${name.slice(0, 1).toUpperCase()}</span>`;
-      }
-    }
+    if (this.portrait) { this.portrait.className = "portrait warrior-portrait"; this.portrait.replaceChildren(); }
     const labelName = this.playerLabel?.querySelector(".player-label-name");
     if (labelName) labelName.textContent = name;
   }
@@ -240,7 +234,7 @@ export class HUD {
   setStatus(message) {
     this.statusMessage = message;
     this.statusUntil = performance.now() + 2400;
-    this.quest.textContent = message;
+    const output=document.getElementById("status-message"); output.textContent=message;output.hidden=false;
   }
 
   addChat(author, message) {
@@ -307,6 +301,7 @@ export class HUD {
     this.closePanels();
     if (!next) return;
     this.openPanel = name;
+    this.onPanelChange();
     if (name === "inventory") {
       this.inventoryPanel.hidden = false;
       this.#renderInventory();
@@ -325,9 +320,11 @@ export class HUD {
     if (this.inventoryPanel) this.inventoryPanel.hidden = true;
     if (this.statsPanel) this.statsPanel.hidden = true;
     this.#hideDropDialog();
+    this.onPanelChange();
   }
 
   update() {
+    const stamp=performance.now(); if(stamp-(this._uiStamp||0)<50)return;this._uiStamp=stamp;
     const p = this.player;
     const progress = this.progression.snapshot();
     this.hpBar.style.width = `${Math.max(0, p.health / p.maxHealth) * 100}%`;
@@ -350,7 +347,7 @@ export class HUD {
 
     // Chat bubbles stack upward; newest at bottom (closest to head)
     const now = performance.now();
-    const dt = Math.min(0.05, (now - this._lastHudTime) / 1000 || 0.016);
+    const dt = Math.min(0.2, (now - this._lastHudTime) / 1000 || 0.016);
     this._lastHudTime = now;
     for (let i = this.chatBubbles.length - 1; i >= 0; i--) {
       const bubble = this.chatBubbles[i];
@@ -368,7 +365,10 @@ export class HUD {
     }
 
     const questText = this.#questText(progress);
-    this.quest.textContent = performance.now() < this.statusUntil ? this.statusMessage : questText;
+    this.quest.textContent = questText;
+    document.getElementById("status-message").hidden=performance.now()>=this.statusUntil;
+    const objective=progress.quest.completed&&!progress.secondQuest.completed?progress.secondQuest:progress.quest;document.getElementById("quest-progress").style.width=Math.min(100,objective.progress/objective.goal*100)+"%";
+    document.getElementById("quest-reward").textContent=progress.bossDefeated?"Diyarın yolları yeniden açık":progress.secondQuest.completed?"Ödül · Muhafız ganimeti":progress.quest.completed?"Ödül · Demir Kılıç, 30 altın ve 90 XP":"Ödül · 70 XP ve yeni görev";
     this.questPanel.classList.toggle("is-complete", progress.quest.completed && (!progress.secondQuest.unlocked || progress.secondQuest.completed));
     this.targetFrame.update(this.entities.selected);
     this.skillBar.update(this.skillSystem, p, this.entities.selected);
@@ -382,7 +382,7 @@ export class HUD {
       dot.hidden = !mob.alive;
       if (!mob.alive) continue;
       this.#minimapPosition(dot, mob.position, 0, false);
-      const labelY = this.#mobLabelHeight(mob);
+      const labelY = mob._labelHeight || (mob._labelHeight=this.#mobLabelHeight(mob));
       const screen = this.#project(mob.position.add(new BABYLON.Vector3(0, labelY, 0)));
       const dist = BABYLON.Vector3.Distance(p.position, mob.position);
       node.style.left = `${screen.x}px`;
@@ -469,7 +469,7 @@ export class HUD {
     const buffs = [];
     if (this.player.buffs?.guard > 0) buffs.push(`<span class="buff guard">Savunma ${this.player.buffs.guard.toFixed(0)}s</span>`);
     if (this.player.buffs?.rage > 0) buffs.push(`<span class="buff rage">Öfke ${this.player.buffs.rage.toFixed(0)}s</span>`);
-    this.buffBar.innerHTML = buffs.join("") || "";
+    const markup=buffs.join("");if(this.buffBar.innerHTML!==markup)this.buffBar.innerHTML=markup;
     this.buffBar.hidden = buffs.length === 0;
   }
 
@@ -485,10 +485,10 @@ export class HUD {
       button.className = `inv-slot${item ? "" : " empty"}${snap.selected === index ? " selected" : ""}${equipped ? " equipped" : ""}`;
       button.dataset.invSlot = String(index);
       if (item) {
-        button.innerHTML = `<span class="inv-icon">${item.icon}</span><span class="inv-name">${item.name}</span>`;
+        button.innerHTML = `${itemArt(item.id)}<span class="inv-name">${item.name}</span>`;
         button.title = `${item.name}\n${item.description}`;
       } else {
-        button.innerHTML = `<span class="inv-empty">·</span>`;
+        button.innerHTML = `<span class="inv-empty" aria-hidden="true"></span>`;
         button.title = "Boş";
       }
       this.inventoryGrid.append(button);
@@ -498,7 +498,7 @@ export class HUD {
       ? `${selected.name} — sürükle taşı / dışarı bırakınca at`
       : "Eşyayı sürükle; dışarı bırakınca yere at.";
     if (this.equipSummary) {
-      this.equipSummary.textContent = `Silah: ${itemName(snap.equipped.weapon)} · Zırh: ${itemName(snap.equipped.armor)}`;
+      this.equipSummary.innerHTML = `<span>${snap.equipped.weapon?itemArt(snap.equipped.weapon):""}<small>Silah<strong>${itemName(snap.equipped.weapon)}</strong></small></span><span>${snap.equipped.armor?itemArt(snap.equipped.armor):""}<small>Zırh<strong>${itemName(snap.equipped.armor)}</strong></small></span>`;
     }
     if (this.useItemButton) this.useItemButton.disabled = snap.selected < 0;
   }
@@ -523,7 +523,7 @@ export class HUD {
 
   #minimapPosition(node, position, rotation, isPlayer) {
     const x = (position.x + 25) / 50 * 100;
-    const y = (position.z + 25) / 50 * 100;
+    const y = (25 - position.z) / 50 * 100;
     node.style.left = `${BABYLON.Scalar.Clamp(x, 3, 97)}%`;
     node.style.top = `${BABYLON.Scalar.Clamp(y, 3, 97)}%`;
     if (isPlayer) node.style.transform = `translate(-50%,-50%) rotate(${rotation}rad)`;

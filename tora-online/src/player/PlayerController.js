@@ -1,4 +1,4 @@
-import { Entity } from "../entities/Entity.js?v=45";
+import { Entity } from "../entities/Entity.js";
 
 export class PlayerController extends Entity {
   constructor(visual, input, navigation, identity = {}) {
@@ -70,6 +70,6 @@ export class PlayerController extends Entity {
     if (speed > .15 && !this.actionLocked) { const desiredRotation = Math.atan2(this.velocity.x, this.velocity.z); this.root.rotation.y = this.#lerpAngle(this.root.rotation.y, desiredRotation, 1 - Math.exp(-12 * dt)); this.rotation = this.root.rotation.y; }
     this.navigation.clamp(this.position);
   }
-  face(point) { const dx = point.x - this.position.x, dz = point.z - this.position.z; if (dx * dx + dz * dz > .01) this.root.rotation.y = Math.atan2(dx, dz); }
+  face(point) { const dx = point.x - this.position.x, dz = point.z - this.position.z; if (dx * dx + dz * dz > .01) this.rotation=this.root.rotation.y = Math.atan2(dx, dz); }
   #lerpAngle(from, to, amount) { let delta = (to - from + Math.PI) % (Math.PI * 2) - Math.PI; if (delta < -Math.PI) delta += Math.PI * 2; return from + delta * amount; }
 }

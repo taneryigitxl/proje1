@@ -10,8 +10,8 @@ const CLIP_ALIASES = {
   land: ["jump_land", "ninjajump_land", "land"],
   attack1: ["sword_regular_a", "sword_attack", "punch_jab", "attack"],
   attack2: ["sword_regular_combo", "sword_regular_b", "sword_attack", "punch_cross"],
-  heavy: ["sword_heavy_combo", "sword_regular_combo", "sword_regular_c"],
-  skill4: ["sword_regular_combo", "sword_regular_c", "sword_attack"],
+  heavy: ["sword_attack"],
+  skill4: ["sword_regular_b"],
   skill5: ["sword_dash", "roll", "shield_dash"],
   skill6: ["sword_regular_c", "sword_attack", "spell_simple_shoot"],
   skill7: ["sword_block", "idle_shield_loop"],
@@ -76,8 +76,12 @@ export class PlayerAnimator {
     this.setState(state, true, duration);
   }
 
+  hitStop(seconds){this.hitStopUntil=performance.now()+seconds*1000;}
+
   update(dt, speedRatio = 0) {
     if (!this.activeGroup) return;
+    if(performance.now()<(this.hitStopUntil||0)){this.activeGroup.speedRatio=0;return;}
+    this.activeGroup.speedRatio=this.actionSpeed||1;
     if(this.outgoing) {this.blendTime+=dt;const weight=Math.min(1,this.blendTime/.13);this.activeGroup.setWeightForAllAnimatables(weight);this.outgoing.setWeightForAllAnimatables(1-weight);if(weight>=1){this.outgoing.stop();this.outgoing=null;}}
     else this.activeGroup.setWeightForAllAnimatables(1);
     // Keep non-loop locomotion alive if a one-shot ended early

@@ -14,7 +14,9 @@ export class InputManager {
     this.onBlur = () => this.reset();
     this.onKeyDown = (event) => {
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
-      if (!this.enabled || event.repeat) return;
+      if(event.repeat)return;
+      if(["Escape","KeyI","KeyC"].includes(event.code)){event.preventDefault();if(event.code==="Escape")this.onEscape?.();if(event.code==="KeyI")this.onInventory?.();if(event.code==="KeyC")this.onStats?.();return;}
+      if (!this.enabled) return;
       const code = event.code;
       this.keys.add(code);
       if(["KeyW","KeyA","KeyS","KeyD"].includes(code))this.onManualMove?.();
@@ -42,6 +44,7 @@ export class InputManager {
   }
 
   axis() {
+    if(!this.enabled)return {x:0,z:0,running:false};
     const x = (this.keys.has("KeyD") ? 1 : 0) - (this.keys.has("KeyA") ? 1 : 0);
     const z = (this.keys.has("KeyW") ? 1 : 0) - (this.keys.has("KeyS") ? 1 : 0);
     return { x, z, running: this.keys.has("ShiftLeft") || this.keys.has("ShiftRight") };

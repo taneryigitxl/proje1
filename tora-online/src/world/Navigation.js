@@ -1,4 +1,4 @@
-import { findGridPath } from './Pathfinding.js?v=45';
+import { findGridPath } from './Pathfinding.js';
 export class Navigation {
   constructor(halfSize) { this.halfSize = halfSize; this.obstacles = []; this.heightProvider = () => 0; }
   setHeightProvider(provider) { this.heightProvider = provider; }

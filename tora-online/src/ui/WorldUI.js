@@ -1,4 +1,5 @@
-import { REGIONS } from '../world/RegionWorld.js?v=45';
+import { itemArt } from "./Art.js";
+import { REGIONS } from '../world/RegionWorld.js';
 
 export class WorldUI {
   constructor(game) {
@@ -9,6 +10,7 @@ export class WorldUI {
     this.loader=document.createElement('div');this.loader.className='region-loading';this.loader.hidden=true;document.body.append(this.loader);
     this.onClick=e=>{
       const action=e.target.closest('[data-world-action]')?.dataset.worldAction;if(!action)return;
+      if((action==='npc'||action.startsWith('travel:'))&&(!game.running||game.paused||game.hud.openPanel||!this.modal.hidden))return;
       if(action==='close')this.close();
       if(action==='npc') {
         if(BABYLON.Vector3.Distance(game.player.position,game.map.npc.position)<=4)this.openNpc();
@@ -40,39 +42,46 @@ export class WorldUI {
     if(this.game.map.npc)this.#marker('Ayame · Görev / Dükkân','npc',this.game.map.npc.position.add(new BABYLON.Vector3(0,2.1,0)));
   }
   drawMinimap() {
-    const ctx=this.canvas.getContext('2d'),world=this.game.map;
-    ctx.fillStyle=world.region==='ruins'?'#51524a':'#40543c';ctx.fillRect(0,0,180,180);
-    ctx.fillStyle='#a18d66';ctx.fillRect(83,0,14,180);
-    if(world.region==='village'){ctx.fillStyle='#777967';ctx.fillRect(57,61,66,62);}
-    if(world.region==='forest'){ctx.fillStyle='#537b85';ctx.fillRect(0,95,180,10);ctx.fillStyle='#b5a889';ctx.fillRect(84,93,12,14);}
-    for(const root of world.roots) {
-      if(root instanceof BABYLON.Mesh)continue;
-      ctx.fillStyle=root.name.includes('tree')||root.name.includes('border')?'#223526':'#c0ac83';
-      const x=(root.position.x+25)/50*180,z=(root.position.z+25)/50*180;ctx.fillRect(x-2,z-2,4,4);
+    const ctx=this.canvas.getContext('2d'),world=this.game.map,size=180,at=v=>(v+25)/50*size,atz=v=>(25-v)/50*size;
+    ctx.fillStyle=world.region==='ruins'?'#756f57':'#65745a';ctx.fillRect(0,0,size,size);
+    // Soft ink silhouettes on aged parchment; outlines follow the actual scenery.
+    for(let y=0;y<size;y+=3)for(let x=0;x<size;x+=3){ctx.fillStyle='rgba(230,211,161,'+(.015+Math.sin(x*13+y*7)*.013)+')';ctx.fillRect(x,y,3,3);}
+    ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#bba67b';ctx.lineWidth=11;ctx.beginPath();ctx.moveTo(90,0);ctx.bezierCurveTo(89,50,90,135,90,180);ctx.stroke();
+    if(world.region==='village'){ctx.fillStyle='#c5b48a88';ctx.beginPath();ctx.ellipse(90,97,34,31,0,0,Math.PI*2);ctx.fill();}
+    if(world.region==='forest'){ctx.strokeStyle='#789f9d';ctx.lineWidth=8;ctx.beginPath();ctx.moveTo(0,atz(3));ctx.bezierCurveTo(45,atz(2.8),120,atz(3.2),180,atz(3));ctx.stroke();ctx.strokeStyle='#d1bc8e';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(90,atz(1.6));ctx.lineTo(90,atz(4.4));ctx.stroke();}
+    for(const root of world.roots){if(root instanceof BABYLON.Mesh)continue;const x=at(root.position.x),y=atz(root.position.z),tree=/tree|border/.test(root.name);if(x<0||x>180||y<0||y>180)continue;
+      if(tree){const brush=ctx.createRadialGradient(x-1,y-1,1,x,y,7);brush.addColorStop(0,'#304a33d9');brush.addColorStop(1,'#304a3300');ctx.fillStyle=brush;ctx.fillRect(x-8,y-8,16,16);}
+      else if(/front|back|left|right|ruin-|roof/.test(root.name)){ctx.strokeStyle='#4c4534';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x-3,y);ctx.lineTo(x+3,y);ctx.stroke();}
+      else if(/rock/.test(root.name)){ctx.fillStyle='#8e8a71';ctx.beginPath();ctx.ellipse(x,y,3.3,2.1,.5,0,Math.PI*2);ctx.fill();}
     }
-    ctx.fillStyle='#b7a2df';for(const exit of world.definition.exits){ctx.beginPath();ctx.arc((exit.x+25)/50*180,(exit.z+25)/50*180,4,0,Math.PI*2);ctx.fill();}
+    for(const exit of world.definition.exits){const x=at(exit.x),y=atz(exit.z);ctx.strokeStyle='#d9c291';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x-3,y+4);ctx.lineTo(x-3,y-2);ctx.quadraticCurveTo(x,y-7,x+3,y-2);ctx.lineTo(x+3,y+4);ctx.stroke();}
+    if(world.npc){const x=at(world.npc.position.x),y=atz(world.npc.position.z);ctx.font='bold 15px Georgia';ctx.textAlign='center';ctx.fillStyle='#ecd194';ctx.strokeStyle='#24352a';ctx.lineWidth=2;ctx.strokeText('!',x,y+4);ctx.fillText('!',x,y+4);}
+    ctx.strokeStyle='#4a4431';ctx.lineWidth=2;ctx.strokeRect(1,1,178,178);ctx.font='9px Georgia';ctx.fillStyle='#e2d3af';ctx.textAlign='left';ctx.fillText('K',7,13);
   }
   #marker(text,action,position) {const button=document.createElement('button');button.textContent=text;button.dataset.worldAction=action;this.landmarks.append(button);this.markers.push({button,position});}
   update() {
+    const now=performance.now();if(now-(this.stamp||0)<80)return;this.stamp=now;
     this.banner.dataset.gold=this.game.inventory.gold+' altın';
     const engine=this.game.engine,cam=this.game.camera.camera,canvas=this.game.canvas;
     const width=engine.getRenderWidth(),height=engine.getRenderHeight(),viewport=cam.viewport.toGlobal(width,height);
     for(const marker of this.markers||[]){const p=BABYLON.Vector3.Project(marker.position,BABYLON.Matrix.IdentityReadOnly,this.game.scene.getTransformMatrix(),viewport);const dist=BABYLON.Vector3.Distance(marker.position,this.game.player.position);
-      marker.button.hidden=p.z<0||p.z>1||dist>26;marker.button.style.left=p.x/width*canvas.clientWidth+'px';marker.button.style.top=p.y/height*canvas.clientHeight+'px';}
+      marker.button.hidden=p.z<0||p.z>1||(!marker.button.dataset.worldAction.startsWith("travel:")&&dist>26);const sx=p.x/width*canvas.clientWidth,sy=p.y/height*canvas.clientHeight,gate=marker.button.dataset.worldAction.startsWith('travel:');marker.button.style.left=(gate?BABYLON.Scalar.Clamp(sx,100,canvas.clientWidth-230):sx)+'px';marker.button.style.top=(gate?BABYLON.Scalar.Clamp(sy,185,canvas.clientHeight-165):sy)+'px';}
   }
   loading(value,text='Bölge yükleniyor…') {this.loader.hidden=!value;this.loader.textContent=text;}
   openNpc() {
     const g=this.game,q=g.progression.quest,s=g.progression.secondQuest;
     g.combat.playerCombat.cancelApproach();g.input.reset();g.input.enabled=false;
-    this.modal.hidden=false;
+    this.modal.hidden=false;g.hud.closePanels();g.syncInputGate();
     let quest=q.accepted?(q.completed?'Sisli Orman’daki yaratıklardan 3 kadim diş getir.':'Sisli Orman’da 5 yaratığı yen. Yol kuzey kapısında.'): 'Ormanın yolu kesildi. Beş yaratığı yen; ardından kadim dişleri bana getir. Harabenin muhafızına ulaşmanı sağlayacağım.';
     if(s.completed)quest='Son görev: Kadim Harabe’de Kül Muhafızı’nı yen. Ağır vuruşlardan önce savunma kullan.';
     if(g.progression.bossDefeated)quest='Diyarın yolu yeniden açıldı. Ayaz Köyü sana borçlu.';
-    this.modal.innerHTML=`<button class="dialog-close" data-world-action="close" aria-label="Kapat">×</button><small>AYAZ KÖYÜ · DEMİRCİ</small><h2>Ayame</h2><p>${quest}</p>
+    this.modal.innerHTML=`<button class="dialog-close" data-world-action="close" aria-label="Kapat">Kapat</button><div class="npc-layout"><div class="npc-portrait" aria-hidden="true"></div><div><small>AYAZ KÖYÜ · DEMİRCİ</small><h2>Ayame</h2><p>${quest}</p><div class="quest-rewards">Ödül · ${q.completed?'Demir Kılıç ve 90 XP':'70 XP ve yeni görev'}</div>
       ${!q.accepted?'<button data-world-action="quest">Görevi kabul et</button>':''}
-      ${q.completed&&!s.completed?`<button data-world-action="claim" ${g.inventory.countItem('wolf-fang')<3?'disabled':''}>3 dişi teslim et · Demir Kılıç + 90 XP</button>`:''}
-      <hr><h3>Dükkân <span>${g.inventory.gold} altın</span></h3><button data-world-action="buy:health-potion">Can İksiri <b>12 altın</b></button><button data-world-action="buy:mana-potion">Mana İksiri <b>15 altın</b></button><button data-world-action="buy:iron-blade">Demir Kılıç <b>80 altın</b></button><small>I · çantayı aç, eşyaya çift tıkla</small>`;
+      ${q.completed&&!s.completed?`<button data-world-action="claim" ${g.inventory.countItem('wolf-fang')<3?'disabled':''}>3 dişi teslim et · Demir Kılıç + 90 XP</button>`:''}</div></div>
+      <hr><h3>Demirci dükkânı <span>${g.inventory.gold} altın</span></h3><div class="shop-grid">
+      ${[['health-potion','Can İksiri',12,'40 can'],['mana-potion','Mana İksiri',15,'35 mana'],['iron-blade','Demir Kılıç',80,'Güç +4']].map(([id,name,price,description])=>`<button class="shop-card" data-world-action="buy:${id}" ${g.inventory.gold<price?'disabled':''}>${itemArt(id)}<span>${name}</span><small>${description}</small><b>${price} altın</b></button>`).join('')}</div><p class="panel-hint">Satın alınan eşyalar çantana eklenir. Çantada çift tıkla veya Kullan düğmesine bas.</p>`;
+
   }
-  close() {this.modal.hidden=true;this.game.input.enabled=this.game.running&&!this.game.paused;this.game.canvas.focus();}
+  close() {this.modal.hidden=true;this.game.syncInputGate();this.game.canvas.focus();}
   dispose() {this.modal.removeEventListener('click',this.onClick);this.landmarks.removeEventListener('click',this.onClick);window.removeEventListener('keydown',this.onKey);this.landmarks.remove();this.modal.remove();this.banner.remove();this.loader.remove();this.canvas.remove();}
 }

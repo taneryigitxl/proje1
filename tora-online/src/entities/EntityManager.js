@@ -1,4 +1,4 @@
-import { Mob } from "./Mob.js?v=45";
+import { Mob } from "./Mob.js";
 
 export class EntityManager {
   constructor(scene, navigation, spawns, onDamage, visuals) {
@@ -12,17 +12,8 @@ export class EntityManager {
   }
 
   #createSelectionRing() {
-    const ring = BABYLON.MeshBuilder.CreateTorus("mob-select-ring", {
-      diameter: 1.35,
-      thickness: 0.055,
-      tessellation: 32,
-    }, this.scene);
-    const mat = new BABYLON.StandardMaterial("mob-select-ring-mat", this.scene);
-    mat.disableLighting = true;
-    mat.emissiveColor = new BABYLON.Color3(0.95, 0.55, 0.18);
-    mat.diffuseColor = mat.emissiveColor;
-    mat.alpha = 0.85;
-    mat.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
+    const ring=BABYLON.MeshBuilder.CreateGround("mob-selection-brush",{width:1.5,height:1.5},this.scene);
+    const mat=new BABYLON.StandardMaterial("mob-selection-brush-material",this.scene);mat.diffuseTexture=new BABYLON.Texture("assets/vfx/slash.webp",this.scene);mat.diffuseTexture.hasAlpha=true;mat.useAlphaFromDiffuseTexture=true;mat.disableLighting=true;mat.emissiveColor=new BABYLON.Color3(.8,.7,.5);mat.alpha=.45;mat.backFaceCulling=false;
     ring.material = mat;
     ring.isPickable = false;
 
@@ -91,7 +82,7 @@ export class EntityManager {
       mob.position.y + 0.06,
       mob.position.z,
     );
-    this.selectionRing.rotation.y = (this.selectionRing.rotation.y + 0.04) % (Math.PI * 2);
+    this.selectionRing.rotation.y = mob.root.rotation.y;
     this.selectionRing.setEnabled(true);
   }
 

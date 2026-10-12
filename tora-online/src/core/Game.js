@@ -1,22 +1,22 @@
-import { GAME_CONFIG } from "./Config.js?v=45";
-import { AssetManager } from "./AssetManager.js?v=45";
-import { Navigation } from "../world/Navigation.js?v=45";
-import { RegionWorld, REGIONS } from "../world/RegionWorld.js?v=45";
-import { WorldUI } from "../ui/WorldUI.js?v=45";
-import { InputManager } from "../input/InputManager.js?v=45";
-import { CursorManager } from "../input/CursorManager.js?v=45";
-import { IsometricCamera } from "../camera/IsometricCamera.js?v=45";
-import { PlayerController } from "../player/PlayerController.js?v=45";
-import { PlayerAnimator } from "../player/PlayerAnimator.js?v=45";
-import { EntityManager } from "../entities/EntityManager.js?v=45";
-import { CombatSystem } from "../combat/CombatSystem.js?v=45";
-import { NetworkAdapter } from "../network/NetworkAdapter.js?v=45";
-import { HUD } from "../ui/HUD.js?v=45";
-import { ProgressionSystem } from "../progression/ProgressionSystem.js?v=45";
-import { StatsSystem } from "../progression/StatsSystem.js?v=45";
-import { InventorySystem } from "../progression/InventorySystem.js?v=45";
-import { GlbLoot as LootSystem } from "../progression/GlbLoot.js?v=45";
-import { AmbientAudio } from "../audio/AmbientAudio.js?v=45";
+import { GAME_CONFIG } from "./Config.js";
+import { AssetManager } from "./AssetManager.js";
+import { Navigation } from "../world/Navigation.js";
+import { RegionWorld, REGIONS } from "../world/RegionWorld.js";
+import { WorldUI } from "../ui/WorldUI.js";
+import { InputManager } from "../input/InputManager.js";
+import { CursorManager } from "../input/CursorManager.js";
+import { IsometricCamera } from "../camera/IsometricCamera.js";
+import { PlayerController } from "../player/PlayerController.js";
+import { PlayerAnimator } from "../player/PlayerAnimator.js";
+import { EntityManager } from "../entities/EntityManager.js";
+import { CombatSystem } from "../combat/CombatSystem.js";
+import { NetworkAdapter } from "../network/NetworkAdapter.js";
+import { HUD } from "../ui/HUD.js";
+import { ProgressionSystem } from "../progression/ProgressionSystem.js";
+import { StatsSystem } from "../progression/StatsSystem.js";
+import { InventorySystem } from "../progression/InventorySystem.js";
+import { GlbLoot as LootSystem } from "../progression/GlbLoot.js";
+import { AmbientAudio } from "../audio/AmbientAudio.js";
 
 export class Game {
   constructor(runtime, onProgress = () => {}, onFatal = () => {}) {
@@ -34,7 +34,7 @@ export class Game {
     this.snapshotTimer = 0;
     this.lastTime = performance.now();
     this.pointerObserver = null;
-    this.identity = { username: "admin", isAdmin: true };
+    this.identity = { username: "Ayaz", isAdmin: false };
     this.renderFrame = () => {
       try { this.#frame(); }
       catch (error) {
@@ -51,8 +51,8 @@ export class Game {
     try {
       this.loadStarted=performance.now();
       this.identity = {
-        username: identity?.username || "admin",
-        isAdmin: identity?.isAdmin !== false,
+        username: identity?.username || "Ayaz",
+        isAdmin: false,
       };
       this.onProgress(28, "Yerel dünya oturumu açılıyor…");
       this.network = new NetworkAdapter();
@@ -90,12 +90,12 @@ export class Game {
 
       console.info("[Tora Startup] 7/10 Animasyon ve combat hazırlanıyor.");
       this.animator = new PlayerAnimator(visual);
-      this.entities = new EntityManager(this.scene, this.navigation, world.spawns, (entity, result) => this.combat?.damagePlayer(result), mobVisuals);
+      this.entities = new EntityManager(this.scene, this.navigation, world.spawns, (entity, result, attacker) => this.combat?.damagePlayer(result,attacker), mobVisuals);
       this.combat = new CombatSystem(this.scene, this.player, this.animator, this.entities, {
         onDamage: (entity, result) => this.hud?.showDamage(entity, result),
         onKill: (mob) => this.#onMobDefeated(mob),
         onStatus: (message) => this.hud?.setStatus(message),
-        onActionStart: (skill) => this.player.visual?.weaponSheath?.markCombat(skill?.duration || 1.2),
+        onActionStart: (skill) => {this.player.visual?.weaponSheath?.markCombat(skill?.duration || 1.2);this.audio?.playSwing(skill);},
         onCameraShake: (amp, dur) => {
           this.camera?.shake(amp, dur);
           this.audio?.playHit(amp > 0.07);
@@ -107,6 +107,7 @@ export class Game {
       console.info("[Tora Startup] 8/10 HUD ve cursor bağlanıyor.");
       this.hud = new HUD(this.scene, this.engine, this.player, this.entities, this.combat.skills, this.progression, (slot) => this.#useSkill(slot), this.stats, this.inventory, {
         onDropItem: (itemId) => this.#dropInventoryItem(itemId),
+        onPanelChange: () => this.syncInputGate(),
       });
       this.worldUI = new WorldUI(this);
       this.cursor = new CursorManager(this.scene, this.canvas, this.player, this.entities);
@@ -156,7 +157,7 @@ export class Game {
   applyIdentity(identity) {
     this.identity = {
       username: identity?.username || this.identity.username,
-      isAdmin: identity?.isAdmin !== false,
+      isAdmin: false,
     };
     if (this.player) {
       this.player.name = this.identity.username;
@@ -179,6 +180,7 @@ export class Game {
   }
 
   leave() {
+    this.audio?.suspend(true);
     this.#saveWorld();
     this.running = false;
     this.paused = false;
@@ -188,10 +190,18 @@ export class Game {
     document.getElementById("pause-menu").hidden = true;
   }
 
+  syncInputGate() {
+    if(!this.input)return;
+    const blocked=this.hud?.openPanel || (this.worldUI && !this.worldUI.modal.hidden) || document.activeElement===this.hud?.chatInput;
+    this.input.enabled=this.running&&!this.paused&&!this.transitioning&&!blocked;
+    if(blocked){this.input.reset();this.combat?.playerCombat.cancelApproach();this.player?.cancelDestination?.();if(this.player?.velocity){this.player.velocity.x=0;this.player.velocity.z=0;}}
+  }
+
   togglePause(force) {
     if (!this.running) return;
     this.paused = typeof force === "boolean" ? force : !this.paused;
-    this.input.enabled = !this.paused;
+    this.syncInputGate();
+    this.audio?.suspend(this.paused);
     if (this.paused) this.input.reset();
     document.getElementById("pause-menu").hidden = !this.paused;
   }
@@ -219,6 +229,8 @@ export class Game {
     this.map?.dispose();
     this.loot?.dispose();
     this.audio?.dispose();
+    this.player?.visual?.ik?.dispose();
+    this.combat?.vfx?.dispose();
     this.scene?.dispose();
     if (window.__TORA_DEBUG__?.map === this.map) delete window.__TORA_DEBUG__;
     console.info("[Tora Startup] Başarısız/sonlandırılmış oyun instance kaynakları temizlendi.");
@@ -256,7 +268,7 @@ export class Game {
     this.input.onTab = () => this.entities.cycle(this.player.position);
     this.input.onSkill = (slot) => this.#useSkill(slot);
     this.input.onInventory = () => {
-      if (!this.running || this.paused) return;
+      if (!this.running || this.paused || !this.worldUI.modal.hidden) return;
       this.hud.togglePanel("inventory");
     };
     this.input.onStats = () => {
@@ -269,7 +281,7 @@ export class Game {
     };
     this.pointerObserver = this.scene.onPointerObservable.add((info) => {
       if (!this.running || this.paused || this.transitioning || !this.worldUI.modal.hidden || info.event?.target !== this.canvas || info.type !== BABYLON.PointerEventTypes.POINTERDOWN || info.event.button !== 0) return;
-      if (this.hud?.openPanel) this.hud.closePanels();
+      if (this.hud?.openPanel) return;
       const actionPick = this.scene.pick(this.scene.pointerX, this.scene.pointerY, (mesh) => Boolean(mesh.metadata?.portal || mesh.metadata?.mob || mesh.metadata?.npc || mesh.metadata?.loot || mesh.metadata?.interactive || mesh.metadata?.lootPickup));
       if (actionPick?.hit) {
         const data = actionPick.pickedMesh.metadata;
@@ -342,7 +354,7 @@ export class Game {
   }
 
   #useSkill(slot) {
-    if (!this.running || this.paused) return;
+    if (!this.running || this.paused || this.hud?.openPanel || !this.worldUI.modal.hidden || document.activeElement===this.hud?.chatInput) return;
     this.hud?.skillBar?.markPressed?.(slot);
     this.combat.useSkill(slot, this.entities.selected, this.camera.forwardOnGround());
   }
@@ -367,6 +379,7 @@ export class Game {
     const raw = Math.min(1.6, (now - this.lastTime) / 1000 || 0.016);
     this.lastTime = now;
     if (this.running && !this.paused) {
+      this.syncInputGate();
       let remaining = raw;
       while (remaining > 1e-4) {
         const dt = Math.min(0.05, remaining);
@@ -383,7 +396,7 @@ export class Game {
       const viewDt = Math.min(0.05, raw);
       this.camera.update(viewDt);
       this.map.update(viewDt, this.camera.camera, this.engine.getFps());
-      this.audio?.update?.(viewDt, this.player);
+      this.audio?.update?.(viewDt, this.player, this.map.region);
       this.snapshotTimer += raw;
       if (this.snapshotTimer > .25) {
         this.network.publishSnapshot([this.player, ...this.entities.mobs]);
