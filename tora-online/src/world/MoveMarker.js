@@ -35,6 +35,7 @@ export class MoveMarker {
     this.valid = valid;
     this.duration = valid ? 0.62 : 0.38;
     this.life = this.duration;
+    this.expiresAt = performance.now() + this.duration * 1000;
     const mat = valid ? this.gold : this.bad;
     for (const tick of this.ticks) tick.material = mat;
     this.ring.material = mat;
@@ -43,7 +44,7 @@ export class MoveMarker {
 
   update(dt) {
     if (!this.root.isEnabled()) return;
-    this.life -= dt;
+    this.life = Math.max(0, (this.expiresAt - performance.now()) / 1000);
     if (this.life <= 0) {
       this.root.setEnabled(false);
       return;
