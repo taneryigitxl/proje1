@@ -1,17 +1,18 @@
+/** Wheel zoom only. Camera yaw and pitch stay locked. */
 export class CameraControls {
-  constructor(canvas, camera, config) {
-    this.canvas = canvas; this.camera = camera; this.config = config;
-    this.radius = config.distance; this.dragging = false;
-    this.down = e => { if (e.button === 2) { e.preventDefault(); this.dragging = true; canvas.setPointerCapture(e.pointerId); } };
-    this.move = e => { if (this.dragging && (e.buttons & 2)) camera.alpha -= e.movementX * config.sensitivityX; };
-    this.up = () => { this.dragging = false; };
-    this.wheel = e => { e.preventDefault(); this.radius = Math.max(config.minDistance, Math.min(config.maxDistance, this.radius + e.deltaY * config.zoomStep)); };
-    canvas.addEventListener('pointerdown', this.down); canvas.addEventListener('pointermove', this.move);
+  constructor(canvas, config) {
+    this.canvas = canvas;
+    this.config = config;
+    this.radius = config.distance;
+    this.wheel = (event) => {
+      event.preventDefault();
+      const step = Math.sign(event.deltaY) * Math.min(1.4, Math.abs(event.deltaY) * config.zoomStep);
+      this.radius = Math.max(config.minDistance, Math.min(config.maxDistance, this.radius + step));
+    };
     canvas.addEventListener('wheel', this.wheel, { passive: false });
-    window.addEventListener('pointerup', this.up); window.addEventListener('blur', this.up);
   }
+
   dispose() {
-    this.canvas.removeEventListener('pointerdown', this.down); this.canvas.removeEventListener('pointermove', this.move);
-    this.canvas.removeEventListener('wheel', this.wheel); window.removeEventListener('pointerup', this.up); window.removeEventListener('blur', this.up);
+    this.canvas.removeEventListener('wheel', this.wheel);
   }
 }

@@ -19,6 +19,7 @@ import { GlbLoot as LootSystem } from "../progression/GlbLoot.js";
 import { AmbientAudio } from "../audio/AmbientAudio.js";
 import { BuffVFXManager } from "../combat/BuffVFXManager.js";
 import { CHEST } from "../world/ChestState.js";
+import { SkillMarker } from "../combat/SkillMarker.js";
 
 export class Game {
   constructor(runtime, onProgress = () => {}, onFatal = () => {}) {
@@ -103,9 +104,11 @@ export class Game {
         onActionStart: (skill) => {this.player.visual?.weaponSheath?.markCombat(skill?.duration || 1.2);this.audio?.playSwing(skill);},
         onCameraShake: (amp, dur) => {
           this.camera?.shake(amp, dur);
-          this.audio?.playHit(amp > 0.07);
+          this.audio?.playHit(amp > 0.02);
         },
+        onTargetLost: () => { if (this.entities.selected && !this.entities.selected.alive) this.entities.clear(); },
       }, this.stats);
+      this.skillMarker = new SkillMarker(this.scene);
       this.loot = new LootSystem(this.scene, this.inventory, (message) => this.hud?.setStatus(message), this.navigation, assets);
       this.audio = new AmbientAudio();
       this.buffVfx = new BuffVFXManager(this.scene, this.player, this.combat.vfx.materials[4].diffuseTexture);
@@ -202,7 +205,7 @@ export class Game {
     if(!this.input)return;
     const blocked=this.hud?.openPanel || (this.worldUI && !this.worldUI.modal.hidden) || document.activeElement===this.hud?.chatInput;
     this.input.enabled=this.running&&!this.paused&&!this.transitioning&&!blocked;
-    if(blocked){this.input.reset();this.combat?.playerCombat.cancelApproach();this.player?.cancelDestination?.();if(this.player?.velocity){this.player.velocity.x=0;this.player.velocity.z=0;}}
+    if(blocked){this.input.reset();this.combat?.playerCombat.cancelApproach();this.#endSteer();if(this.armedSkill)this.#disarm();this.player?.cancelDestination?.();if(this.player?.velocity){this.player.velocity.x=0;this.player.velocity.z=0;}}
   }
 
   togglePause(force) {
@@ -227,6 +230,11 @@ export class Game {
     this.network?.disconnect();
     if (this.pointerObserver) this.scene?.onPointerObservable.remove(this.pointerObserver);
     this.pointerObserver = null;
+    if (this.onSteerRelease) {
+      window.removeEventListener('pointerup', this.onSteerRelease);
+      window.removeEventListener('pointercancel', this.onSteerRelease);
+    }
+    this.skillMarker?.dispose();
     this.#unbindPauseMenu();
     this.cursor?.dispose();
     this.camera?.dispose();
@@ -272,6 +280,7 @@ export class Game {
         this.hud.closePanels();
         return;
       }
+      if (this.armedSkill) { this.#disarm('Yetenek iptal edildi.'); return; }
       this.togglePause();
     };
     this.input.onTab = () => this.entities.cycle(this.player.position);
@@ -288,45 +297,157 @@ export class Game {
       if (!this.running || this.paused) return;
       this.#clearTarget();
     };
+    this.steer = null;
+    this.armedSkill = null;
+    this.onSecondaryInteract = null;
+    this.onSteerRelease = (event) => { if (this.steer && event.pointerId === this.steer.id) this.#endSteer(); };
+    window.addEventListener('pointerup', this.onSteerRelease);
+    window.addEventListener('pointercancel', this.onSteerRelease);
     this.pointerObserver = this.scene.onPointerObservable.add((info) => {
-      if (!this.running || this.paused || this.transitioning || !this.worldUI.modal.hidden || info.event?.target !== this.canvas || info.type !== BABYLON.PointerEventTypes.POINTERDOWN || info.event.button !== 0) return;
-      if (this.hud?.openPanel) return;
-      const actionPick = this.scene.pick(this.scene.pointerX, this.scene.pointerY, (mesh) => Boolean(mesh.metadata?.portal || mesh.metadata?.mob || mesh.metadata?.npc || mesh.metadata?.loot || mesh.metadata?.interactive || mesh.metadata?.lootPickup));
-      if (actionPick?.hit) {
-        const data = actionPick.pickedMesh.metadata;
-        if(data.portal) {
-          if(BABYLON.Vector3.Distance(this.player.position,actionPick.pickedPoint)<5) void this.switchRegion(data.portal);
-          else {this.combat.playerCombat.cancelApproach();this.player.setDestination(actionPick.pickedPoint);this.hud.setStatus("Kapıya yaklaş ve yeniden tıkla.");}
-          return;
-        }
-        if (data.lootPickup) {
-          if (this.loot.tryPickup(actionPick.pickedMesh)) {
-            this.hud.refreshInventory();
-            const collector = this.progression.syncCollectorQuest();
-            if (collector) this.hud.announceProgress({ ...collector, questCompleted: true });
-          }
-          return;
-        }
-        if (data.mob) {
-          const mob = this.entities.getById(data.entityId);
-          if(mob?.alive) {this.entities.select(mob);this.combat.basicAttack(mob,this.camera.forwardOnGround());}
-        } else if (data.npc || data.interactive) {
-          if(BABYLON.Vector3.Distance(this.player.position,this.map.npc.position)>4){this.combat.playerCombat.cancelApproach();this.player.setDestination(this.map.npc.position,2.5);this.hud.setStatus('Ayame’ye yaklaş ve yeniden tıkla.');}
-          else this.worldUI.openNpc();
-        } else if (data.chest) {
-          this.interactChest(data.chest);
-        } else if (data.loot) {
-          this.hud.setStatus("Sandığı açmak için yaklaş.");
-        } else this.hud.setStatus("Demirci tezgâhı.");
+      if (!this.#pointerLive(info)) return;
+      const event = info.event;
+      if (info.type === BABYLON.PointerEventTypes.POINTERDOWN && event.button === 2) {
+        this.onSecondaryInteract?.(info);
         return;
       }
-      const groundPick = this.scene.pick(this.scene.pointerX, this.scene.pointerY, (mesh) => Boolean(mesh.metadata?.ground));
-      if (groundPick?.hit) {
-        this.combat.playerCombat.cancel();
-        this.entities.clear();
-        this.player.setDestination(groundPick.pickedPoint, .18);
+      if (info.type === BABYLON.PointerEventTypes.POINTERUP) {
+        if (this.steer && event.pointerId === this.steer.id) this.#endSteer();
+        return;
       }
+      if (info.type === BABYLON.PointerEventTypes.POINTERMOVE) { this.#steerMove(event); return; }
+      if (info.type !== BABYLON.PointerEventTypes.POINTERDOWN || event.button !== 0) return;
+      if (this.armedSkill) { this.#confirmArmed(); return; }
+      const actionPick = this.#pickAction();
+      if (actionPick?.hit) { this.#useWorldPick(actionPick); return; }
+      const groundPick = this.#pickGround();
+      if (groundPick?.hit) this.#beginGroundMove(event, groundPick.pickedPoint);
     });
+  }
+
+  #pointerLive(info) {
+    return Boolean(this.running && !this.paused && !this.transitioning && this.worldUI?.modal.hidden && !this.hud?.openPanel && this.input?.enabled && info.event?.target === this.canvas);
+  }
+
+  #manualIdle() {
+    const axis = this.input?.axis?.() || { x: 0, z: 0 };
+    return !axis.x && !axis.z;
+  }
+
+  #pickAction() {
+    return this.scene.pick(this.scene.pointerX, this.scene.pointerY, (mesh) => Boolean(mesh.metadata?.portal || mesh.metadata?.mob || mesh.metadata?.npc || mesh.metadata?.loot || mesh.metadata?.interactive || mesh.metadata?.lootPickup || mesh.metadata?.chest));
+  }
+
+  #pickGround() {
+    return this.scene.pick(this.scene.pointerX, this.scene.pointerY, (mesh) => Boolean(mesh.metadata?.ground));
+  }
+
+  #beginGroundMove(event, point) {
+    this.combat.playerCombat.cancel();
+    this.entities.clear();
+    this.steer = { id: event.pointerId, x: event.clientX, y: event.clientY, hold: false, next: 0 };
+    if (this.#manualIdle()) this.player.setDestination(point, 0.2);
+  }
+
+  #steerMove(event) {
+    if (!this.steer || event.pointerId !== this.steer.id || !this.#manualIdle()) return;
+    if (Math.hypot(event.clientX - this.steer.x, event.clientY - this.steer.y) > 12) this.steer.hold = true;
+    if (!this.steer.hold || performance.now() < this.steer.next) return;
+    this.steer.next = performance.now() + 90;
+    const ground = this.#pickGround();
+    if (ground?.hit) this.player.setDestination(ground.pickedPoint, 0.45);
+  }
+
+  #endSteer() {
+    if (!this.steer) return;
+    const hold = this.steer.hold;
+    this.steer = null;
+    if (hold && this.#manualIdle()) this.player?.cancelDestination();
+  }
+
+  #useWorldPick(actionPick) {
+    const data = actionPick.pickedMesh.metadata;
+    if (data.portal) {
+      if (BABYLON.Vector3.Distance(this.player.position, actionPick.pickedPoint) < 5) void this.switchRegion(data.portal);
+      else { this.combat.playerCombat.cancelApproach(); this.player.setDestination(actionPick.pickedPoint); this.hud.setStatus('Kapıya yaklaş ve yeniden tıkla.'); }
+      return;
+    }
+    if (data.lootPickup) {
+      if (this.loot.tryPickup(actionPick.pickedMesh)) {
+        this.hud.refreshInventory();
+        const collector = this.progression.syncCollectorQuest();
+        if (collector) this.hud.announceProgress({ ...collector, questCompleted: true });
+      }
+      return;
+    }
+    if (data.mob) {
+      const mob = this.entities.getById(data.entityId);
+      if (mob?.alive) { this.entities.select(mob); this.combat.basicAttack(mob, this.camera.forwardOnGround()); }
+      return;
+    }
+    if (data.npc || data.interactive) {
+      if (BABYLON.Vector3.Distance(this.player.position, this.map.npc.position) > 4) { this.combat.playerCombat.cancelApproach(); this.player.setDestination(this.map.npc.position, 2.5); this.hud.setStatus('Ayame’ye yaklaş ve yeniden tıkla.'); }
+      else this.worldUI.openNpc();
+      return;
+    }
+    if (data.chest) { this.interactChest(data.chest); return; }
+    if (data.loot) { this.hud.setStatus('Sandığı açmak için yaklaş.'); return; }
+    this.hud.setStatus('Demirci tezgâhı.');
+  }
+
+  #disarm(message) {
+    this.armedSkill = null;
+    this.skillMarker?.hide();
+    this.hud?.skillBar?.setArmed(null);
+    if (message) this.hud?.setStatus(message);
+  }
+
+  #isSelfCast(skill) { return skill.action === 'guard' || skill.action === 'rage'; }
+
+  #confirmArmed() {
+    const skill = this.armedSkill;
+    if (!skill) return;
+    const check = this.combat.skills.canUse(skill, this.player);
+    if (!check.ok) { this.hud.setStatus(check.reason); return; }
+    const ground = this.#pickGround();
+    if (skill.aoe) {
+      const point = ground?.pickedPoint || this.player.position;
+      if (BABYLON.Vector3.Distance(this.player.position, point) > skill.range + 0.45) { this.hud.setStatus('Menzil dışı.'); return; }
+      this.#castArmed(skill, null);
+      return;
+    }
+    if (skill.action === 'dash') {
+      if (!ground?.hit) { this.hud.setStatus('Zemin seç.'); return; }
+      const dir = ground.pickedPoint.subtract(this.player.position);
+      dir.y = 0;
+      if (dir.lengthSquared() < 0.05) { this.hud.setStatus('Daha uzağı seç.'); return; }
+      if (dir.length() > skill.range + 0.45) { this.hud.setStatus('Menzil dışı.'); return; }
+      this.#castArmed(skill, null, dir);
+      return;
+    }
+    if (skill.target === 'enemy') {
+      const action = this.#pickAction();
+      let mob = action?.hit && action.pickedMesh.metadata?.mob ? this.entities.getById(action.pickedMesh.metadata.entityId) : null;
+      if (!mob?.alive && ground?.hit) {
+        const near = this.entities.aliveMobs()
+          .map((entry) => ({ entry, d: Math.hypot(entry.position.x - ground.pickedPoint.x, entry.position.z - ground.pickedPoint.z) }))
+          .filter((item) => item.d < 1.8)
+          .sort((a, b) => a.d - b.d)[0];
+        mob = near?.entry || null;
+      }
+      if (!mob?.alive) { this.hud.setStatus('Geçersiz hedef.'); return; }
+      this.entities.select(mob);
+      if (BABYLON.Vector3.Distance(this.player.position, mob.position) > skill.range) this.hud.setStatus('Menzil dışı · yaklaşıyor.');
+      this.#castArmed(skill, mob);
+      return;
+    }
+    this.hud.setStatus('Geçersiz hedef.');
+  }
+
+  #castArmed(skill, target, forward) {
+    this.armedSkill = null;
+    this.skillMarker?.hide();
+    this.hud?.skillBar?.setArmed(null);
+    this.combat.useSkill(skill.slot, target, forward || this.camera.forwardOnGround());
   }
 
   #restoreChests() {
@@ -389,7 +510,7 @@ export class Game {
       this.entities.reset(world.spawns,visuals);this.hud.syncEntities();
       this.player.position.copyFrom(world.spawn);this.player.respawnPoint=world.spawn.clone();this.player.velocity.setAll(0);this.player.grounded=true;this.player.verticalVelocity=0;
       this.map.addShadowCaster(this.player.root);for(const mob of this.entities.mobs)this.map.addShadowCaster(mob.root);
-      this.camera.focus.copyFrom(world.spawn);this.camera.update(1);this.worldUI.setRegion();
+      this.#disarm();this.camera.snap(world.spawn);this.worldUI.setRegion();
       this.hud.setStatus(REGIONS[id].name+' · Bölge hazır');
     } catch(error) {console.error('[Tora Region]',error);this.hud.setStatus('Bölge yüklenemedi: '+error.message);}
     finally {this.transitioning=false;this.paused=false;this.input.enabled=true;this.worldUI.loading(false);this.canvas.focus();this.lastTime=performance.now();}
@@ -397,8 +518,22 @@ export class Game {
 
   #useSkill(slot) {
     if (!this.running || this.paused || this.hud?.openPanel || !this.worldUI.modal.hidden || document.activeElement===this.hud?.chatInput) return;
+    const skill = this.combat.skills.get(slot);
+    if (!skill) return;
     this.hud?.skillBar?.markPressed?.(slot);
-    this.combat.useSkill(slot, this.entities.selected, this.camera.forwardOnGround());
+    const check = this.combat.skills.canUse(skill, this.player);
+    if (!check.ok) { this.hud.setStatus(check.reason); return; }
+    if (this.#isSelfCast(skill)) {
+      this.#disarm();
+      this.combat.useSkill(slot, null, this.camera.forwardOnGround());
+      return;
+    }
+    if (this.armedSkill?.slot === slot) { this.#disarm('Yetenek iptal edildi.'); return; }
+    this.armedSkill = skill;
+    this.hud.skillBar.setArmed(slot);
+    this.skillMarker?.update(skill, this.player);
+    const hint = skill.aoe ? 'Etki alanını onaylamak için zemine tıkla.' : skill.action === 'dash' ? 'Atılım yönü için zemine tıkla.' : 'Hedefe tıkla.';
+    this.hud.setStatus(`${skill.name}: ${hint} Esc iptal.`);
   }
 
   #onMobDefeated(mob) {
@@ -436,6 +571,7 @@ export class Game {
         if (this.player.alive) this.player.mana = Math.min(this.player.maxMana, this.player.mana + 4 * dt);
       }
       const viewDt = Math.min(0.05, raw);
+      this.skillMarker?.update(this.armedSkill, this.player);
       this.camera.update(viewDt);
       this.map.update(viewDt, this.camera.camera, this.engine.getFps());
       this.audio?.update?.(viewDt, this.player, this.map.region);

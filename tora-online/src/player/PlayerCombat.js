@@ -13,6 +13,7 @@ export class PlayerCombat {
     this._approachToast = 0;
     this._approachSide = 1;
     this.approachTime = 0;
+    this.autoAttack = false;
   }
 
   request(slot, target, fallbackDirection) {
@@ -36,12 +37,31 @@ export class PlayerCombat {
 
   requestBasic(target, fallbackDirection) {
     const ok=this.request(1,target,fallbackDirection);
-    if(ok){this.combo=((this.combo??-1)+1)%3;this.pending.skill={...this.pending.skill,animation:["attack1","attack2","attack3"][this.combo]};}
-    return ok;
+    if(!ok) return false;
+    this.autoAttack = true;
+    this.combo=((this.combo??-1)+1)%3;
+    this.pending.skill={...this.pending.skill,animation:["attack1","attack2","attack3"][this.combo]};
+    return true;
   }
-  cancelApproach() { this.pending = null; this.player.cancelDestination(); if(!this.active)this.player.targetId=null; }
+  cancelApproach() {
+    this.autoAttack = false;
+    this.pending = null;
+    if (this.active) {
+      this.callbacks.onActionEnd?.(this.active.skill);
+      this.active = null;
+      this.elapsed = 0;
+      this.applied.clear();
+      this.player.actionLocked = false;
+      if (this.player.alive) {
+        this.player.state = "idle";
+        this.animator.setState("idle");
+      }
+    }
+    this.player.cancelDestination();
+  }
 
   cancel() {
+    this.autoAttack = false;
     this.pending = null;
     // Mid-swing cancel must unlock body facing / movement immediately
     if (this.active) {
@@ -67,6 +87,7 @@ export class PlayerCombat {
       return;
     }
     if (this.active) {
+      if (this.active.target?.alive && (this.active.skill.target === "enemy" || this.active.skill.action === "dash")) this.player.face(this.active.target.position, dt);
       this.elapsed += dt;
       this.active.skill.impact?.forEach((moment, index) => {
         if (this.elapsed >= moment && !this.applied.has(index)) {
@@ -94,6 +115,7 @@ export class PlayerCombat {
     }
     this.player.cancelDestination();
     if (target && (skill.target === "enemy" || skill.action === "dash")) this.player.face(target.position);
+    else if (skill.action === "dash" && this.fallbackDirection?.lengthSquared?.() > .01) this.player.face(this.player.position.add(this.fallbackDirection));
     const commit = this.skills.commit(skill, this.player);
     if (!commit.ok) {
       // Keep soft-target basic swing queued through short cooldowns
@@ -131,7 +153,13 @@ export class PlayerCombat {
   #finish() {
     if (!this.active) return;
     const skill = this.active.skill;
-    if(!this.active.target?.alive)this.player.targetId=null;
+    const target = this.active.target;
+    const chain = this.autoAttack && skill.slot === 1 && target?.alive && !this.player.destination;
+    if (!target?.alive) {
+      this.autoAttack = false;
+      this.player.targetId = null;
+      this.callbacks.onTargetLost?.();
+    }
     this.active = null;
     this.elapsed = 0;
     this.applied.clear();
@@ -141,7 +169,16 @@ export class PlayerCombat {
       this.animator.setState("idle");
     }
     this.callbacks.onActionEnd?.(skill);
-    // actionLocked cleared above — next RMB / facing works this frame
+    if (chain) this.#queueBasic(target);
+  }
+
+  #queueBasic(target) {
+    const base = this.skills.get(1);
+    if (!base || !target?.alive) { this.autoAttack = false; return; }
+    this.combo = ((this.combo ?? -1) + 1) % 3;
+    this.pending = { skill: { ...base, animation: ["attack1", "attack2", "attack3"][this.combo] }, target };
+    this.approachTime = 0;
+    this.player.targetId = target.id;
   }
 
   #impact(skill, target, index) {

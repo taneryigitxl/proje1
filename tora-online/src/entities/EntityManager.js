@@ -8,16 +8,22 @@ export class EntityManager {
     this.mobs = spawns.map((spawn, index) => new Mob(scene, spawn, index, navigation, onDamage, visuals[index]));
     this.selected = null;
     this.slowAccumulator = 0;
-    this.selectionRing = this.#createSelectionRing();
+    this.playerRing = this.#ring('player-ring', new BABYLON.Color3(0.78, 0.66, 0.38), 1.05, 0.55);
+    this.selectionRing = this.#ring('target-ring', new BABYLON.Color3(0.62, 0.24, 0.18), 1.35, 0.72);
+    this.selectionRing.setEnabled(false);
   }
 
-  #createSelectionRing() {
-    const ring=BABYLON.MeshBuilder.CreateGround("mob-selection-brush",{width:1.5,height:1.5},this.scene);
-    const mat=new BABYLON.StandardMaterial("mob-selection-brush-material",this.scene);mat.diffuseTexture=new BABYLON.Texture("assets/vfx/slash.webp",this.scene);mat.diffuseTexture.hasAlpha=true;mat.useAlphaFromDiffuseTexture=true;mat.disableLighting=true;mat.emissiveColor=new BABYLON.Color3(.8,.7,.5);mat.alpha=.45;mat.backFaceCulling=false;
+  #ring(name, color, diameter, alpha) {
+    const ring = BABYLON.MeshBuilder.CreateTorus(name, { diameter, thickness: 0.038, tessellation: 40 }, this.scene);
+    ring.rotation.x = Math.PI / 2;
+    const mat = new BABYLON.StandardMaterial(name + '-mat', this.scene);
+    mat.emissiveColor = color;
+    mat.disableLighting = true;
+    mat.alpha = alpha;
+    mat.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
+    mat.backFaceCulling = false;
     ring.material = mat;
     ring.isPickable = false;
-
-    ring.setEnabled(false);
     return ring;
   }
 
@@ -65,6 +71,8 @@ export class EntityManager {
     }
     if (this.slowAccumulator > 0.2) this.slowAccumulator = 0;
     if (this.selected && !this.selected.alive) this.selected = null;
+    const feet = this.navigation.heightAt(player.position.x, player.position.z) + 0.05;
+    this.playerRing.position.set(player.position.x, feet, player.position.z);
     this.#syncRing();
   }
 
@@ -75,14 +83,9 @@ export class EntityManager {
       this.selectionRing.setEnabled(false);
       return;
     }
-    const scale = Math.max(0.85, Math.min(1.6, (mob.root?.scaling?.x || 1) * 1.15));
-    this.selectionRing.scaling.setAll(scale);
-    this.selectionRing.position.set(
-      mob.position.x,
-      mob.position.y + 0.06,
-      mob.position.z,
-    );
-    this.selectionRing.rotation.y = mob.root.rotation.y;
+    const scale = Math.max(0.9, Math.min(1.45, (mob.root?.scaling?.x || 1)));
+    this.selectionRing.scaling.set(scale, scale, 1);
+    this.selectionRing.position.set(mob.position.x, this.navigation.heightAt(mob.position.x, mob.position.z) + 0.055, mob.position.z);
     this.selectionRing.setEnabled(true);
   }
 

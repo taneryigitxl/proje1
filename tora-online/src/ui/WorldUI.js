@@ -46,8 +46,8 @@ export class WorldUI {
     document.querySelector('.minimap>span').textContent='Kapıya yaklaş · sol tık ile geç';
     this.drawMinimap();
     this.landmarks.replaceChildren();this.markers=[];
-    for(const exit of def.exits)this.#marker(exit.name+' →','travel:'+exit.id,new BABYLON.Vector3(exit.x,this.game.map.heightAt(exit.x,exit.z)+2.5,exit.z),'Geçiş Yap');
-    if(this.game.map.npc)this.#marker('Ayame · Görev / Dükkân','npc',this.game.map.npc.position.add(new BABYLON.Vector3(0,2.1,0)),'Konuş','Ayame · Demirci');
+    for(const exit of def.exits)this.#marker(exit.name+' →','travel:'+exit.id,new BABYLON.Vector3(exit.x,this.game.map.heightAt(exit.x,exit.z)+2.5,exit.z),'Geçiş Yap',exit.name);
+    if(this.game.map.npc)this.#marker('Ayame · Görev / Dükkân','npc',this.game.map.npc.position.add(new BABYLON.Vector3(0,2.1,0)),'Konuş','Ayame',true);
     for(const chest of this.game.map.chests||[])this.#marker('Sandık · '+chest.id,'chest:'+chest.id,chest.root.position.add(new BABYLON.Vector3(0,1.5,0)),'Sandığı Aç');
     this.game.hud?.refreshMinimapSites();
   }
@@ -56,7 +56,7 @@ export class WorldUI {
     ctx.fillStyle=world.region==='ruins'?'#756f57':'#65745a';ctx.fillRect(0,0,size,size);
     // Soft ink silhouettes on aged parchment; outlines follow the actual scenery.
     for(let y=0;y<size;y+=3)for(let x=0;x<size;x+=3){ctx.fillStyle='rgba(230,211,161,'+(.015+Math.sin(x*13+y*7)*.013)+')';ctx.fillRect(x,y,3,3);}
-    ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#bba67b';ctx.lineWidth=11;ctx.beginPath();ctx.moveTo(90,0);ctx.bezierCurveTo(89,50,90,135,90,180);ctx.stroke();
+    ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#bba67b';ctx.lineWidth=16;ctx.beginPath();ctx.moveTo(90,0);ctx.bezierCurveTo(89,50,90,135,90,180);ctx.stroke();
     if(world.region==='village'){ctx.fillStyle='#c5b48a88';ctx.beginPath();ctx.ellipse(90,97,34,31,0,0,Math.PI*2);ctx.fill();}
     if(world.region==='forest'){ctx.strokeStyle='#789f9d';ctx.lineWidth=8;ctx.beginPath();ctx.moveTo(0,atz(3));ctx.bezierCurveTo(45,atz(2.8),120,atz(3.2),180,atz(3));ctx.stroke();ctx.strokeStyle='#d1bc8e';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(90,atz(1.6));ctx.lineTo(90,atz(4.4));ctx.stroke();}
     for(const root of world.roots){if(root instanceof BABYLON.Mesh)continue;const x=at(root.position.x),y=atz(root.position.z),tree=/tree|border/.test(root.name);if(x<0||x>180||y<0||y>180)continue;
@@ -68,9 +68,9 @@ export class WorldUI {
     if(world.npc){const x=at(world.npc.position.x),y=atz(world.npc.position.z);ctx.font='bold 15px Georgia';ctx.textAlign='center';ctx.fillStyle='#ecd194';ctx.strokeStyle='#24352a';ctx.lineWidth=2;ctx.strokeText('!',x,y+4);ctx.fillText('!',x,y+4);}
     ctx.strokeStyle='#4a4431';ctx.lineWidth=2;ctx.strokeRect(1,1,178,178);ctx.font='9px Georgia';ctx.fillStyle='#e2d3af';ctx.textAlign='left';ctx.fillText('K',7,13);
   }
-  #marker(text,action,position,prompt,nameplate='') {
+  #marker(text,action,position,prompt,nameplate='',quest=false) {
     const button=document.createElement('button');button.type='button';button.className='interaction-prompt';button.setAttribute('aria-label',text);button.innerHTML=`<kbd>E</kbd><span>${prompt}</span>`;button.dataset.worldAction=action;button.hidden=true;
-    const label=nameplate?document.createElement('small'):null;if(label){label.className='npc-nameplate';label.textContent=nameplate;this.landmarks.append(label);}
+    const label=nameplate?document.createElement('small'):null;if(label){label.className='npc-nameplate';label.innerHTML=quest?`${nameplate}<b class="quest-pip">!</b>`:nameplate;this.landmarks.append(label);}
     this.landmarks.append(button);this.markers.push({button,label,position,action,distance:Infinity});
   }
   update() {
@@ -87,7 +87,7 @@ export class WorldUI {
       const show=visible&&dist<5.4&&!this.game.hud.openPanel&&this.modal.hidden&&chest?.state!=='LOOTED';
       marker.button.hidden=!show;
       if(show){marker.button.style.left=Math.round(sx)+'px';marker.button.style.top=Math.round(sy)+'px';}
-      if(marker.label){marker.label.hidden=!visible||dist>22;if(!marker.label.hidden){marker.label.style.left=Math.round(sx)+'px';marker.label.style.top=Math.round(sy-37)+'px';}}
+      if(marker.label){marker.label.hidden=!visible;if(!marker.label.hidden){const scale=Math.min(1.35,Math.max(1,dist/18));marker.label.style.left=Math.round(sx)+'px';marker.label.style.top=Math.round(sy-34)+'px';marker.label.style.transform=`translate(-50%,-100%) scale(${scale})`;}}
     }
   }
   loading(value,text='Bölge yükleniyor…') {this.loader.hidden=!value;this.loader.textContent=text;}

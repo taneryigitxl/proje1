@@ -103,6 +103,7 @@ export class HUD {
 
     this.playerLabel = document.createElement("div");
     this.playerLabel.className = "player-label";
+    this.playerLabel.hidden = true;
     this.playerLabel.innerHTML = `<small class="player-label-level">Lv.1</small><strong class="player-label-name">—</strong>`;
     this.labelLayer.append(this.playerLabel);
 
@@ -429,14 +430,7 @@ export class HUD {
     this.xpText.textContent = `${progress.xp} / ${progress.nextLevelXp} XP`;
     if (this.nameEl && this.nameEl.textContent !== p.name) this.nameEl.textContent = p.name;
 
-    const labelName = this.playerLabel.querySelector(".player-label-name");
-    const labelLevel = this.playerLabel.querySelector(".player-label-level");
-    if (labelName) labelName.textContent = p.name;
-    if (labelLevel) labelLevel.textContent = `Lv.${progress.level}`;
-    const playerScreen = this.#project(p.position.add(new BABYLON.Vector3(0, 1.95, 0)));
-    this.playerLabel.style.left = `${playerScreen.x}px`;
-    this.playerLabel.style.top = `${playerScreen.y}px`;
-    this.playerLabel.style.opacity = playerScreen.z > 0 && playerScreen.z < 1 ? "1" : "0";
+    this.playerLabel.hidden = true;
 
     // Chat bubbles stack upward; newest at bottom (closest to head)
     const now = performance.now();
@@ -479,11 +473,14 @@ export class HUD {
       const labelY = mob._labelHeight || (mob._labelHeight=this.#mobLabelHeight(mob));
       const screen = this.#project(mob.position.add(new BABYLON.Vector3(0, labelY, 0)));
       const dist = BABYLON.Vector3.Distance(p.position, mob.position);
+      const engaged = mob.aggro || this.entities.selected === mob || p.targetId === mob.id;
+      const visible = screen.z > 0 && screen.z < 1 && Number.isFinite(mob.position.x) && (engaged || dist < 7);
+      node.hidden = !visible;
+      if (!visible) continue;
       node.style.left = `${screen.x}px`;
       node.style.top = `${screen.y}px`;
-      const visible = screen.z > 0 && screen.z < 1 && dist < 28 && Number.isFinite(mob.position.x);
-      node.style.opacity = visible ? String(BABYLON.Scalar.Clamp(1.15 - dist / 28, 0.35, 1)) : "0";
-      node.style.transform = `translate(-50%,-100%) scale(${BABYLON.Scalar.Clamp(1.15 - dist / 40, 0.75, 1.1)})`;
+      node.style.opacity = "1";
+      node.style.transform = "translate(-50%,-100%)";
       node.classList.toggle("selected", this.entities.selected === mob);
       node.querySelector("i").style.width = `${mob.health / mob.maxHealth * 100}%`;
     }

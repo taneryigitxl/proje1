@@ -55,10 +55,10 @@ export class PlayerController extends Entity {
     const horizontal = new BABYLON.Vector3(this.velocity.x * dt, 0, this.velocity.z * dt);
     const nextX = this.position.add(new BABYLON.Vector3(horizontal.x, 0, 0)); if (this.navigation.canOccupy(nextX)) this.position.x = nextX.x; else this.velocity.x = 0;
     const nextZ = this.position.add(new BABYLON.Vector3(0, 0, horizontal.z)); if (this.navigation.canOccupy(nextZ)) this.position.z = nextZ.z; else this.velocity.z = 0;
-    if (this.input.consume("Space") && this.grounded && !this.actionLocked && this.landingTimer <= 0) { this.verticalVelocity = 7.1; this.grounded = false; this.state = "jump"; }
+    if (this.input.consume("Space") && this.grounded && !this.actionLocked && this.landingTimer <= 0) { this.verticalVelocity = 4.6; this.grounded = false; this.state = "jump"; }
     const groundY = this.navigation.heightAt(this.position.x, this.position.z);
     if (!this.grounded) {
-      this.verticalVelocity -= 18.5 * dt; this.position.y += this.verticalVelocity * dt;
+      this.verticalVelocity -= 21 * dt; this.position.y += this.verticalVelocity * dt;
       if (this.position.y <= groundY) { this.position.y = groundY; this.verticalVelocity = 0; this.grounded = true; this.landingTimer = .15; this.state = "land"; }
       else if (this.verticalVelocity < 0) this.state = "fall";
     } else {
@@ -67,9 +67,15 @@ export class PlayerController extends Entity {
     }
     const speed = Math.hypot(this.velocity.x, this.velocity.z); this.speedRatio = speed / 6.4;
     if (this.grounded && this.landingTimer <= 0 && !this.actionLocked && !["hit", "dead"].includes(this.state)) this.state = speed > .3 ? (running ? "run" : "walk") : (this.targetId?"combatIdle":"idle");
-    if (speed > .15 && !this.actionLocked) { const desiredRotation = Math.atan2(this.velocity.x, this.velocity.z); this.root.rotation.y = this.#lerpAngle(this.root.rotation.y, desiredRotation, 1 - Math.exp(-12 * dt)); this.rotation = this.root.rotation.y; }
+    if (speed > .15 && !this.actionLocked) { const desiredRotation = Math.atan2(this.velocity.x, this.velocity.z); this.root.rotation.y = this.#lerpAngle(this.root.rotation.y, desiredRotation, 1 - Math.exp(-8 * dt)); this.rotation = this.root.rotation.y; }
     this.navigation.clamp(this.position);
   }
-  face(point) { const dx = point.x - this.position.x, dz = point.z - this.position.z; if (dx * dx + dz * dz > .01) this.rotation=this.root.rotation.y = Math.atan2(dx, dz); }
+  face(point, dt = 0) {
+    const dx = point.x - this.position.x, dz = point.z - this.position.z;
+    if (dx * dx + dz * dz <= .01) return;
+    const desired = Math.atan2(dx, dz);
+    this.root.rotation.y = dt > 0 ? this.#lerpAngle(this.root.rotation.y, desired, 1 - Math.exp(-14 * dt)) : desired;
+    this.rotation = this.root.rotation.y;
+  }
   #lerpAngle(from, to, amount) { let delta = (to - from + Math.PI) % (Math.PI * 2) - Math.PI; if (delta < -Math.PI) delta += Math.PI * 2; return from + delta * amount; }
 }

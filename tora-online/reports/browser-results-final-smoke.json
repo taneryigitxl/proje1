@@ -1,14 +1,14 @@
 {
-  "date": "2026-10-12T07:31:00.807Z",
-  "url": "http://127.0.0.1:49568/",
+  "date": "2026-10-12T11:47:22.712Z",
+  "url": "http://127.0.0.1:57725/",
   "softwareCI": false,
   "soakSeconds": 0,
   "checks": [
     "Şifresiz profil, ilk yükleme, raster portre ve dokuz atlas ikon",
     "WASD hareket",
-    "Sağ sürükleme ve kamera zoom",
+    "Sabit izometrik kamera, sağ tık dönüş yok, zoom sınırları",
     "Zıplama, havada kalma ve iniş",
-    "Mouse hareketi ve WASD ile yol iptali",
+    "Sol tıkla yürüme, basılı tutarak ilerleme ve WASD ile yol iptali",
     "Çantadan dışarı gerçek sürükleme: iptal eşyayı koruyor, onay yere bırakıyor",
     "Envanter aç/kapat, UI hareket koruması, çift tık equip/unequip, gerçek drag/drop",
     "Karakter paneli ve Escape",
@@ -23,7 +23,8 @@
     "Hedef ölümü, yeni hedef ve loot oluşumu",
     "Dolu envanterde loot kaybolmuyor; boş yer açılınca alınabiliyor (kontrollü fixture)",
     "Ölüm animasyonu ve respawn",
-    "Ormandan harabeye geçiş ve farklı boss ekipmanı",
+    "Kamera ile karakter arasında kalan ağaç saydamlaşıyor",
+    "Ormandan harabeye geçiş, sabit kamera ve farklı boss ekipmanı",
     "1920×1080 yeniden boyutlandırma, üç kalite profili ve bağımsız ses ayarları",
     "Kayıt, bölge ve konum geri yükleme",
     "Sandık CLOSED → OPENING → OPEN → LOOTED: tek animasyon, tek ses ve tekrar açılmama",
@@ -41,34 +42,34 @@
     "tora-1-Sword_Heavy_Combo"
   ],
   "ikSamples": [
-    0.028286123246777938,
-    0.0002715923429151362,
-    0.045907827750468956,
-    0.0001673599052117692,
-    0.023979147472191587,
-    0.05052907076991091,
-    0.005797419790389262,
-    0.015879502796227407,
-    0.00930607649232593
+    0.029128627854254047,
+    0.00016208282473238384,
+    0.045227293179188915,
+    0.00032583080668100443,
+    0.024095674796963343,
+    0.05052902327164641,
+    0.006276230618391653,
+    0.013521222510611905,
+    0.009033277947886062
   ],
   "fps": [
     {
       "quality": "low",
       "width": 1920,
       "height": 1080,
-      "fps": 60.000000000000455
+      "fps": 59.9520383703759
     },
     {
       "quality": "medium",
       "width": 1920,
       "height": 1080,
-      "fps": 59.988002399341894
+      "fps": 60.000000000000135
     },
     {
       "quality": "high",
       "width": 1920,
       "height": 1080,
-      "fps": 60.03602161261026
+      "fps": 60.01200239976467
     }
   ],
   "errors": [],

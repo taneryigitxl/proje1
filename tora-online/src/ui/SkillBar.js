@@ -23,7 +23,11 @@ export class SkillBar {
    button.classList.toggle('unavailable',!check.ok||player.actionLocked);button.classList.toggle('busy',player.actionLocked);button.classList.toggle('no-mana',player.mana<skill.mana);button.classList.toggle('needs-target',needsTarget);button.classList.toggle('flash',(this.flashUntil.get(skill.slot)||0)>now);
    const message=!check.ok?check.reason:player.actionLocked?'Devam eden saldırının bitmesini bekle.':needsTarget?'Bir düşman seç · TAB veya sol tık':'Kullanıma hazır';
    if(reason.textContent!==message)reason.textContent=message;
+   const dist=selected?.alive&&player.position?BABYLON.Vector3.Distance(player.position,selected.position):Infinity;
+   button.classList.toggle('out-of-range',skill.target==='enemy'&&selected?.alive&&dist>skill.range+.15);
+   if(dist<Infinity&&skill.target==='enemy'&&dist>skill.range+.15&&check.ok){if(reason.textContent!=='Menzil dışı')reason.textContent='Menzil dışı';}
   }
  }
+ setArmed(slot){for(const [id,ui] of this.slots)ui.button.classList.toggle('armed',id===slot);}
  dispose(){this.element.replaceChildren();this.slots.clear();}
 }
