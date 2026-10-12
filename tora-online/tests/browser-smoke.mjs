@@ -100,18 +100,18 @@ try{
  await page.keyboard.up('w');await page.keyboard.up('a');await page.keyboard.up('s');await page.keyboard.up('d');
  await game(()=>{const g=window.__TORA_BOOTSTRAP__.game;g.input.reset();const n=g.map.npc.getAbsolutePosition();g.player.position.set(n.x,g.map.heightAt(n.x,n.z),n.z);g.player.velocity.set(0,0,0);g.player.cancelDestination();g.camera.snap(g.player.position);g.worldUI.update();});
  await page.screenshot({path:'reports/labels-moving-1366.png'});
- await page.keyboard.down('d');
+ // Bound the anchor-motion fixture by distance, rather than holding a key for
+ // 60 frames: on software GPUs those frames can span twenty seconds.
  const labelSamples=await page.evaluate(()=>new Promise(resolve=>{
-  const g=window.__TORA_BOOTSTRAP__.game, marker=g.worldUI.markers.find(m=>m.action==='npc'), out=[];
+  const g=window.__TORA_BOOTSTRAP__.game, marker=g.worldUI.markers.find(m=>m.action==='npc'), out=[],start=g.player.position.clone();
   const step=()=>{
    const w=g.engine.getRenderWidth(),h=g.engine.getRenderHeight();
    const anchor=BABYLON.Vector3.Project(marker.position,BABYLON.Matrix.IdentityReadOnly,g.scene.getTransformMatrix(),g.camera.camera.viewport.toGlobal(w,h));
    const screen=marker.label._screen;
    out.push({x:screen?.x,y:screen?.y,hidden:marker.label.hidden,px:g.player.position.x,ax:anchor.x/w*innerWidth,ay:anchor.y/h*innerHeight-28});
-   if(out.length<60)requestAnimationFrame(step);else resolve(out);
+   if(out.length<60){g.input.reset();g.player.cancelDestination();g.player.velocity.setAll(0);g.player.position.set(start.x+out.length*.015,g.navigation.heightAt(start.x+out.length*.015,start.z),start.z);requestAnimationFrame(step);}else resolve(out);
   }; requestAnimationFrame(step);
  }));
- await page.keyboard.up('d');
  const visibleLabels=labelSamples.filter(s=>!s.hidden&&Number.isFinite(s.x));
  assert(visibleLabels.length>=8,JSON.stringify(labelSamples));
  for(let i=1;i<visibleLabels.length;i++){
