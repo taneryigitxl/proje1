@@ -565,6 +565,18 @@ export class HUD {
     const dt = Math.min(0.05, (stamp - (this._labelTime || stamp)) / 1000 || 0.016);
     this._labelTime = stamp;
     this.#placeMobLabels(dt);
+    const playerScreen = this.#project(this.player.position.add(new BABYLON.Vector3(0, 1.95, 0)));
+    this.playerLabel.hidden = !this.#onScreen(playerScreen);
+    if (!this.playerLabel.hidden) placeAnchor(this.playerLabel, playerScreen.x, playerScreen.y, dt);
+    else this.playerLabel._screen = null;
+    this.playerLabel.querySelector('.player-label-level').textContent = 'Lv.' + this.player.level;
+    // Visual anchors stay at render cadence, independently of slower HUD text.
+    for (let i = 0; i < this.chatBubbles.length; i++) {
+      const bubble = this.chatBubbles[i], stack = this.chatBubbles.length - 1 - i;
+      const screen = this.#project(this.player.position.add(new BABYLON.Vector3(0, 2.4 + stack * .38, 0)));
+      placeAnchor(bubble.node, screen.x, screen.y, dt);
+      bubble.node.style.opacity = this.#onScreen(screen) ? String(Math.min(1, bubble.life)) : '0';
+    }
     this.preview?.update?.(stamp);
     if (stamp - (this._uiStamp || 0) < 50) return;
     this._uiStamp = stamp;
@@ -584,7 +596,6 @@ export class HUD {
     this.xpText.textContent = `${progress.xp} / ${progress.nextLevelXp} XP`;
     if (this.nameEl && this.nameEl.textContent !== p.name) this.nameEl.textContent = p.name;
 
-    this.playerLabel.hidden = true;
 
     // Chat bubbles stack upward; newest at bottom (closest to head)
     const now = performance.now();
@@ -598,11 +609,6 @@ export class HUD {
         this.chatBubbles.splice(i, 1);
         continue;
       }
-      const stack = this.chatBubbles.length - 1 - i;
-      const screen = this.#project(p.position.add(new BABYLON.Vector3(0, 2.25 + stack * 0.38, 0)));
-      bubble.node.style.left = `${screen.x}px`;
-      bubble.node.style.top = `${screen.y}px`;
-      bubble.node.style.opacity = screen.z > 0 && screen.z < 1 ? String(Math.min(1, bubble.life)) : "0";
     }
 
     const questText = this.#questText(progress);
@@ -698,7 +704,7 @@ export class HUD {
       const screen = this.#project(mob.position.add(new BABYLON.Vector3(0, labelY, 0)));
       const dist = BABYLON.Vector3.Distance(player.position, mob.position);
       const engaged = mob.aggro || this.entities.selected === mob || player.targetId === mob.id;
-      const visible = screen.z > 0 && screen.z < 1 && Number.isFinite(screen.x) && (engaged || dist < 18);
+      const visible = this.#onScreen(screen) && (engaged || dist < 18);
       node.hidden = !visible;
       if (!visible) {
         node._screen = null;
@@ -868,7 +874,7 @@ export class HUD {
     if (this._projectStamp !== this._labelTime) {
       this._projectStamp = this._labelTime;
       const canvas = this.engine.getRenderingCanvas();
-      this._rect = canvas.getBoundingClientRect();
+      this._rect = { left: canvas.offsetLeft, top: canvas.offsetTop, width: canvas.clientWidth, height: canvas.clientHeight };
       this._rw = this.engine.getRenderWidth();
       this._rh = this.engine.getRenderHeight();
       this._vp = cam.viewport.toGlobal(this._rw, this._rh);
@@ -877,9 +883,11 @@ export class HUD {
     const projected = BABYLON.Vector3.Project(position, BABYLON.Matrix.IdentityReadOnly, this._tm, this._vp);
     const rect = this._rect;
     return {
-      x: projected.x / this._rw * rect.width,
-      y: projected.y / this._rh * rect.height,
+      x: projected.x / this._rw * rect.width + rect.left,
+      y: projected.y / this._rh * rect.height + rect.top,
       z: projected.z,
     };
   }
+
+  #onScreen(p) { return p.z > 0 && p.z < 1 && Number.isFinite(p.x) && p.x > -40 && p.x < this._rect.width + 40 && p.y > -40 && p.y < this._rect.height + 40; }
 }

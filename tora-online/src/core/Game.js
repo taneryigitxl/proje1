@@ -113,9 +113,11 @@ export class Game {
       }, this.stats);
       this.skillMarker = new SkillMarker(this.scene);
       this.loot = new LootSystem(this.scene, this.inventory, (message) => this.hud?.setStatus(message), this.navigation);
+      await this.loot.initialize(assets);
       this.moveMarker = new MoveMarker(this.scene, this.navigation);
       this.loot.onApproach = (point) => { this.combat.playerCombat.cancelApproach(); this.player.setDestination(point, 2.2); };
-      this.loot.onOpen = () => this.player.cancelDestination();
+      this.loot.onOpen = () => { this.player.cancelDestination(); this.syncInputGate(); };
+      this.loot.onClose = () => this.syncInputGate();
       this.loot.onPickup = () => {
         this.hud?.refreshInventory();
         const collector = this.progression.syncCollectorQuest();
@@ -155,7 +157,7 @@ export class Game {
         getGrassStats: () => this.map.getGrassStats(),
       };
 
-      this.input.onManualMove=()=>this.combat.playerCombat.cancelApproach();
+      this.input.onManualMove=()=>{this.combat.playerCombat.cancelApproach();this.loot.cancelApproach();this.moveMarker.hide();};
       this.onProgress(92, "Opsiyonel çevre ayrıntıları hazırlanıyor…");
       await this.map.buildOptional();
       try {
@@ -217,7 +219,7 @@ export class Game {
 
   syncInputGate() {
     if(!this.input)return;
-    const blocked=this.hud?.openPanel || (this.worldUI && !this.worldUI.modal.hidden) || document.activeElement===this.hud?.chatInput;
+    const blocked=this.hud?.openPanel || this.loot?.isOpen() || (this.worldUI && !this.worldUI.modal.hidden) || document.activeElement===this.hud?.chatInput;
     this.input.enabled=this.running&&!this.paused&&!this.transitioning&&!blocked;
     if(blocked){this.input.reset();this.combat?.playerCombat.cancelApproach();this.#endSteer();if(this.armedSkill)this.#disarm();this.player?.cancelDestination?.();if(this.player?.velocity){this.player.velocity.x=0;this.player.velocity.z=0;}}
   }
@@ -331,6 +333,7 @@ export class Game {
     window.addEventListener('pointercancel', this.onSteerRelease);
     this.pointerObserver = this.scene.onPointerObservable.add((info) => {
       const event = info.event;
+      if (event?.toraLootDismissed) return;
       if (this.loot?.isOpen?.() && info.type === BABYLON.PointerEventTypes.POINTERDOWN && event?.button === 0 && event.target === this.canvas) {
         this.loot.close();
         return;
@@ -372,6 +375,7 @@ export class Game {
   }
 
   #beginGroundMove(event, point) {
+    this.loot.cancelApproach();
     this.combat.playerCombat.cancel();
     this.entities.clear();
     this.steer = { id: event.pointerId, x: event.clientX, y: event.clientY, hold: false, next: 0 };
@@ -406,6 +410,8 @@ export class Game {
   }
 
   #useWorldPick(actionPick) {
+    this.moveMarker?.hide();
+    this.loot.cancelApproach();
     const data = actionPick.pickedMesh.metadata;
     if (data.portal) {
       if (BABYLON.Vector3.Distance(this.player.position, actionPick.pickedPoint) < 5) void this.switchRegion(data.portal);
@@ -537,6 +543,7 @@ export class Game {
 
   async switchRegion(id) {
     if(this.transitioning||!REGIONS[id]||id===this.map.region)return;
+    this.moveMarker.hide();this.hud.closePanels();
     this.transitioning=true;this.paused=true;this.input.enabled=false;this.input.reset();this.#clearTarget();this.loot.dispose();this.worldUI.close();this.input.enabled=false;
     this.worldUI.loading(true,REGIONS[id].name+' yükleniyor…');
     try {
@@ -618,11 +625,11 @@ export class Game {
         this.network.publishSnapshot([this.player, ...this.entities.mobs]);
         this.snapshotTimer = 0;
       }
-      this.hud.update();
-      this.worldUI.update();
       this.saveTimer=(this.saveTimer||0)+raw;if(this.saveTimer>5){this.#saveWorld();this.saveTimer=0;}
       this.input.endFrame();
     }
     this.scene.render();
+    // Project labels with this frame's view matrix, after Babylon updates the camera.
+    if (this.running && !this.paused) { this.hud.update(); this.worldUI.update(); }
   }
 }

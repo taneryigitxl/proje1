@@ -123,7 +123,7 @@ export class AssetManager {
     };
     const weaponSheath = new WeaponSheath(weaponRoot, skeleton, skinnedMesh, hand, handPose);
 
-    const visual={root,skeleton,weaponRoot,weaponSheath,animationGroups};visual.ik=new TwoHandIK(visual,this.scene);
+    const visual={root,skeleton,weaponRoot,weaponSheath,animationGroups,previewMeshes:root.getChildMeshes(false)};visual.ik=new TwoHandIK(visual,this.scene);
     visual.weaponMaterials=[...new Set(weaponRoot.getChildMeshes(false).map(m=>m.material).filter(Boolean))];
     return visual;
   }

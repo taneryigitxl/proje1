@@ -19,7 +19,6 @@ export class MoveMarker {
     }
     this.ring = BABYLON.MeshBuilder.CreateTorus("move-ring", { diameter: 0.5, thickness: 0.012, tessellation: 28 }, scene);
     this.ring.parent = this.root;
-    this.ring.rotation.x = Math.PI / 2;
     this.ring.position.y = 0.02;
     this.ring.isPickable = false;
     this.ring.material = this.gold;
@@ -50,7 +49,7 @@ export class MoveMarker {
       return;
     }
     const t = 1 - this.life / this.duration;
-    const scale = 0.84 + Math.sin(Math.min(1, t) * Math.PI) * 0.28;
+    const scale = t < .25 ? .84 + t * 1.12 : 1.12 * (1 - (t - .25) / .75);
     this.root.scaling.setAll(scale);
     const alpha = t < 0.22 ? t / 0.22 : 1 - (t - 0.22) / 0.78;
     this.gold.alpha = this.valid ? alpha * 0.92 : 0;
@@ -62,6 +61,8 @@ export class MoveMarker {
     this.gold.dispose();
     this.bad.dispose();
   }
+
+  hide() { this.life = 0; this.root.setEnabled(false); }
 
   #material(name, color) {
     const mat = new BABYLON.StandardMaterial(name, this.scene);

@@ -11,7 +11,7 @@ export class WorldUI {
     this.loader=document.createElement('div');this.loader.className='region-loading';this.loader.hidden=true;document.body.append(this.loader);
     this.onClick=e=>{
       const action=e.target.closest('[data-world-action]')?.dataset.worldAction;if(!action)return;
-      if((action==='npc'||action.startsWith('travel:')||action.startsWith('chest:'))&&(!game.running||game.paused||game.hud.openPanel||!this.modal.hidden))return;
+      if((action==='npc'||action.startsWith('travel:')||action.startsWith('chest:'))&&(!game.running||game.paused||game.hud.openPanel||game.loot?.isOpen()||!this.modal.hidden))return;
       if(action==='close')this.close();
       if(action==='npc') {
         if(BABYLON.Vector3.Distance(game.player.position,game.map.npc.position)<=4)this.openNpc();
@@ -33,7 +33,7 @@ export class WorldUI {
       if(e.code==='Escape'&&!this.modal.hidden){e.preventDefault();this.close();return;}
       if(e.code==='KeyE'&&!e.repeat&&!(e.target instanceof HTMLInputElement)){
         if(game.loot?.isOpen?.()){e.preventDefault();game.loot.takeAll();return;}
-        if(!game.hud.openPanel&&this.modal.hidden){
+        if(game.running&&!game.paused&&!game.transitioning&&!game.hud.openPanel&&this.modal.hidden){
           const nearest=(this.markers||[]).filter(m=>!m.button.hidden).sort((a,b)=>a.distance-b.distance)[0];
           if(nearest){e.preventDefault();nearest.button.click();}
         }
@@ -82,14 +82,14 @@ export class WorldUI {
     const now=performance.now();
     const dt=Math.min(0.05,(now-(this.stamp||now))/1000||0.016);this.stamp=now;
     if(!this._goldAt||now-this._goldAt>200){this._goldAt=now;const gold=this.game.inventory.gold+' altın';if(this.goldText&&this.goldText.textContent!==gold)this.goldText.textContent=gold;}
-    const engine=this.game.engine,cam=this.game.camera.camera,canvas=this.game.canvas;
+    const engine=this.game.engine,cam=this.game.camera.camera,canvas=this.game.canvas,rect=this.game.hud._rect;
     const width=engine.getRenderWidth(),height=engine.getRenderHeight(),viewport=cam.viewport.toGlobal(width,height);
     const matrix=this.game.scene.getTransformMatrix();
     const placed=[];
     for(const marker of this.markers||[]){
       const p=BABYLON.Vector3.Project(marker.position,BABYLON.Matrix.IdentityReadOnly,matrix,viewport);
       const dist=BABYLON.Vector3.Distance(marker.position,this.game.player.position);marker.distance=dist;
-      let sx=p.x/width*canvas.clientWidth,sy=p.y/height*canvas.clientHeight;
+      let sx=p.x/width*rect.width+rect.left,sy=p.y/height*rect.height+rect.top;
       const visible=p.z>0&&p.z<1&&sx>-40&&sx<canvas.clientWidth+40&&sy>-40&&sy<canvas.clientHeight+40;
       for(const other of placed){if(Math.hypot(other.x-sx,other.y-sy)<36)sy-=22;}
       if(visible)placed.push({x:sx,y:sy});

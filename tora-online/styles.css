@@ -103,11 +103,11 @@ kbd{font:10px "Segoe UI",sans-serif;color:var(--gold)}
 .buff-tooltip em{font-size:10px;color:#d7c4a0;font-style:normal}
 
 .shortcut-bar{position:absolute;left:16px;top:158px;display:flex;flex-direction:column;gap:4px;pointer-events:auto}
-.shortcut-button{position:relative;width:36px;height:36px;display:grid;place-items:center;padding:0;background:#16130fe6;border:1px solid #5c4a32;color:#c6a15a}
+.shortcut-button{position:relative;width:36px;height:36px;display:grid;place-items:center;padding:0;background:#16130fe6;border:1px solid #5c4a32;color:#c6a15a;box-shadow:inset 0 1px 0 #dbc08b26,inset 0 0 0 3px #0e0c0a80}
 .shortcut-button:hover,.shortcut-button.active{color:#f0e2c4;border-color:var(--gold);background:#2c261f}
 .shortcut-button:active{background:#3a3228;transform:translateY(1px)}
 .shortcut-button:disabled{opacity:.4}
-.shortcut-icon{width:18px;height:18px;display:block}
+.shortcut-icon{width:23px;height:23px;display:block}
 .shortcut-icon path{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 .shortcut-tip{position:absolute;left:calc(100% + 8px);top:50%;transform:translateY(-50%);display:none;z-index:12;white-space:nowrap;padding:5px 8px;background:#14110e;border:1px solid var(--bronze);font-size:11px;color:#e7d8c0}
 .shortcut-tip small{margin-left:6px;color:#a89880}
@@ -143,7 +143,7 @@ kbd{font:10px "Segoe UI",sans-serif;color:var(--gold)}
 .mini-site.quest{background:#e7c56a;clip-path:polygon(50% 0,100% 100%,0 100%)}
 .mini-site.loot{width:7px;height:7px;border-radius:50%;background:#e7c56a;box-shadow:0 0 0 1px #4a3a22}
 
-.quest-panel{position:absolute;top:268px;right:16px;width:176px;padding:10px 12px;display:grid;gap:6px}
+.quest-panel{position:absolute;top:320px;right:16px;width:200px;padding:10px 12px;display:grid;gap:6px}
 .quest-panel>small{font-size:9px;letter-spacing:.14em;color:var(--gold)}
 .quest-panel strong{font:14px Georgia,serif}
 .quest-panel span{font-size:11px;color:#d2c4ae;line-height:1.45}
@@ -207,8 +207,8 @@ kbd{font:10px "Segoe UI",sans-serif;color:var(--gold)}
 .inventory-layout{pointer-events:none}
 .bag-caption{display:flex;justify-content:space-between;margin:0 0 8px;color:#c6b496;font-size:10px;letter-spacing:.12em}
 .bag-caption b{color:#e0c27a}
-.inventory-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}
-.inv-slot{position:relative;aspect-ratio:1;padding:3px;background:#1c1814;border:1px solid #4a3d2c;overflow:visible}
+.inventory-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}
+.inv-slot{position:relative;min-width:0;min-height:0;aspect-ratio:1;padding:3px;background:#1c1814;border:1px solid #4a3d2c;overflow:visible}
 .inv-slot .item-art{width:100%;height:100%}
 .inv-name{position:absolute;left:2px;right:2px;bottom:2px;display:block;font-size:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:#100e0ccc;color:#e7d8c0;pointer-events:none}
 .inv-slot.empty{background:#14110e}
@@ -286,8 +286,10 @@ kbd{font:10px "Segoe UI",sans-serif;color:var(--gold)}
 .mob-label i{display:block;height:100%;background:#a8483c}
 .mob-label.selected strong{color:#f0e2c4}
 .mob-label.selected .bar{border-color:var(--gold)}
-.player-label{display:none!important}
-.chat-bubble{position:absolute;transform:translate(-50%,-100%);font-size:12px;max-width:220px;border:1px solid var(--bronze);background:#14110eed;padding:6px 10px}
+.player-label{position:absolute;left:0;top:0;white-space:nowrap;text-align:center;padding:2px 6px;background:#14110ea8;text-shadow:0 1px 2px #000;will-change:transform}
+.player-label small{font-size:9px;color:#cbbba0;margin-right:5px}
+.player-label strong{font-size:11px;color:#eddfbe}
+.chat-bubble{position:absolute;left:0;top:0;transform:translate(-50%,-100%);font-size:12px;max-width:220px;border:1px solid var(--bronze);background:#14110eed;padding:6px 10px}
 .damage-number{position:absolute;font-size:15px;font-weight:700;color:#f3e6d0;text-shadow:0 1px 2px #000;animation:damage-rise .9s ease-out both}
 .damage-number.critical{font-size:19px;color:#f0d48a}
 @keyframes damage-rise{0%{opacity:0;transform:translate(-50%,0)}15%{opacity:1}100%{opacity:0;transform:translate(-50%,-42px)}}
@@ -338,7 +340,7 @@ kbd{font:10px "Segoe UI",sans-serif;color:var(--gold)}
 @media(max-height:800px){
   .menu-art{height:560px;min-height:0}
   .game-panel{max-height:74vh}
-  .preview-host,.character-preview,.stats-layout .preview-host{min-height:0;max-height:42vh}
+  .preview-host,.stats-layout .preview-host{min-height:0;max-width:31.5vh}
   .npc-portrait{height:160px}
 }
 @media(max-width:1000px){

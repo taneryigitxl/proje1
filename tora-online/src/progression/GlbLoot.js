@@ -1,13 +1,14 @@
 import { ITEM_DEFS } from "./InventorySystem.js";
 import { itemArt } from "../ui/Art.js";
 
-/** Original lathe pouch. Not a scaled chest and not a third-party GLB. */
+/** Original pleated GLB pouch; one shared template and materials for all drops. */
 export class GlbLoot {
   constructor(scene, inventory, onStatus, navigation) {
     Object.assign(this, { scene, inventory, onStatus, navigation });
     this.drops = [];
     this.generation = 0;
     this.nextId = 1;
+    this.nextStackId = 1;
     this.openDrop = null;
     this.approachId = null;
     this.selected = 0;
@@ -15,33 +16,10 @@ export class GlbLoot {
     this.onPickup = null;
     this.onOpen = null;
     this.onClose = null;
-    this.bagMat = new BABYLON.StandardMaterial("loot-bag-mat", scene);
-    this.bagMat.diffuseColor = new BABYLON.Color3(0.29, 0.16, 0.09);
-    this.bagMat.specularColor = new BABYLON.Color3(0.08, 0.05, 0.03);
-    this.cordMat = new BABYLON.StandardMaterial("loot-cord-mat", scene);
-    this.cordMat.diffuseColor = new BABYLON.Color3(0.42, 0.3, 0.12);
-    this.cordMat.emissiveColor = new BABYLON.Color3(0.45, 0.32, 0.12);
     this.pickMat = new BABYLON.StandardMaterial("loot-pick-mat", scene);
     this.pickMat.alpha = 0.01;
     this.pickMat.disableDepthWrite = true;
     this.pickMat.transparencyMode = BABYLON.Material.MATERIAL_ALPHABLEND;
-    const shape = [
-      new BABYLON.Vector3(0, 0, 0),
-      new BABYLON.Vector3(0.2, 0.03, 0),
-      new BABYLON.Vector3(0.3, 0.16, 0),
-      new BABYLON.Vector3(0.24, 0.34, 0),
-      new BABYLON.Vector3(0.1, 0.46, 0),
-      new BABYLON.Vector3(0.02, 0.43, 0),
-    ];
-    this.template = BABYLON.MeshBuilder.CreateLathe("loot-bag-template", { shape, tessellation: 12, sideOrientation: BABYLON.Mesh.DOUBLESIDE }, scene);
-    this.template.material = this.bagMat;
-    this.template.setEnabled(false);
-    this.template.isPickable = false;
-    const cord = BABYLON.MeshBuilder.CreateTorus("loot-cord-template", { diameter: 0.15, thickness: 0.016, tessellation: 10 }, scene);
-    cord.parent = this.template;
-    cord.position.y = 0.42;
-    cord.material = this.cordMat;
-    cord.isPickable = false;
     this.panel = document.createElement("section");
     this.panel.id = "loot-window";
     this.panel.className = "loot-window panel";
@@ -62,14 +40,31 @@ export class GlbLoot {
       const row = event.target.closest("[data-loot-index]");
       if (!row) return;
       event.preventDefault();
-      this.takeOne(Number(row.dataset.lootIndex));
+      this.takeOne(Number(row.dataset.lootIndex), Number(row.dataset.lootId));
     };
     this.panel.addEventListener("click", this.onPanelClick);
     this.panel.addEventListener("dblclick", this.onPanelDbl);
+    this.onOutside = event => {
+      if (this.isOpen() && !this.panel.contains(event.target)) {
+        this.close(); event.toraLootDismissed = true;
+        this.dismissedTarget = event.target;
+      }
+    };
+    this.onOutsideClick = event => {
+      if (event.target === this.dismissedTarget) { event.preventDefault(); event.stopPropagation(); }
+      this.dismissedTarget = null;
+    };
+    document.addEventListener('pointerdown', this.onOutside, true);
+    document.addEventListener('click', this.onOutsideClick, true);
   }
 
   rollFor(mob) {
     return mob.definition.boss ? "iron-blade" : Math.random() < 0.6 ? "wolf-fang" : Math.random() < 0.5 ? "health-potion" : "mana-potion";
+  }
+
+  async initialize(assets) {
+    this.template = await assets.getStaticTemplate('lootBag');
+    this.cordMat = this.template.getChildMeshes(false).find(mesh => mesh.material?.name === 'flax drawstring')?.material;
   }
 
   async spawnDrop(source, itemId, position = null) {
@@ -91,7 +86,8 @@ export class GlbLoot {
     for (const child of mesh.getChildMeshes(false)) {
       child.setEnabled(true);
       child.isVisible = true;
-      child.isPickable = false;
+      child.isPickable = true;
+      child.metadata = { lootPickup: true, dropId: id };
     }
     const pick = BABYLON.MeshBuilder.CreateDisc(`loot-pick-${id}`, { radius: 0.46, tessellation: 8 }, this.scene);
     pick.parent = mesh;
@@ -100,7 +96,7 @@ export class GlbLoot {
     pick.material = this.pickMat;
     pick.isPickable = true;
     pick.metadata = { lootPickup: true, dropId: id };
-    const drop = { id, mesh, pick, contents: [{ itemId, count: 1 }], life: 60 };
+    const drop = { id, mesh, pick, contents: [{ id: this.nextStackId++, itemId, count: 1 }], life: 60 };
     this.drops.push(drop);
     this.onStatus?.(ITEM_DEFS[itemId].name + " düştü · yaklaş ve tıkla");
     return true;
@@ -134,6 +130,7 @@ export class GlbLoot {
   }
 
   close() {
+    this.cancelApproach();
     if (!this.openDrop && this.panel.hidden) return;
     this.openDrop = null;
     this.panel.hidden = true;
@@ -141,11 +138,15 @@ export class GlbLoot {
     this.onClose?.();
   }
 
-  takeOne(index) {
+  cancelApproach() { this.approachId = null; }
+
+  takeOne(index, expectedId = null) {
     const drop = this.openDrop;
     const stack = drop?.contents?.[index];
-    if (!stack) return false;
-    if (!this.#give(stack)) {
+    if (!stack || (expectedId != null && stack.id !== expectedId)) return false;
+    let took = false;
+    while (drop.contents.includes(stack) && this.#give(stack)) took = true;
+    if (!took) {
       this.onStatus?.("Envanter dolu.");
       return false;
     }
@@ -157,14 +158,14 @@ export class GlbLoot {
   takeAll() {
     const drop = this.openDrop;
     if (!drop) return false;
-    let took = false;
-    while (drop.contents.length) {
-      if (!this.#give(drop.contents[0])) {
-        this.onStatus?.(took ? "Çanta doldu. Kalanı kesede duruyor." : "Envanter dolu.");
-        break;
+    let took = false, full = false;
+    for (const stack of [...drop.contents]) {
+      while (drop.contents.includes(stack)) {
+        if (!this.#give(stack)) { full = true; break; }
+        took = true;
       }
-      took = true;
     }
+    if (full) this.onStatus?.(took ? "Çanta doldu. Kalanı kesede duruyor." : "Envanter dolu.");
     if (!drop.contents.length) this.#remove(drop);
     else this.#render();
     return took;
@@ -188,8 +189,9 @@ export class GlbLoot {
 
   update(dt) {
     const pulse = 0.28 + Math.sin(performance.now() * 0.004) * 0.08;
-    this.cordMat.emissiveColor.set(0.42 + pulse, 0.3 + pulse * 0.4, 0.1);
+    this.cordMat?.emissiveColor.set(.06 + pulse * .08, .035 + pulse * .03, .008);
     const player = this.inventory.player;
+    if (!player.alive) this.cancelApproach();
     if (this.approachId) {
       const drop = this.drops.find((item) => item.id === this.approachId);
       if (!drop) this.approachId = null;
@@ -201,7 +203,7 @@ export class GlbLoot {
     }
     for (let i = this.drops.length - 1; i >= 0; i--) {
       const drop = this.drops[i];
-      if (drop === this.openDrop) continue;
+      if (drop === this.openDrop || drop.id === this.approachId) continue;
       drop.life -= dt;
       if (drop.life <= 0) this.#remove(drop);
     }
@@ -216,10 +218,9 @@ export class GlbLoot {
     if (!final) return;
     this.panel.removeEventListener("click", this.onPanelClick);
     this.panel.removeEventListener("dblclick", this.onPanelDbl);
+    document.removeEventListener('pointerdown', this.onOutside, true);
+    document.removeEventListener('click', this.onOutsideClick, true);
     this.panel.remove();
-    this.template?.dispose();
-    this.bagMat?.dispose();
-    this.cordMat?.dispose();
     this.pickMat?.dispose();
   }
 
@@ -252,10 +253,11 @@ export class GlbLoot {
     const drop = this.openDrop;
     if (!drop) return;
     const rows = drop.contents.map((stack, index) => {
+      stack.id ??= this.nextStackId++;
       const item = ITEM_DEFS[stack.itemId];
       const count = stack.count > 1 ? `<b>×${stack.count}</b>` : "";
-      return `<button type="button" class="loot-row ${item.rarity || "common"}${index === this.selected ? " is-selected" : ""}" data-loot-index="${index}" title="${item.name} · ${item.rarity || "common"}"><span>${itemArt(stack.itemId)}<span><strong>${item.name}</strong><small>${item.rarity || "common"}</small></span></span>${count}</button>`;
+      return `<button type="button" class="loot-row ${item.rarity || "common"}${index === this.selected ? " is-selected" : ""}" data-loot-index="${index}" data-loot-id="${stack.id}" title="${item.name} · ${item.rarity || "common"}"><span>${itemArt(stack.itemId)}<span><strong>${item.name}</strong><small>${item.rarity || "common"}</small></span></span>${count}</button>`;
     }).join("");
-    this.panel.innerHTML = `<header><strong>Ganimet Kesesi</strong><button type="button" data-loot="close">Kapat</button></header><div class="loot-list">${rows}</div><button type="button" class="loot-take" data-loot="all">Hepsini Al [E]</button><p>Tek tık seçer. Çift tık bir adet alır.</p>`;
+    this.panel.innerHTML = `<header><strong>Ganimet Kesesi</strong><button type="button" data-loot="close">Kapat</button></header><div class="loot-list">${rows}</div><button type="button" class="loot-take" data-loot="all">Hepsini Al [E]</button><p>Tek tık seçer. Çift tık seçili yığını alır.</p>`;
   }
 }

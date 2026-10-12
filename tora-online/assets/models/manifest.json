@@ -109,6 +109,7 @@
     "workbench": "assets/models/props/workbench.glb",
     "market-stall": "assets/models/props/market-stall.glb",
     "chest": "assets/models/props/chest.glb",
+    "lootBag": "assets/models/props/loot-bag.glb",
     "barrel": "assets/models/props/barrel.glb",
     "crate": "assets/models/props/crate.glb",
     "torch": "assets/models/props/torch.glb",

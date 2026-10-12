@@ -74,7 +74,10 @@ export class RegionWorld {
     const colors=[];for(let i=0;i<rp.length;i+=3){const edge=1-Math.abs(rp[i])/4;rp[i+1]=this.heightAt(rp[i],rp[i+2])+.024;colors.push(1,1,1,Math.min(1,Math.max(0,edge*5)));}road.setVerticesData(BABYLON.VertexBuffer.ColorKind,colors);road.hasVertexAlpha=true;
     road.updateVerticesData(BABYLON.VertexBuffer.PositionKind,rp,true); road.refreshBoundingInfo();road.material=this.#material('mud',10);road.material.albedoTexture.uScale=road.material.bumpTexture.uScale=road.material.metallicTexture.uScale=2;road.material.albedoTexture.vScale=road.material.bumpTexture.vScale=road.material.metallicTexture.vScale=20;road.isPickable=false;road.receiveShadows=true;this.roots.push(road);
     if(this.region==='village') {
-      const plaza=BABYLON.MeshBuilder.CreateGround('village-plaza',{width:22,height:18},this.scene);plaza.position.z=-2;plaza.position.y=.025;
+      const plaza=BABYLON.MeshBuilder.CreateGround('village-plaza',{width:22,height:18,subdivisions:40},this.scene);plaza.position.z=-2;plaza.position.y=.025;
+      const pp=plaza.getVerticesData(BABYLON.VertexBuffer.PositionKind),colors=[];
+      for(let i=0;i<pp.length;i+=3){const x=pp[i],z=pp[i+2],edge=Math.min(11-Math.abs(x),9-Math.abs(z))-.12*Math.sin(x*3+z*5);colors.push(1,1,1,BABYLON.Scalar.Clamp(edge/.8,0,1));}
+      plaza.setVerticesData(BABYLON.VertexBuffer.ColorKind,colors);plaza.hasVertexAlpha=true;
       plaza.material=this.#material('cobblestone',7);plaza.isPickable=false;plaza.receiveShadows=true;this.roots.push(plaza);
     }
   }
@@ -205,7 +208,8 @@ export class RegionWorld {
     }
   }
   #fadeMaterial(mesh) {
-    if(!mesh.material||mesh.metadata?.occlusionMaterial)return;
+    if(!mesh.material)return;
+    if(mesh.metadata?.occlusionMaterial){mesh.material=mesh.metadata.occlusionMaterial;return;}
     const mat=mesh.material.clone((mesh.name||'occluder')+'-occlude');
     mat.transparencyMode=BABYLON.Material.MATERIAL_ALPHABLEND;
     mat.disableDepthWrite=true;
@@ -214,10 +218,8 @@ export class RegionWorld {
     mesh.material=mat;
   }
   #restoreMaterial(mesh) {
-    const mat=mesh.metadata?.occlusionMaterial;
     if(mesh.metadata?.occlusionSource)mesh.material=mesh.metadata.occlusionSource;
-    if(mesh.metadata){mesh.metadata.occlusionMaterial=null;mesh.metadata.occlusionSource=null;}
-    mat?.dispose(false,false);
+    // Keep one cached fade material per occluder; release it with the region.
   }
   getGrassStats() { return this.grass?.getStats() || {}; }
   clear() {

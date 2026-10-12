@@ -14,7 +14,6 @@ export class EntityManager {
 
   #ring(name, color, diameter, alpha, thickness = 0.015) {
     const ring = BABYLON.MeshBuilder.CreateTorus(name, { diameter, thickness, tessellation: 48 }, this.scene);
-    ring.rotation.x = Math.PI / 2;
     const mat = new BABYLON.StandardMaterial(name + '-mat', this.scene);
     mat.emissiveColor = color;
     mat.disableLighting = true;
@@ -81,7 +80,7 @@ export class EntityManager {
       return;
     }
     const scale = Math.max(0.9, Math.min(1.45, (mob.root?.scaling?.x || 1)));
-    this.selectionRing.scaling.set(scale, scale, 1);
+    this.selectionRing.scaling.set(scale, 1, scale);
     this.selectionRing.position.set(mob.position.x, this.navigation.heightAt(mob.position.x, mob.position.z) + 0.03, mob.position.z);
     this.selectionRing.setEnabled(true);
   }

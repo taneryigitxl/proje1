@@ -35,7 +35,13 @@ Creator: Poly Haven. License: CC0-1.0.
 
 `vendor/babylon.js` and `vendor/babylonjs.loaders.min.js` are local distributions of Babylon.js, licensed under Apache License 2.0: https://www.apache.org/licenses/LICENSE-2.0
 
-## Build-time optimizer
+## Original interface and loot assets — 2026-10-12
+
+`assets/models/props/loot-bag.glb` is an original pleated leather pouch with drawstring, knot and hanging cord geometry, created for Tora Online. It contains no third-party geometry, imagery or textures. Its reproducible source is `scripts/prepare-loot.mjs`; the generated model is dedicated under CC0-1.0. The nine hand-authored menu SVG paths in `src/ui/HUD.js`, ground movement rune and map marker shapes are original project artwork, also CC0-1.0. No artwork from another game is included.
+
+Generation libraries: @gltf-transform/core and @gltf-transform/functions, MIT (development only).
+
+## Build-time optimizer (existing assets)
 
 The shipped GLB files were processed with [meshoptimizer/gltfpack](https://github.com/zeux/meshoptimizer) (MIT). The executable is not distributed with the game.
 

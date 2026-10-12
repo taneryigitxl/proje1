@@ -19,9 +19,15 @@ Sol tık: koş, hedef seç ve saldır. Sol tuşu basılı tut: imlecin gösterdi
 Tekerlek: sınırlı yakınlaştırma. Kamera sabit izometrik açıda kalır.
 Ayame'den görevi al; beş yaratığı yen, üç dişi teslim et, Kül Muhafızı'na ilerle.
 
-## Yayın
+## Ganimet ve önizleme
+Ganimet kesesine tek tıkla: uzaktaysa otomatik yaklaşır, menzilde pencere açılır. Tek tık eşyayı seçer; çift tık seçili yığını alır. E hepsini alır; çantaya sığmayanlar kesede kalır. Esc veya dışarı tıklama pencereyi kapatır. Açık panel dünya hareketi ve yetenek komutlarını engeller.
+
+I ve C aynı GPU önizlemesini paylaşır. Önizleme yalnızca açılışta, ekipman değişiminde ve sınırlı yatay sürüklemede çizilir; GPU piksel okuması yapmaz. Yeni kese modeli `node scripts/prepare-loot.mjs` ile yeniden üretilebilir.
+
+## Yayın paketi
 GitHub Pages workflow oyunu Vite ile hashli JS/CSS ve UI dokularına derler. Yayın paketi testleri, kaynak modülleri, node_modules ve önceki çıktı kopyalarını içermez. Depodaki diğer site sayfaları korunur.
 `dist/` yalnızca üretim çıktısıdır. Asset URL'leri manifestte tanımlıdır.
 Lisanslar: [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
 Görsel üretim istemleri: [assets/ui/art-prompts.json](assets/ui/art-prompts.json).
 Test kanıtları ve öncesi/sonrası ekranları: [reports/](reports/).
+Son denetim: [12 Ekim 2026 uygulama ve test raporu](reports/REQUEST_IMPLEMENTATION_2026-10-12.md).

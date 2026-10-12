@@ -1,0 +1,94 @@
+{
+  "date": "2026-10-12T17:14:37.755Z",
+  "url": "http://127.0.0.1:56643/",
+  "softwareCI": false,
+  "soakSeconds": 0,
+  "checks": [
+    "Şifresiz profil, ilk yükleme, raster portre ve dokuz atlas ikon",
+    "WASD hareket ve karakter kamerayla aynı yöne bakar",
+    "Sabit izometrik kamera, sağ tık dönüş yok, zoom sınırları",
+    "Ayak merkezi üç çözünürlükte ve zoomda ekran ortasında",
+    "Shift hareket hızını değiştirmiyor",
+    "Oyuncunun altında sürekli halka yok",
+    "Skill slotunda mana rakamı yok, 1–9 ve menü ikonları duruyor",
+    "Geçerli zeminde hareket işareti oluşup kayboluyor",
+    "UI tıklamasında hareket işareti oluşmuyor",
+    "Dünya etiketleri hareket sırasında büyük sıçrama yapmıyor",
+    "Zıplama kamerayı sallamadan iniyor",
+    "Sol tıkla yürüme, basılı tutarak ilerleme ve WASD ile yol iptali",
+    "Çantadan dışarı gerçek sürükleme: iptal eşyayı koruyor, onay yere bırakıyor",
+    "Önizleme doğal oranda ve panel açıkken sürekli readPixels yok",
+    "Envanter aç/kapat, UI hareket koruması, çift tık equip/unequip, gerçek drag/drop",
+    "Karakter paneli, Escape ve önizleme dinleyici sayısı sabit",
+    "Görev teslimi: gerçek seçenek düğmesi, diş tüketimi ve Demir Kılıç ödülü (kontrollü fixture)",
+    "Gerçek NPC yaklaşımı, görev kabulü, mağaza ve satın alma",
+    "Köyden ormana gerçek kapı geçişi",
+    "TAB hedef seçimi ve menzil dışından güvenli yaklaşarak saldırı",
+    "1–9 yetenekler: dokuz ayrı rig klibi, hasar anı, mana tüketimi, cooldown ve buff",
+    "Savunma kalkanı, öfke silah parçacığı ve gerçek buff ikonları",
+    "Buff VFX ve ikon sayaçları ortak süre state ile kapanıyor",
+    "Yetersiz mana durumu saldırıyı reddediyor",
+    "Hedef ölümü, yeni hedef ve loot oluşumu",
+    "Dolu envanterde loot kaybolmuyor; boş yer açılınca alınabiliyor (kontrollü fixture)",
+    "Kese tek tıkla açılıyor, çift tık bir eşya alıyor, E kalanı alıp keseyi siliyor",
+    "Ölüm animasyonu ve respawn",
+    "Kamera ile karakter arasında kalan ağaç saydamlaşıyor",
+    "Ormandan harabeye geçiş, loot ve etiket state temiz, sabit kamera",
+    "1920×1080 yeniden boyutlandırma, üç kalite profili ve bağımsız ses ayarları",
+    "Kayıt, bölge ve konum geri yükleme",
+    "Sandık CLOSED → OPENING → OPEN → LOOTED: tek animasyon, tek ses ve tekrar açılmama",
+    "Console error, uncaught promise, 404 ve başarısız asset isteği yok"
+  ],
+  "castStates": [
+    "tora-1-Sword_Regular_A",
+    "tora-1-Sword_Regular_Combo",
+    "tora-0-Sword_Attack",
+    "tora-1-Sword_Regular_B",
+    "tora-1-Sword_Dash",
+    "tora-1-Sword_Regular_C",
+    "tora-1-Sword_Block",
+    "tora-0-Spell_Simple_Enter",
+    "tora-1-Sword_Heavy_Combo"
+  ],
+  "ikSamples": [
+    0.027688948968037617,
+    0.00035059418929742596,
+    0.03792288335542924,
+    0.0002685781385416253,
+    0.022771755663366984,
+    0.050502626541837584,
+    0.007827942350847038,
+    0.01620634220701821,
+    0.008672420970213663
+  ],
+  "fps": [
+    {
+      "quality": "low",
+      "width": 1920,
+      "height": 1080,
+      "fps": 200.00000000000102
+    },
+    {
+      "quality": "medium",
+      "width": 1920,
+      "height": 1080,
+      "fps": 200.00000000000088
+    },
+    {
+      "quality": "high",
+      "width": 1920,
+      "height": 1080,
+      "fps": 200.00000000000094
+    },
+    {
+      "quality": "medium-preview",
+      "width": 1920,
+      "height": 1080,
+      "fpsClosed": 199.73368841148377,
+      "fpsOpen": 199.86675548443165
+    }
+  ],
+  "errors": [],
+  "warnings": [],
+  "failedRequests": []
+}
