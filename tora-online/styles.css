@@ -103,9 +103,12 @@ kbd{font:10px "Segoe UI",sans-serif;color:var(--gold)}
 .buff-tooltip em{font-size:10px;color:#d7c4a0;font-style:normal}
 
 .shortcut-bar{position:absolute;left:16px;top:158px;display:flex;flex-direction:column;gap:4px;pointer-events:auto}
-.shortcut-button{position:relative;width:32px;height:32px;display:grid;place-items:center;padding:0;background:#16130fe6;border:1px solid #5c4a32;color:#c6a15a}
+.shortcut-button{position:relative;width:36px;height:36px;display:grid;place-items:center;padding:0;background:#16130fe6;border:1px solid #5c4a32;color:#c6a15a}
 .shortcut-button:hover,.shortcut-button.active{color:#f0e2c4;border-color:var(--gold);background:#2c261f}
-.shortcut-glyph{font:16px Georgia,serif;line-height:1}
+.shortcut-button:active{background:#3a3228;transform:translateY(1px)}
+.shortcut-button:disabled{opacity:.4}
+.shortcut-icon{width:18px;height:18px;display:block}
+.shortcut-icon path{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 .shortcut-tip{position:absolute;left:calc(100% + 8px);top:50%;transform:translateY(-50%);display:none;z-index:12;white-space:nowrap;padding:5px 8px;background:#14110e;border:1px solid var(--bronze);font-size:11px;color:#e7d8c0}
 .shortcut-tip small{margin-left:6px;color:#a89880}
 .shortcut-button:hover .shortcut-tip,.shortcut-button:focus-visible .shortcut-tip{display:block}
@@ -118,10 +121,13 @@ kbd{font:10px "Segoe UI",sans-serif;color:var(--gold)}
 .region-gold{display:flex;align-items:center;justify-content:center;gap:5px;font-size:11px;color:#d7bc7d}
 .region-gold .gold-icon{width:16px;height:16px}
 
-.minimap{position:absolute;right:16px;top:16px;width:176px;padding:8px;text-align:center}
+.minimap{position:absolute;right:16px;top:16px;width:220px;padding:8px;text-align:center}
 .minimap-tools{display:flex;justify-content:space-between;align-items:center;color:#c6b496;font-size:8px;letter-spacing:.14em;margin:0 0 4px}
-.minimap-tools button{font-size:14px;line-height:1;padding:0 4px;background:transparent;border:0;color:#e7d3a4}
-.minimap-map{position:relative;width:158px;height:158px;margin:0 auto;border:1px solid var(--bronze);overflow:hidden;background:#8f866c}
+.minimap-tools button{width:18px;height:18px;font-size:13px;line-height:1;padding:0;background:#1a1612;border:1px solid #5c4a32;color:#e7d3a4}
+.minimap-tools button:hover{border-color:var(--gold)}
+.minimap-tools button:active{background:#3a3228}
+.minimap-tools button:disabled{opacity:.35}
+.minimap-map{position:relative;width:200px;height:200px;margin:0 auto;border:1px solid var(--bronze);overflow:hidden;background:#8f866c}
 .region-mini{position:absolute;inset:0;width:100%;height:100%}
 .minimap-map #minimap-content{position:absolute;inset:0;transform-origin:50% 50%;transition:transform .16s ease}
 .minimap>strong{display:block;font:12px Georgia,serif;color:var(--gold);margin:6px 0 2px}
@@ -131,10 +137,11 @@ kbd{font:10px "Segoe UI",sans-serif;color:var(--gold)}
 #minimap-mobs i.elite{width:8px;height:8px;background:#b07a3c}
 #minimap-mobs i.boss{width:11px;height:11px;border-radius:50%;background:#a8483c;transform:translate(-50%,-50%)}
 .minimap-sites{position:absolute;inset:0}
-.mini-site{position:absolute;z-index:4;transform:translate(-50%,-50%);font:12px Georgia,serif;color:#f2e2bc;text-shadow:0 1px 2px #000}
-.mini-site.portal{color:#b7ddd4}
-.mini-site.chest{color:#e0b06a}
-.mini-site.quest{color:#f0d48a}
+.mini-site{position:absolute;z-index:4;width:8px;height:8px;transform:translate(-50%,-50%)}
+.mini-site.portal{background:#d9c291;clip-path:polygon(20% 100%,20% 35%,50% 8%,80% 35%,80% 100%)}
+.mini-site.chest{width:9px;height:7px;background:#c6a15a;border:1px solid #4a3a22}
+.mini-site.quest{background:#e7c56a;clip-path:polygon(50% 0,100% 100%,0 100%)}
+.mini-site.loot{width:7px;height:7px;border-radius:50%;background:#e7c56a;box-shadow:0 0 0 1px #4a3a22}
 
 .quest-panel{position:absolute;top:268px;right:16px;width:176px;padding:10px 12px;display:grid;gap:6px}
 .quest-panel>small{font-size:9px;letter-spacing:.14em;color:var(--gold)}
@@ -150,15 +157,16 @@ kbd{font:10px "Segoe UI",sans-serif;color:var(--gold)}
 .skill-art{position:absolute;inset:3px;background-image:url("assets/ui/skills-atlas.webp");background-size:300% 300%;pointer-events:none}
 .item-art{width:48px;height:48px;background-image:url("assets/ui/items-atlas.webp");background-size:400% 200%}
 .skill-slot .key{position:absolute;z-index:4;top:2px;left:2px;min-width:14px;padding:0 3px;color:#f3e6d0;font-size:10px;line-height:14px;background:#14110ecc;border:1px solid #6d5636}
-.skill-slot .cost{position:absolute;z-index:4;right:2px;bottom:2px;color:#c5ddd8;font-size:10px;text-shadow:0 1px 2px #000}
 .cooldown{position:absolute;inset:0;z-index:3;display:grid;place-items:center;background:conic-gradient(#0c0a08d0 0deg var(--cooldown-angle),#0c0a0844 var(--cooldown-angle) 360deg);font-size:16px;color:#f6ead4;text-shadow:0 1px 2px #000}
 .skill-slot:hover,.skill-slot:focus-visible{border-color:var(--gold)}
 .skill-slot:active,.skill-slot.flash{background:#3a3428}
 .skill-slot:not(.unavailable):not(.no-mana){box-shadow:inset 0 0 0 1px #c6a15a22}
 .skill-slot.no-mana .skill-art,.skill-slot.unavailable .skill-art{filter:grayscale(.65) brightness(.55)}
-.skill-slot.no-mana .cost{color:#e0a090}
+.skill-slot.no-mana{border-color:#4d7c96}
+.skill-slot.no-mana::after{content:"";position:absolute;z-index:4;right:3px;bottom:3px;width:7px;height:7px;border-radius:50%;background:#6ea8c8;box-shadow:0 0 0 1px #1a120e}
 .skill-slot.out-of-range{border-color:#9a5340}
-.skill-slot.armed{border-color:#e7d3a4;box-shadow:inset 0 0 0 1px #e7d3a4}
+.skill-slot.needs-target{box-shadow:inset 0 0 0 1px #8a7a62}
+.skill-slot.armed{border-color:#e7d3a4;box-shadow:inset 0 0 0 1px #e7d3a4,0 0 8px #c6a15a33}
 .skill-slot.busy .skill-art{filter:brightness(.72)}
 .skill-tooltip{position:absolute;display:none;bottom:calc(100% + 12px);left:50%;transform:translateX(-50%);width:220px;z-index:20;padding:10px 12px;background:#14110ef8;border:1px solid #8d6e42;text-align:left;pointer-events:none;color:#d7cbb6;font-size:11px;line-height:1.5}
 .skill-tooltip strong{display:block;font:14px Georgia,serif;color:#e7d3a4;margin-bottom:4px}
@@ -185,8 +193,8 @@ kbd{font:10px "Segoe UI",sans-serif;color:var(--gold)}
 .character-panel-heading{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--line)}
 .character-panel-heading strong{font:20px Georgia,serif;color:#f0e2c4}
 .character-panel-heading span{font-size:10px;color:#b7a48a;letter-spacing:.12em}
-.preview-host{position:relative;min-height:320px;border:1px solid #5c4a32;background:radial-gradient(circle at 50% 40%,#2a241e,#100e0c 72%);overflow:hidden}
-.character-preview{display:block;width:100%;height:100%;min-height:320px;object-fit:contain;cursor:ew-resize;pointer-events:auto}
+.preview-host{position:relative;width:min(100%,280px);aspect-ratio:3/4;border:1px solid #5c4a32;background:radial-gradient(circle at 50% 42%,#2a241e,#100e0c 72%);overflow:hidden}
+.character-preview{display:block;width:100%;height:auto;aspect-ratio:3/4;object-fit:contain;cursor:ew-resize;pointer-events:auto;background:#100e0c}
 .equipment-side{display:grid;gap:8px}
 .equip-summary{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0;pointer-events:auto}
 .equip-summary button{display:flex;align-items:center;gap:6px;min-height:52px;padding:6px;text-align:left;background:#1c1814}
@@ -223,7 +231,7 @@ kbd{font:10px "Segoe UI",sans-serif;color:var(--gold)}
 .inventory-actions button{font-size:11px;letter-spacing:.08em}
 .panel-hint{font-size:11px;color:var(--muted);line-height:1.45}
 .stats-panel{width:min(720px,86vw)}
-.stats-layout .preview-host,.stats-layout .character-preview{min-height:360px}
+.stats-layout .preview-host,.stats-layout .character-preview{width:min(100%,240px);aspect-ratio:3/4}
 .combat-readout{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
 .combat-readout span{padding:7px 6px;border:1px solid var(--line);background:#14110e;text-align:center}
 .combat-readout small{display:block;font-size:9px;letter-spacing:.1em;color:#b7a48a}
@@ -271,7 +279,7 @@ kbd{font:10px "Segoe UI",sans-serif;color:var(--gold)}
 .chat-panel label{font-size:9px;color:var(--gold);letter-spacing:.08em}
 .chat-panel input{min-width:0;flex:1;border:0;background:transparent;padding:5px 0;font-size:12px}
 .world-labels,.damage-layer,.chat-bubbles{position:absolute;inset:0;overflow:hidden;pointer-events:none}
-.mob-label{position:absolute;width:120px;text-align:center;transform:translate(-50%,-100%);text-shadow:0 1px 2px #000}
+.mob-label{position:absolute;left:0;top:0;width:120px;text-align:center;text-shadow:0 1px 2px #000;will-change:transform}
 .mob-label strong{display:block;font-size:11px;color:#f0e6d4}
 .mob-label small{display:block;font-size:9px;color:#cbbba0}
 .mob-label .bar{height:3px;width:72px;background:#1a1210;margin:3px auto 0;border:1px solid #6a4636}
@@ -285,11 +293,11 @@ kbd{font:10px "Segoe UI",sans-serif;color:var(--gold)}
 @keyframes damage-rise{0%{opacity:0;transform:translate(-50%,0)}15%{opacity:1}100%{opacity:0;transform:translate(-50%,-42px)}}
 
 .landmarks{position:absolute;inset:0;pointer-events:none}
-.landmarks button,.interaction-prompt{position:absolute;transform:translate(-50%,-100%);font-size:11px;pointer-events:auto;padding:4px 8px;background:#16130ee8;border:1px solid #b08a4e;color:#f0e2c4}
+.landmarks button,.interaction-prompt{position:absolute;left:0;top:0;font-size:11px;pointer-events:auto;padding:4px 8px;background:#16130ee8;border:1px solid #b08a4e;color:#f0e2c4;will-change:transform}
 .interaction-prompt{display:flex;align-items:center;gap:6px}
 .interaction-prompt kbd{padding:1px 4px;background:#8d6e42;color:#14110e}
-.npc-nameplate{position:absolute;transform:translate(-50%,-100%);padding:3px 7px;background:#14110ee0;border:1px solid #5c4a32;color:#f0e2c4;font-size:12px;white-space:nowrap;pointer-events:none}
-.quest-pip{display:inline-block;margin-left:5px;color:#f0e2c4;font:700 14px Georgia,serif}
+.npc-nameplate{position:absolute;left:0;top:0;padding:3px 7px;background:#14110ee0;border:1px solid #5c4a32;color:#f0e2c4;font-size:12px;white-space:nowrap;pointer-events:none;will-change:transform}
+.quest-pip{display:inline-block;width:8px;height:8px;margin-left:6px;background:#e7c56a;transform:rotate(45deg);vertical-align:middle}
 .npc-dialog{position:absolute;pointer-events:auto;left:50%;top:50%;transform:translate(-50%,-50%);width:min(680px,90vw);max-height:84vh;overflow:auto;padding:22px;z-index:14}
 .npc-layout{display:grid;grid-template-columns:150px 1fr;gap:18px}
 .npc-portrait{height:210px;background:url("assets/ui/portraits/ayame.webp") center/cover;border:1px solid var(--bronze)}
@@ -330,7 +338,7 @@ kbd{font:10px "Segoe UI",sans-serif;color:var(--gold)}
 @media(max-height:800px){
   .menu-art{height:560px;min-height:0}
   .game-panel{max-height:74vh}
-  .preview-host,.character-preview,.stats-layout .preview-host{min-height:240px}
+  .preview-host,.character-preview,.stats-layout .preview-host{min-height:0;max-height:42vh}
   .npc-portrait{height:160px}
 }
 @media(max-width:1000px){
@@ -368,4 +376,19 @@ kbd{font:10px "Segoe UI",sans-serif;color:var(--gold)}
   .npc-layout{grid-template-columns:72px 1fr}
   .shop-grid{grid-template-columns:1fr 1fr 1fr}
 }
+.loot-window{position:absolute;right:16px;bottom:88px;width:min(280px,calc(100vw - 32px));z-index:8;pointer-events:auto;padding:10px 12px;animation:panel-in .15s ease}
+.loot-window header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
+.loot-window header strong{font:15px Georgia,serif;color:var(--gold)}
+.loot-list{display:grid;gap:4px;max-height:168px;overflow:auto}
+.loot-row{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;padding:4px 6px;background:#1a1612}
+.loot-row>span{display:flex;gap:8px;align-items:center}
+.loot-row strong{display:block;font-size:13px}
+.loot-row small{display:block;color:var(--muted);font-size:10px;text-transform:capitalize}
+.loot-row.is-selected{border-color:var(--gold)}
+.loot-row.uncommon strong{color:#d5e4ee}
+.loot-row .item-art{width:28px;height:28px}
+.loot-take{width:100%;margin-top:8px}
+.loot-window p{margin:6px 0 0;font-size:10px;color:var(--muted)}
+.inventory-panel,.stats-panel,.shortcut-panel,.npc-dialog{animation:panel-in .15s ease}
+@keyframes panel-in{from{opacity:0}to{opacity:1}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation-duration:.01ms!important}}

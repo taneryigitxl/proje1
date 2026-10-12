@@ -6,7 +6,7 @@ export class SkillBar {
    const button=document.createElement('button');button.type='button';button.className='skill-slot';
    button.setAttribute('aria-label',skill.slot+': '+skill.name);
    const i=skill.slot-1;
-   button.innerHTML='<span class="key">'+skill.slot+'</span><span class="art-icon skill-art" style="background-position:'+i%3*50+'% '+Math.floor(i/3)*50+'%" aria-hidden="true"></span><span class="cost">'+skill.mana+'</span><span class="cooldown" hidden></span><span class="skill-tooltip" role="tooltip"><strong>'+skill.name+'</strong><span>'+skill.description+'</span><span class="tooltip-stats">Mana '+skill.mana+' · Bekleme '+skill.cooldown+' sn<br>Hasar '+skill.damage+(skill.impact.length>1?' × '+skill.impact.length:'')+' · Menzil '+skill.range+' m</span><small class="skill-reason"></small></span>';
+   button.innerHTML='<span class="key">'+skill.slot+'</span><span class="art-icon skill-art" style="background-position:'+i%3*50+'% '+Math.floor(i/3)*50+'%" aria-hidden="true"></span><span class="cooldown" hidden></span><span class="skill-tooltip" role="tooltip"><strong>'+skill.name+'</strong><span>'+skill.description+'</span><span class="tooltip-stats">Mana '+skill.mana+' · Bekleme '+skill.cooldown+' sn<br>Hasar '+skill.damage+(skill.impact.length>1?' × '+skill.impact.length:'')+' · Menzil '+skill.range+' m</span><small class="skill-reason"></small></span>';
    button.addEventListener('click',()=>{this.markPressed(skill.slot);onActivate(skill.slot);});element.append(button);
    this.slots.set(skill.slot,{button,overlay:button.querySelector('.cooldown'),reason:button.querySelector('.skill-reason')});
   }

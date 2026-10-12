@@ -1,4 +1,5 @@
 import { itemArt } from "./Art.js";
+import { placeAnchor } from "./screenAnchor.js";
 import { REGIONS } from '../world/RegionWorld.js';
 
 export class WorldUI {
@@ -30,12 +31,15 @@ export class WorldUI {
     this.landmarks.addEventListener('click',this.onClick);
     this.onKey=e=>{
       if(e.code==='Escape'&&!this.modal.hidden){e.preventDefault();this.close();return;}
-      if(e.code==='KeyE'&&!e.repeat&&!(e.target instanceof HTMLInputElement)&&!game.hud.openPanel&&this.modal.hidden){
-        const nearest=(this.markers||[]).filter(m=>!m.button.hidden).sort((a,b)=>a.distance-b.distance)[0];
-        if(nearest){e.preventDefault();nearest.button.click();}
+      if(e.code==='KeyE'&&!e.repeat&&!(e.target instanceof HTMLInputElement)){
+        if(game.loot?.isOpen?.()){e.preventDefault();game.loot.takeAll();return;}
+        if(!game.hud.openPanel&&this.modal.hidden){
+          const nearest=(this.markers||[]).filter(m=>!m.button.hidden).sort((a,b)=>a.distance-b.distance)[0];
+          if(nearest){e.preventDefault();nearest.button.click();}
+        }
       }
     };window.addEventListener('keydown',this.onKey);
-    this.canvas=document.createElement('canvas');this.canvas.width=this.canvas.height=180;this.canvas.className='region-mini';document.querySelector('.minimap-map').prepend(this.canvas);
+    this.canvas=document.createElement('canvas');this.canvas.width=this.canvas.height=220;this.canvas.className='region-mini';document.querySelector('.minimap-map').prepend(this.canvas);
     this.setRegion();
   }
   setRegion() {
@@ -52,42 +56,53 @@ export class WorldUI {
     this.game.hud?.refreshMinimapSites();
   }
   drawMinimap() {
-    const ctx=this.canvas.getContext('2d'),world=this.game.map,size=180,at=v=>(v+25)/50*size,atz=v=>(25-v)/50*size;
+    const ctx=this.canvas.getContext('2d'),world=this.game.map,size=220,at=v=>(v+25)/50*size,atz=v=>(25-v)/50*size;
     ctx.fillStyle=world.region==='ruins'?'#756f57':'#65745a';ctx.fillRect(0,0,size,size);
     // Soft ink silhouettes on aged parchment; outlines follow the actual scenery.
     for(let y=0;y<size;y+=3)for(let x=0;x<size;x+=3){ctx.fillStyle='rgba(230,211,161,'+(.015+Math.sin(x*13+y*7)*.013)+')';ctx.fillRect(x,y,3,3);}
-    ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#bba67b';ctx.lineWidth=16;ctx.beginPath();ctx.moveTo(90,0);ctx.bezierCurveTo(89,50,90,135,90,180);ctx.stroke();
-    if(world.region==='village'){ctx.fillStyle='#c5b48a88';ctx.beginPath();ctx.ellipse(90,97,34,31,0,0,Math.PI*2);ctx.fill();}
-    if(world.region==='forest'){ctx.strokeStyle='#789f9d';ctx.lineWidth=8;ctx.beginPath();ctx.moveTo(0,atz(3));ctx.bezierCurveTo(45,atz(2.8),120,atz(3.2),180,atz(3));ctx.stroke();ctx.strokeStyle='#d1bc8e';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(90,atz(1.6));ctx.lineTo(90,atz(4.4));ctx.stroke();}
-    for(const root of world.roots){if(root instanceof BABYLON.Mesh)continue;const x=at(root.position.x),y=atz(root.position.z),tree=/tree|border/.test(root.name);if(x<0||x>180||y<0||y>180)continue;
+    const mid=size/2;
+    ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#bba67b';ctx.lineWidth=18;ctx.beginPath();ctx.moveTo(mid,0);ctx.bezierCurveTo(mid,size*.28,mid,size*.75,mid,size);ctx.stroke();
+    if(world.region==='village'){ctx.fillStyle='#c5b48a88';ctx.beginPath();ctx.ellipse(mid,size*.54,size*.16,size*.14,0,0,Math.PI*2);ctx.fill();}
+    if(world.region==='forest'){ctx.strokeStyle='#789f9d';ctx.lineWidth=8;ctx.beginPath();ctx.moveTo(0,atz(3));ctx.bezierCurveTo(size*.25,atz(2.8),size*.66,atz(3.2),size,atz(3));ctx.stroke();ctx.strokeStyle='#d1bc8e';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(mid,atz(1.6));ctx.lineTo(mid,atz(4.4));ctx.stroke();}
+    for(const root of world.roots){if(root instanceof BABYLON.Mesh)continue;const x=at(root.position.x),y=atz(root.position.z),tree=/tree|border/.test(root.name);if(x<0||x>size||y<0||y>size)continue;
       if(tree){const brush=ctx.createRadialGradient(x-1,y-1,1,x,y,7);brush.addColorStop(0,'#304a33d9');brush.addColorStop(1,'#304a3300');ctx.fillStyle=brush;ctx.fillRect(x-8,y-8,16,16);}
       else if(/front|back|left|right|ruin-|roof/.test(root.name)){ctx.strokeStyle='#4c4534';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x-3,y);ctx.lineTo(x+3,y);ctx.stroke();}
       else if(/rock/.test(root.name)){ctx.fillStyle='#8e8a71';ctx.beginPath();ctx.ellipse(x,y,3.3,2.1,.5,0,Math.PI*2);ctx.fill();}
     }
     for(const exit of world.definition.exits){const x=at(exit.x),y=atz(exit.z);ctx.strokeStyle='#d9c291';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x-3,y+4);ctx.lineTo(x-3,y-2);ctx.quadraticCurveTo(x,y-7,x+3,y-2);ctx.lineTo(x+3,y+4);ctx.stroke();}
-    if(world.npc){const x=at(world.npc.position.x),y=atz(world.npc.position.z);ctx.font='bold 15px Georgia';ctx.textAlign='center';ctx.fillStyle='#ecd194';ctx.strokeStyle='#24352a';ctx.lineWidth=2;ctx.strokeText('!',x,y+4);ctx.fillText('!',x,y+4);}
-    ctx.strokeStyle='#4a4431';ctx.lineWidth=2;ctx.strokeRect(1,1,178,178);ctx.font='9px Georgia';ctx.fillStyle='#e2d3af';ctx.textAlign='left';ctx.fillText('K',7,13);
+    if(world.npc){const x=at(world.npc.position.x),y=atz(world.npc.position.z);ctx.fillStyle='#e7c56a';ctx.beginPath();ctx.moveTo(x,y-6);ctx.lineTo(x+5,y+4);ctx.lineTo(x-5,y+4);ctx.closePath();ctx.fill();}
+    ctx.strokeStyle='#4a4431';ctx.lineWidth=2;ctx.strokeRect(1,1,size-2,size-2);
   }
   #marker(text,action,position,prompt,nameplate='',quest=false) {
     const button=document.createElement('button');button.type='button';button.className='interaction-prompt';button.setAttribute('aria-label',text);button.innerHTML=`<kbd>E</kbd><span>${prompt}</span>`;button.dataset.worldAction=action;button.hidden=true;
-    const label=nameplate?document.createElement('small'):null;if(label){label.className='npc-nameplate';label.innerHTML=quest?`${nameplate}<b class="quest-pip">!</b>`:nameplate;this.landmarks.append(label);}
+    const label=nameplate?document.createElement('small'):null;if(label){label.className='npc-nameplate';label.innerHTML=quest?`${nameplate}<b class="quest-pip"></b>`:nameplate;this.landmarks.append(label);}
     this.landmarks.append(button);this.markers.push({button,label,position,action,distance:Infinity});
   }
   update() {
-    const now=performance.now();if(now-(this.stamp||0)<80)return;this.stamp=now;
-    const gold=this.game.inventory.gold+' altın';if(this.goldText&&this.goldText.textContent!==gold)this.goldText.textContent=gold;
+    const now=performance.now();
+    const dt=Math.min(0.05,(now-(this.stamp||now))/1000||0.016);this.stamp=now;
+    if(!this._goldAt||now-this._goldAt>200){this._goldAt=now;const gold=this.game.inventory.gold+' altın';if(this.goldText&&this.goldText.textContent!==gold)this.goldText.textContent=gold;}
     const engine=this.game.engine,cam=this.game.camera.camera,canvas=this.game.canvas;
     const width=engine.getRenderWidth(),height=engine.getRenderHeight(),viewport=cam.viewport.toGlobal(width,height);
+    const matrix=this.game.scene.getTransformMatrix();
+    const placed=[];
     for(const marker of this.markers||[]){
-      const p=BABYLON.Vector3.Project(marker.position,BABYLON.Matrix.IdentityReadOnly,this.game.scene.getTransformMatrix(),viewport);
+      const p=BABYLON.Vector3.Project(marker.position,BABYLON.Matrix.IdentityReadOnly,matrix,viewport);
       const dist=BABYLON.Vector3.Distance(marker.position,this.game.player.position);marker.distance=dist;
-      const sx=p.x/width*canvas.clientWidth,sy=p.y/height*canvas.clientHeight;
-      const visible=p.z>0&&p.z<1&&sx>30&&sx<canvas.clientWidth-30&&sy>30&&sy<canvas.clientHeight-65;
+      let sx=p.x/width*canvas.clientWidth,sy=p.y/height*canvas.clientHeight;
+      const visible=p.z>0&&p.z<1&&sx>-40&&sx<canvas.clientWidth+40&&sy>-40&&sy<canvas.clientHeight+40;
+      for(const other of placed){if(Math.hypot(other.x-sx,other.y-sy)<36)sy-=22;}
+      if(visible)placed.push({x:sx,y:sy});
       const chest=marker.action.startsWith('chest:')?this.game.map.chests.find(c=>c.id===marker.action.slice(6)):null;
-      const show=visible&&dist<5.4&&!this.game.hud.openPanel&&this.modal.hidden&&chest?.state!=='LOOTED';
+      const show=visible&&dist<5.4&&!this.game.hud.openPanel&&this.modal.hidden&&!this.game.loot?.isOpen?.()&&chest?.state!=='LOOTED';
       marker.button.hidden=!show;
-      if(show){marker.button.style.left=Math.round(sx)+'px';marker.button.style.top=Math.round(sy)+'px';}
-      if(marker.label){marker.label.hidden=!visible;if(!marker.label.hidden){const scale=Math.min(1.35,Math.max(1,dist/18));marker.label.style.left=Math.round(sx)+'px';marker.label.style.top=Math.round(sy-34)+'px';marker.label.style.transform=`translate(-50%,-100%) scale(${scale})`;}}
+      if(!show)marker.button._screen=null;
+      else placeAnchor(marker.button,sx,sy,dt);
+      if(marker.label){
+        marker.label.hidden=!visible;
+        if(!visible)marker.label._screen=null;
+        else placeAnchor(marker.label,sx,sy-28,dt);
+      }
     }
   }
   loading(value,text='Bölge yükleniyor…') {this.loader.hidden=!value;this.loader.textContent=text;}

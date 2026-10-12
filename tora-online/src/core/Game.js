@@ -20,6 +20,7 @@ import { AmbientAudio } from "../audio/AmbientAudio.js";
 import { BuffVFXManager } from "../combat/BuffVFXManager.js";
 import { CHEST } from "../world/ChestState.js";
 import { SkillMarker } from "../combat/SkillMarker.js";
+import { MoveMarker } from "../world/MoveMarker.js";
 
 export class Game {
   constructor(runtime, onProgress = () => {}, onFatal = () => {}) {
@@ -107,10 +108,19 @@ export class Game {
           this.camera?.shake(amp, dur);
           this.audio?.playHit(amp > 0.02);
         },
+        onRespawn: () => { this.camera?.snap(this.player.position); this.#faceView(); this.loot?.close?.(); },
         onTargetLost: () => { if (this.entities.selected && !this.entities.selected.alive) this.entities.clear(); },
       }, this.stats);
       this.skillMarker = new SkillMarker(this.scene);
-      this.loot = new LootSystem(this.scene, this.inventory, (message) => this.hud?.setStatus(message), this.navigation, assets);
+      this.loot = new LootSystem(this.scene, this.inventory, (message) => this.hud?.setStatus(message), this.navigation);
+      this.moveMarker = new MoveMarker(this.scene, this.navigation);
+      this.loot.onApproach = (point) => { this.combat.playerCombat.cancelApproach(); this.player.setDestination(point, 2.2); };
+      this.loot.onOpen = () => this.player.cancelDestination();
+      this.loot.onPickup = () => {
+        this.hud?.refreshInventory();
+        const collector = this.progression.syncCollectorQuest();
+        if (collector) this.hud?.announceProgress({ ...collector, questCompleted: true });
+      };
       this.audio = new AmbientAudio();
       this.buffVfx = new BuffVFXManager(this.scene, this.player, this.combat.vfx.materials[4].diffuseTexture);
 
@@ -122,6 +132,7 @@ export class Game {
         onSettings: () => this.togglePause(),
         onQuality: (name) => { window.ToraMenu?.applyQuality(name, true); this.applyQuality(name); const pause = document.getElementById("pause-quality"); if (pause) pause.value = name; },
         onVolume: (bus, value) => { this.audio?.setVolume(bus, value); const input = document.getElementById("volume-" + bus); if (input) input.value = String(value); },
+        loot: this.loot,
       });
       this.worldUI = new WorldUI(this);
       this.cursor = new CursorManager(this.scene, this.canvas, this.player, this.entities);
@@ -244,6 +255,7 @@ export class Game {
       window.removeEventListener('pointercancel', this.onSteerRelease);
     }
     this.skillMarker?.dispose();
+    this.moveMarker?.dispose();
     this.#unbindPauseMenu();
     this.cursor?.dispose();
     this.camera?.dispose();
@@ -252,7 +264,7 @@ export class Game {
     this.worldUI?.dispose();
     this.hud?.dispose();
     this.map?.dispose();
-    this.loot?.dispose();
+    this.loot?.dispose(true);
     this.audio?.dispose();
     this.player?.visual?.ik?.dispose();
     this.buffVfx?.dispose();
@@ -284,6 +296,7 @@ export class Game {
 
   #bindInput() {
     this.input.onEscape = () => {
+      if (this.loot?.isOpen?.()) { this.loot.close(); return; }
       if(!this.worldUI.modal.hidden){this.worldUI.close();return;}
       if (this.hud?.openPanel) {
         this.hud.closePanels();
@@ -317,8 +330,12 @@ export class Game {
     window.addEventListener('pointerup', this.onSteerRelease);
     window.addEventListener('pointercancel', this.onSteerRelease);
     this.pointerObserver = this.scene.onPointerObservable.add((info) => {
-      if (!this.#pointerLive(info)) return;
       const event = info.event;
+      if (this.loot?.isOpen?.() && info.type === BABYLON.PointerEventTypes.POINTERDOWN && event?.button === 0 && event.target === this.canvas) {
+        this.loot.close();
+        return;
+      }
+      if (!this.#pointerLive(info)) return;
       if (info.type === BABYLON.PointerEventTypes.POINTERDOWN && event.button === 2) {
         this.onSecondaryInteract?.(info);
         return;
@@ -338,7 +355,7 @@ export class Game {
   }
 
   #pointerLive(info) {
-    return Boolean(this.running && !this.paused && !this.transitioning && this.worldUI?.modal.hidden && !this.hud?.openPanel && this.input?.enabled && info.event?.target === this.canvas);
+    return Boolean(this.running && !this.paused && !this.transitioning && this.worldUI?.modal.hidden && !this.hud?.openPanel && !this.loot?.isOpen?.() && this.input?.enabled && info.event?.target === this.canvas);
   }
 
   #manualIdle() {
@@ -358,7 +375,11 @@ export class Game {
     this.combat.playerCombat.cancel();
     this.entities.clear();
     this.steer = { id: event.pointerId, x: event.clientX, y: event.clientY, hold: false, next: 0 };
-    if (this.#manualIdle()) this.player.setDestination(point, 0.2);
+    if (this.#manualIdle()) {
+      const ok = this.player.setDestination(point, 0.2);
+      this.moveMarker?.show(point, ok);
+      this._markerAt = performance.now();
+    }
   }
 
   #steerMove(event) {
@@ -367,7 +388,14 @@ export class Game {
     if (!this.steer.hold || performance.now() < this.steer.next) return;
     this.steer.next = performance.now() + 90;
     const ground = this.#pickGround();
-    if (ground?.hit) this.player.setDestination(ground.pickedPoint, 0.45);
+    if (ground?.hit) {
+      const ok = this.player.setDestination(ground.pickedPoint, 0.45);
+      const now = performance.now();
+      if (now - (this._markerAt || 0) > 450) {
+        this._markerAt = now;
+        this.moveMarker?.show(ground.pickedPoint, ok);
+      }
+    }
   }
 
   #endSteer() {
@@ -385,11 +413,7 @@ export class Game {
       return;
     }
     if (data.lootPickup) {
-      if (this.loot.tryPickup(actionPick.pickedMesh)) {
-        this.hud.refreshInventory();
-        const collector = this.progression.syncCollectorQuest();
-        if (collector) this.hud.announceProgress({ ...collector, questCompleted: true });
-      }
+      this.loot.activate(actionPick.pickedMesh);
       return;
     }
     if (data.mob) {
@@ -530,7 +554,7 @@ export class Game {
   }
 
   #useSkill(slot) {
-    if (!this.running || this.paused || this.hud?.openPanel || !this.worldUI.modal.hidden || document.activeElement===this.hud?.chatInput) return;
+    if (!this.running || this.paused || this.hud?.openPanel || this.loot?.isOpen?.() || !this.worldUI.modal.hidden || document.activeElement===this.hud?.chatInput) return;
     const skill = this.combat.skills.get(slot);
     if (!skill) return;
     this.hud?.skillBar?.markPressed?.(slot);
@@ -585,6 +609,7 @@ export class Game {
       }
       const viewDt = Math.min(0.05, raw);
       this.skillMarker?.update(this.armedSkill, this.player);
+      this.moveMarker?.update(viewDt);
       this.camera.update(viewDt);
       this.map.update(viewDt, this.camera.camera, this.engine.getFps());
       this.audio?.update?.(viewDt, this.player, this.map.region);

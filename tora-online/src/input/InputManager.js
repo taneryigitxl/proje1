@@ -44,10 +44,10 @@ export class InputManager {
   }
 
   axis() {
-    if(!this.enabled)return {x:0,z:0,running:false};
+    if (!this.enabled) return { x: 0, z: 0 };
     const x = (this.keys.has("KeyD") ? 1 : 0) - (this.keys.has("KeyA") ? 1 : 0);
     const z = (this.keys.has("KeyW") ? 1 : 0) - (this.keys.has("KeyS") ? 1 : 0);
-    return { x, z, running: this.keys.has("ShiftLeft") || this.keys.has("ShiftRight") };
+    return { x, z };
   }
 
   consume(code) {

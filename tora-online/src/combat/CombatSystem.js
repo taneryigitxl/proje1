@@ -36,6 +36,7 @@ export class CombatSystem{
     this.player.cancelDestination();this.playerCombat.cancel();
     this.player.state = "land";this.player.landingTimer=.3;this.vfx.spawn(3,this.player.position,1.5,false,.55);
     this.playerRespawn = 0;
+    this.callbacks.onRespawn?.();
   }
 
 }

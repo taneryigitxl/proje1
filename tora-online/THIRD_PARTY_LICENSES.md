@@ -1,6 +1,6 @@
 # Third-party art and runtime licenses
 
-Tora Online'ın özgün oyun kodu ve `assets/ui/parchment-minimap.png` görseli bu proje için üretildi. Aşağıdaki üçüncü taraf paketleri değiştirilmiş/optimize edilmiş biçimde yerel olarak dağıtılır.
+Tora Online'ın özgün oyun kodu ve `assets/ui/parchment-minimap.png` görseli bu proje için üretildi. Ganimet kesesi ayrı bir model dosyası değildir: `GlbLoot` içindeki lathe geometrisi bu proje için yazıldı, üçüncü taraf bir `loot-bag.glb` kullanılmaz. Menü ikonları da aynı şekilde elle yazılmış SVG yollarıdır. Aşağıdaki üçüncü taraf paketleri değiştirilmiş/optimize edilmiş biçimde yerel olarak dağıtılır.
 
 ## Quaternius — CC0 1.0
 

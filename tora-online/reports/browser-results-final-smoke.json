@@ -1,17 +1,25 @@
 {
-  "date": "2026-10-12T12:19:34.284Z",
-  "url": "http://127.0.0.1:63288/",
+  "date": "2026-10-12T13:34:08.125Z",
+  "url": "http://127.0.0.1:49412/",
   "softwareCI": false,
   "soakSeconds": 0,
   "checks": [
     "Şifresiz profil, ilk yükleme, raster portre ve dokuz atlas ikon",
     "WASD hareket ve karakter kamerayla aynı yöne bakar",
     "Sabit izometrik kamera, sağ tık dönüş yok, zoom sınırları",
-    "Zıplama, havada kalma ve iniş",
+    "Ayak merkezi üç çözünürlükte ve zoomda ekran ortasında",
+    "Shift hareket hızını değiştirmiyor",
+    "Oyuncunun altında sürekli halka yok",
+    "Skill slotunda mana rakamı yok, 1–9 ve menü ikonları duruyor",
+    "Geçerli zeminde hareket işareti oluşup kayboluyor",
+    "UI tıklamasında hareket işareti oluşmuyor",
+    "Dünya etiketleri hareket sırasında büyük sıçrama yapmıyor",
+    "Zıplama kamerayı sallamadan iniyor",
     "Sol tıkla yürüme, basılı tutarak ilerleme ve WASD ile yol iptali",
     "Çantadan dışarı gerçek sürükleme: iptal eşyayı koruyor, onay yere bırakıyor",
+    "Önizleme doğal oranda ve panel açıkken sürekli readPixels yok",
     "Envanter aç/kapat, UI hareket koruması, çift tık equip/unequip, gerçek drag/drop",
-    "Karakter paneli ve Escape",
+    "Karakter paneli, Escape ve önizleme dinleyici sayısı sabit",
     "Görev teslimi: gerçek seçenek düğmesi, diş tüketimi ve Demir Kılıç ödülü (kontrollü fixture)",
     "Gerçek NPC yaklaşımı, görev kabulü, mağaza ve satın alma",
     "Köyden ormana gerçek kapı geçişi",
@@ -22,9 +30,10 @@
     "Yetersiz mana durumu saldırıyı reddediyor",
     "Hedef ölümü, yeni hedef ve loot oluşumu",
     "Dolu envanterde loot kaybolmuyor; boş yer açılınca alınabiliyor (kontrollü fixture)",
+    "Kese tek tıkla açılıyor, çift tık bir eşya alıyor, E kalanı alıp keseyi siliyor",
     "Ölüm animasyonu ve respawn",
     "Kamera ile karakter arasında kalan ağaç saydamlaşıyor",
-    "Ormandan harabeye geçiş, sabit kamera ve farklı boss ekipmanı",
+    "Ormandan harabeye geçiş, loot ve etiket state temiz, sabit kamera",
     "1920×1080 yeniden boyutlandırma, üç kalite profili ve bağımsız ses ayarları",
     "Kayıt, bölge ve konum geri yükleme",
     "Sandık CLOSED → OPENING → OPEN → LOOTED: tek animasyon, tek ses ve tekrar açılmama",
@@ -42,34 +51,41 @@
     "tora-1-Sword_Heavy_Combo"
   ],
   "ikSamples": [
-    0.029065035253671247,
-    0.0001991083497016194,
-    0.0455949186086573,
-    0.00031910001441457983,
-    0.024066613398261036,
-    0.05039652878818888,
-    0.0063263603332872,
-    0.012919492649972887,
-    0.009315762720374227
+    0.03080859018885754,
+    0.00025038737567343954,
+    0.04672385918196789,
+    0.00014078350367670417,
+    0.024019210077744674,
+    0.050582364095072704,
+    0.006755738146283729,
+    0.01298497651509719,
+    0.009063453252163027
   ],
   "fps": [
     {
       "quality": "low",
       "width": 1920,
       "height": 1080,
-      "fps": 59.98800239844737
+      "fps": 60.03602161260974
     },
     {
       "quality": "medium",
       "width": 1920,
       "height": 1080,
-      "fps": 60.01200239976418
+      "fps": 59.92808629715792
     },
     {
       "quality": "high",
       "width": 1920,
       "height": 1080,
-      "fps": 59.9880023984472
+      "fps": 60.04803843146113
+    },
+    {
+      "quality": "medium-preview",
+      "width": 1920,
+      "height": 1080,
+      "fpsClosed": 60.00000000000012,
+      "fpsOpen": 60.0000000000001
     }
   ],
   "errors": [],

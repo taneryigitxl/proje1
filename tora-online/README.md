@@ -15,7 +15,7 @@ Windows tarayıcı testi varsayılan olarak kurulu Edge'i kullanır. Diğer sist
 
 ## Oynama
 Profil adını yazıp Diyara Gir'e bas. Şifre veya admin yetkisi yoktur. Kayıtlar bu tarayıcıya aittir.
-Sol tık: yürü, hedef seç ve saldır. Sol tuşu basılı tut: imlecin gösterdiği yöne ilerle. WASD: ikincil hareket. Shift: koş. Space: kısa zıplama. 1–9: yeteneği hazırla, ardından hedefe veya zemine tıkla. Kendine uygulanan savunma ve öfke hemen çalışır. Esc: hazırlanan yeteneği iptal eder, panel yoksa oyunu duraklatır. Tab: hedef değiştir. I: envanter. C: karakter.
+Sol tık: koş, hedef seç ve saldır. Sol tuşu basılı tut: imlecin gösterdiği yöne koş. WASD: aynı koşu hızı. Space: kısa zıplama. 1–9: yeteneği hazırla, ardından hedefe veya zemine tıkla. Kendine uygulanan savunma ve öfke hemen çalışır. Esc: hazırlanan yeteneği iptal eder, panel yoksa oyunu duraklatır. Tab: hedef değiştir. I: envanter. C: karakter. E: açık ganimet kesesini tamamen alır.
 Tekerlek: sınırlı yakınlaştırma. Kamera sabit izometrik açıda kalır.
 Ayame'den görevi al; beş yaratığı yen, üç dişi teslim et, Kül Muhafızı'na ilerle.
 

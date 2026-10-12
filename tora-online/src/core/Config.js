@@ -14,9 +14,9 @@ export const GAME_CONFIG = Object.freeze({
     pitch: Math.PI / 2 - (50 * Math.PI / 180),
     zoomStep: 0.01,
     zoomSmoothness: 8,
-    followSmoothness: 6,
-    focusHeight: 1.2,
-    lookAhead: 1.45,
+    followSmoothness: 18,
+    focusHeight: 0.02,
+    lookAhead: 0,
     shakeMax: 0.028,
   }),
 });

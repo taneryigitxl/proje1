@@ -146,7 +146,7 @@ export class PlayerCombat {
       for(let i=0;i<12;i++){const a=i/12*Math.PI*2;const p=new BABYLON.Vector3(target.position.x+Math.cos(a)*stop,0,target.position.z+Math.sin(a)*stop);if(this.player.navigation.canOccupy(p)){desired=p;break;}}
     }
     if(!this.player.destination || BABYLON.Vector3.DistanceSquared(desired,this.chaseGoal||this.player.position)>.7 || this.player.destinationStall>.4){
-      this.chaseGoal=desired.clone();this.player.setDestination(desired,.2,{sprint:true});
+      this.chaseGoal=desired.clone();this.player.setDestination(desired,.2);
     }
   }
 

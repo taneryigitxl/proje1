@@ -8,13 +8,12 @@ export class EntityManager {
     this.mobs = spawns.map((spawn, index) => new Mob(scene, spawn, index, navigation, onDamage, visuals[index]));
     this.selected = null;
     this.slowAccumulator = 0;
-    this.playerRing = this.#ring('player-ring', new BABYLON.Color3(0.78, 0.66, 0.38), 1.05, 0.55);
-    this.selectionRing = this.#ring('target-ring', new BABYLON.Color3(0.62, 0.24, 0.18), 1.35, 0.72);
+    this.selectionRing = this.#ring('target-ring', new BABYLON.Color3(0.55, 0.12, 0.14), 1.15, 0.88, 0.015);
     this.selectionRing.setEnabled(false);
   }
 
-  #ring(name, color, diameter, alpha) {
-    const ring = BABYLON.MeshBuilder.CreateTorus(name, { diameter, thickness: 0.038, tessellation: 40 }, this.scene);
+  #ring(name, color, diameter, alpha, thickness = 0.015) {
+    const ring = BABYLON.MeshBuilder.CreateTorus(name, { diameter, thickness, tessellation: 48 }, this.scene);
     ring.rotation.x = Math.PI / 2;
     const mat = new BABYLON.StandardMaterial(name + '-mat', this.scene);
     mat.emissiveColor = color;
@@ -71,8 +70,6 @@ export class EntityManager {
     }
     if (this.slowAccumulator > 0.2) this.slowAccumulator = 0;
     if (this.selected && !this.selected.alive) this.selected = null;
-    const feet = this.navigation.heightAt(player.position.x, player.position.z) + 0.05;
-    this.playerRing.position.set(player.position.x, feet, player.position.z);
     this.#syncRing();
   }
 
@@ -85,7 +82,7 @@ export class EntityManager {
     }
     const scale = Math.max(0.9, Math.min(1.45, (mob.root?.scaling?.x || 1)));
     this.selectionRing.scaling.set(scale, scale, 1);
-    this.selectionRing.position.set(mob.position.x, this.navigation.heightAt(mob.position.x, mob.position.z) + 0.055, mob.position.z);
+    this.selectionRing.position.set(mob.position.x, this.navigation.heightAt(mob.position.x, mob.position.z) + 0.03, mob.position.z);
     this.selectionRing.setEnabled(true);
   }
 

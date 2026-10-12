@@ -4,9 +4,10 @@ import { TargetFrame } from "./TargetFrame.js";
 import { ITEM_DEFS } from "../progression/InventorySystem.js";
 import { SKILLS } from "../core/Config.js";
 import { CharacterPreview } from "./CharacterPreview.js";
+import { placeAnchor } from "./screenAnchor.js";
 
 const SHORTCUTS = [
-  ['stats','Karakter','C','M12 3a4 4 0 1 0 4 4 4 4 0 0 0-4-4 4-4Zm-8 17v-2a8 8 0 0 1 16 0v2'],
+  ['stats','Karakter','C','M16 7.5a4 4 0 1 1-8 0 4 4 0 0 1 8 0M5 20v-1.5a7 7 0 0 1 14 0V20'],
   ['inventory','Envanter','I','M4 8h16l-1 12H5L4 8Zm4 0V6a4 4 0 0 1 8 0v2'],
   ['skills','Yetenekler','K','m5 19 14-14M9 5l10 10M4 14l6 6'],
   ['quests','Görevler','J','M6 3h12v18H6zM9 8h6M9 12h6M9 16h4'],
@@ -38,6 +39,8 @@ export class HUD {
     this.stats = stats;
     this.inventory = inventory;
     this.map = options.map;
+    this.loot = options.loot || null;
+    this.lootDots = new Map();
     this.onSettings = options.onSettings || (()=>{});
     this.onQuality = options.onQuality || (()=>{});
     this.onVolume = options.onVolume || (()=>{});
@@ -86,12 +89,15 @@ export class HUD {
     this.shortcutBar = document.getElementById('shortcut-bar');
     this.preview = new CharacterPreview(scene, player);
     this.shortcutButtons = new Map();
-    const glyphs={stats:'♙',inventory:'▣',skills:'✦',quests:'✧',friends:'♧',guild:'⚑',party:'♟',map:'⌖',settings:'⚙'};
-    for(const [id,label,key] of SHORTCUTS){
-      const button=document.createElement('button');button.type='button';button.className='shortcut-button';button.dataset.shortcut=id;
-      button.setAttribute('aria-label',`${label} · ${key}`);
-      button.innerHTML=`<span class="shortcut-glyph" aria-hidden="true">${glyphs[id]}</span><span class="shortcut-tip">${label}<small>${key}</small></span><i class="shortcut-badge" hidden></i>`;
-      this.shortcutBar.append(button);this.shortcutButtons.set(id,button);
+    for (const [id, label, key, path] of SHORTCUTS) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "shortcut-button";
+      button.dataset.shortcut = id;
+      button.setAttribute("aria-label", `${label} · ${key}`);
+      button.innerHTML = `<svg class="shortcut-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="${path}"/></svg><span class="shortcut-tip">${label}<small>${key}</small></span><i class="shortcut-badge" hidden></i>`;
+      this.shortcutBar.append(button);
+      this.shortcutButtons.set(id, button);
     }
     this.inventoryGrid = document.getElementById("inventory-grid");
     this.inventoryHint = document.getElementById("inventory-hint");
@@ -273,6 +279,8 @@ export class HUD {
     this.onMinimapZoom = event => {
       this.minimapZoom = BABYLON.Scalar.Clamp(this.minimapZoom + (event.currentTarget===this.minimapZoomIn ? .3 : -.3), 1, 1.9);
       this.minimapContent.style.transform=`scale(${this.minimapZoom})`;
+      if (this.minimapZoomIn) this.minimapZoomIn.disabled = this.minimapZoom >= 1.89;
+      if (this.minimapZoomOut) this.minimapZoomOut.disabled = this.minimapZoom <= 1.01;
     };
     this.minimapZoomIn?.addEventListener('click',this.onMinimapZoom);
     this.minimapZoomOut?.addEventListener('click',this.onMinimapZoom);
@@ -328,13 +336,13 @@ export class HUD {
   refreshMinimapSites() {
     if(!this.minimapSites||!this.map?.definition)return;
     this.minimapSites.replaceChildren();
-    const add=(kind,name,x,z,glyph)=>{
-      const icon=document.createElement('span');icon.className='mini-site '+kind;icon.textContent=glyph;icon.title=name;
+    const add=(kind,name,x,z)=>{
+      const icon=document.createElement('span');icon.className='mini-site '+kind;icon.title=name;
       this.minimapSites.append(icon);this.#minimapPosition(icon,{x,z},0,false);
     };
-    for(const exit of this.map.definition.exits)add('portal',exit.name,exit.x,exit.z,'⌂');
-    if(this.map.npc){const {x,z}=this.map.npc.position;add('quest','Demirci Ayame · Görev',x,z,'!');}
-    for(const chest of this.map.chests||[]){const {x,z}=chest.root.position;add('chest','Sandık',x,z,'▣');}
+    for(const exit of this.map.definition.exits)add('portal',exit.name,exit.x,exit.z);
+    if(this.map.npc){const {x,z}=this.map.npc.position;add('quest','Demirci Ayame · Görev',x,z);}
+    for(const chest of this.map.chests||[]){const {x,z}=chest.root.position;add('chest','Sandık',x,z);}
   }
   applyIdentity(identity) {
     const name = identity?.username || this.player.name || "Oyuncu";
@@ -389,7 +397,7 @@ export class HUD {
 
   showDamage(entity, result) {
     const node = this.damagePool[this.damageCursor++ % this.damagePool.length];
-    const point = entity.position.add(new BABYLON.Vector3(0, 2.1, 0));
+    const point = entity.position.add(new BABYLON.Vector3(0, 2.55, 0));
     const screen = this.#project(point);
     node.textContent = result.critical ? `${result.amount}!` : String(result.amount);
     node.className = `damage-number${result.critical ? " critical" : ""}`;
@@ -553,7 +561,13 @@ export class HUD {
   }
 
   update() {
-    const stamp=performance.now(); if(stamp-(this._uiStamp||0)<50)return;this._uiStamp=stamp;
+    const stamp = performance.now();
+    const dt = Math.min(0.05, (stamp - (this._labelTime || stamp)) / 1000 || 0.016);
+    this._labelTime = stamp;
+    this.#placeMobLabels(dt);
+    this.preview?.update?.(stamp);
+    if (stamp - (this._uiStamp || 0) < 50) return;
+    this._uiStamp = stamp;
     const p = this.player;
     const progress = this.progression.snapshot();
     const hpPercent=Math.max(0,p.health/p.maxHealth)*100;
@@ -574,11 +588,11 @@ export class HUD {
 
     // Chat bubbles stack upward; newest at bottom (closest to head)
     const now = performance.now();
-    const dt = Math.min(0.2, (now - this._lastHudTime) / 1000 || 0.016);
+    const bubbleDt = Math.min(0.2, (now - this._lastHudTime) / 1000 || 0.016);
     this._lastHudTime = now;
     for (let i = this.chatBubbles.length - 1; i >= 0; i--) {
       const bubble = this.chatBubbles[i];
-      bubble.life -= dt;
+      bubble.life -= bubbleDt;
       if (bubble.life <= 0) {
         bubble.node.remove();
         this.chatBubbles.splice(i, 1);
@@ -601,29 +615,14 @@ export class HUD {
     this.skillBar.update(this.skillSystem, p, this.entities.selected);
     this.fps.textContent = `${this.engine.getFps().toFixed(0)} FPS`;
     this.#updateBuffs();
-    this.preview.update(stamp);
     this.#minimapPosition(this.minimapPlayer, p.position, p.rotation, true);
     for (const mob of this.entities.mobs) {
-      const node = this.labels.get(mob.id);
-      const dot = this.minimapDots?.get(mob.id)||this.minimapMobs.querySelector(`[data-entity-id="${mob.id}"]`);
-      node.hidden = !mob.alive;
+      const dot = this.minimapDots?.get(mob.id);
+      if (!dot) continue;
       dot.hidden = !mob.alive;
-      if (!mob.alive) continue;
-      this.#minimapPosition(dot, mob.position, 0, false);
-      const labelY = mob._labelHeight || (mob._labelHeight=this.#mobLabelHeight(mob));
-      const screen = this.#project(mob.position.add(new BABYLON.Vector3(0, labelY, 0)));
-      const dist = BABYLON.Vector3.Distance(p.position, mob.position);
-      const engaged = mob.aggro || this.entities.selected === mob || p.targetId === mob.id;
-      const visible = screen.z > 0 && screen.z < 1 && Number.isFinite(mob.position.x) && (engaged || dist < 7);
-      node.hidden = !visible;
-      if (!visible) continue;
-      node.style.left = `${screen.x}px`;
-      node.style.top = `${screen.y}px`;
-      node.style.opacity = "1";
-      node.style.transform = "translate(-50%,-100%)";
-      node.classList.toggle("selected", this.entities.selected === mob);
-      node.querySelector("i").style.width = `${mob.health / mob.maxHealth * 100}%`;
+      if (mob.alive) this.#minimapPosition(dot, mob.position, 0, false);
     }
+    this.#syncLootDots();
     if (this.openPanel === "stats" && this.statPoints) {
       this.statPoints.textContent = String(this.stats.unspent);
     }
@@ -682,6 +681,58 @@ export class HUD {
     if (s?.unlocked && !s.completed) return `Kurt Dişi topla: ${s.progress} / ${s.goal}`;
     if (s?.completed) return 'Kül Muhafızı’nı yen · Kadim Harabe';
     return `Tamamlandı • +${q.rewardXp} XP`;
+  }
+
+  #placeMobLabels(dt) {
+    const player = this.player;
+    this._projectStamp = null;
+    for (const mob of this.entities.mobs) {
+      const node = this.labels.get(mob.id);
+      if (!node) continue;
+      if (!mob.alive) {
+        node.hidden = true;
+        node._screen = null;
+        continue;
+      }
+      const labelY = 1.85 * Math.max(0.85, Math.min(1.8, mob.root?.scaling?.y || 1));
+      const screen = this.#project(mob.position.add(new BABYLON.Vector3(0, labelY, 0)));
+      const dist = BABYLON.Vector3.Distance(player.position, mob.position);
+      const engaged = mob.aggro || this.entities.selected === mob || player.targetId === mob.id;
+      const visible = screen.z > 0 && screen.z < 1 && Number.isFinite(screen.x) && (engaged || dist < 18);
+      node.hidden = !visible;
+      if (!visible) {
+        node._screen = null;
+        continue;
+      }
+      placeAnchor(node, screen.x, screen.y, dt);
+      node.classList.toggle("selected", this.entities.selected === mob);
+      const bar = node.querySelector("i");
+      if (bar) bar.style.width = `${mob.health / mob.maxHealth * 100}%`;
+    }
+  }
+
+  #syncLootDots() {
+    if (!this.minimapSites || !this.loot) return;
+    const drops = this.loot.drops || [];
+    const ids = new Set(drops.map((drop) => String(drop.id)));
+    for (const [id, node] of this.lootDots) {
+      if (!ids.has(id)) {
+        node.remove();
+        this.lootDots.delete(id);
+      }
+    }
+    for (const drop of drops) {
+      const id = String(drop.id);
+      let node = this.lootDots.get(id);
+      if (!node || !node.isConnected) {
+        node = document.createElement("span");
+        node.className = "mini-site loot";
+        node.title = "Ganimet";
+        this.minimapSites.append(node);
+        this.lootDots.set(id, node);
+      }
+      this.#minimapPosition(node, drop.mesh.position, 0, false);
+    }
   }
 
   #mobLabelHeight(mob) {
@@ -814,14 +865,20 @@ export class HUD {
   #project(position) {
     const cam = this.scene.activeCamera;
     if (!cam) return { x: 0, y: 0, z: -1 };
-    const width = this.engine.getRenderWidth();
-    const height = this.engine.getRenderHeight();
-    const viewport = cam.viewport.toGlobal(width, height);
-    const projected = BABYLON.Vector3.Project(position, BABYLON.Matrix.IdentityReadOnly, this.scene.getTransformMatrix(), viewport);
-    const rect = this.engine.getRenderingCanvas().getBoundingClientRect();
+    if (this._projectStamp !== this._labelTime) {
+      this._projectStamp = this._labelTime;
+      const canvas = this.engine.getRenderingCanvas();
+      this._rect = canvas.getBoundingClientRect();
+      this._rw = this.engine.getRenderWidth();
+      this._rh = this.engine.getRenderHeight();
+      this._vp = cam.viewport.toGlobal(this._rw, this._rh);
+      this._tm = this.scene.getTransformMatrix();
+    }
+    const projected = BABYLON.Vector3.Project(position, BABYLON.Matrix.IdentityReadOnly, this._tm, this._vp);
+    const rect = this._rect;
     return {
-      x: projected.x / width * rect.width + rect.left,
-      y: projected.y / height * rect.height + rect.top,
+      x: projected.x / this._rw * rect.width,
+      y: projected.y / this._rh * rect.height,
       z: projected.z,
     };
   }
