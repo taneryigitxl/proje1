@@ -17,8 +17,15 @@ const SHORTCUTS = [
   ['settings','Ayarlar','Esc','M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm0-13 1 2 2 .5 2-1 2 2-1 2 .5 2 2 1v3l-2 1-.5 2 1 2-2 2-2-1-2 .5-1 2h-3l-1-2-2-.5-2 1-2-2 1-2-.5-2-2-1v-3l2-1 .5-2-1-2 2-2 2 1 2-.5 1-2h3Z'],
 ];
 
+const STAT_LABEL = { strength: "Güç", vitality: "Canlılık", intelligence: "Zeka", dexterity: "Çeviklik" };
+
 function itemName(id) {
   return ITEM_DEFS[id]?.name || id || "—";
+}
+
+function bonusText(item) {
+  if (!item?.bonuses) return item?.description || "";
+  return Object.entries(item.bonuses).map(([key, value]) => `${STAT_LABEL[key] || key} +${value}`).join(", ");
 }
 
 export class HUD {
@@ -32,6 +39,8 @@ export class HUD {
     this.inventory = inventory;
     this.map = options.map;
     this.onSettings = options.onSettings || (()=>{});
+    this.onQuality = options.onQuality || (()=>{});
+    this.onVolume = options.onVolume || (()=>{});
     this.onDropItem = options.onDropItem || null;
     this.onPanelChange = options.onPanelChange || (()=>{});
     this.root = document.getElementById("hud");
@@ -137,12 +146,20 @@ export class HUD {
       const shortcut=event.target.closest('[data-shortcut]');
       if(shortcut){
         const name=shortcut.dataset.shortcut;
-        if(name==='settings')this.onSettings();else this.togglePanel(name);
+        this.togglePanel(name);
         return;
       }
       const close = event.target.closest("[data-close]");
       if (close) {
         this.togglePanel(close.dataset.close, false);
+        return;
+      }
+      const equipSlot = event.target.closest("[data-equip-slot]");
+      if (equipSlot) {
+        const id = this.inventory.equipped[equipSlot.dataset.equipSlot];
+        const index = id ? this.inventory.slots.indexOf(id) : -1;
+        if (index >= 0) this.inventory.select(index);
+        this.#renderInventory();
         return;
       }
       const slot = event.target.closest("[data-inv-slot]");
@@ -199,6 +216,23 @@ export class HUD {
       event.stopPropagation();
       const from = Number(event.dataTransfer.getData("text/plain") || this.dragFrom);
       if (!Number.isFinite(from) || from < 0) return;
+      const equipSlot = event.target.closest?.("[data-equip-slot]");
+      if (equipSlot) {
+        const id = this.inventory.slots[from];
+        const item = id ? ITEM_DEFS[id] : null;
+        this.dragFrom = -1;
+        if (!item || item.slot !== equipSlot.dataset.equipSlot) {
+          this.setStatus("Bu yuvaya uymaz.");
+          return;
+        }
+        this.inventory.selected = from;
+        const result = this.inventory.useSelected();
+        this.inventoryHint.textContent = result.message;
+        if (result.ok) this.setStatus(result.message);
+        this.#renderInventory();
+        this.#renderStats();
+        return;
+      }
       const slot = event.target.closest?.("[data-inv-slot]");
       if (slot) {
         const to = Number(slot.dataset.invSlot);
@@ -252,6 +286,33 @@ export class HUD {
     document.addEventListener("drop", this.onDocDrop);
     this.dropYes?.addEventListener("click", this.onDropYes);
     this.dropNo?.addEventListener("click", this.onDropNo);
+    this.onPanelDragDown = (event) => {
+      const header = event.target.closest(".game-panel > header");
+      if (!header || event.button !== 0 || event.target.closest("button")) return;
+      const panel = header.parentElement;
+      const rect = panel.getBoundingClientRect();
+      this.dragPanel = { panel, dx: event.clientX - rect.left, dy: event.clientY - rect.top };
+      panel.classList.add("is-dragging");
+      panel.style.right = "auto";
+      panel.style.transform = "none";
+      panel.style.left = `${rect.left}px`;
+      panel.style.top = `${rect.top}px`;
+    };
+    this.onPanelDragMove = (event) => {
+      if (!this.dragPanel) return;
+      const { panel, dx, dy } = this.dragPanel;
+      const x = Math.min(Math.max(8, event.clientX - dx), Math.max(8, window.innerWidth - panel.offsetWidth - 8));
+      const y = Math.min(Math.max(8, event.clientY - dy), Math.max(8, window.innerHeight - 40));
+      panel.style.left = `${x}px`;
+      panel.style.top = `${y}px`;
+    };
+    this.onPanelDragUp = () => {
+      this.dragPanel?.panel.classList.remove("is-dragging");
+      this.dragPanel = null;
+    };
+    this.root.addEventListener("pointerdown", this.onPanelDragDown);
+    window.addEventListener("pointermove", this.onPanelDragMove);
+    window.addEventListener("pointerup", this.onPanelDragUp);
     this.#renderInventory();
     this.#renderStats();
     this.refreshMinimapSites();
@@ -384,17 +445,88 @@ export class HUD {
     const label=SHORTCUTS.find(entry=>entry[0]===name)?.[1]||'Menü';
     this.shortcutTitle.textContent=label.toLocaleUpperCase('tr');
     this.shortcutContent.replaceChildren();
-    if(name==='skills'){
-      const list=document.createElement('div');list.className='shortcut-skill-list';
-      for(const skill of SKILLS){const row=document.createElement('div');row.innerHTML=`<span class="art-icon skill-art" style="background-position:${(skill.slot-1)%3*50}% ${Math.floor((skill.slot-1)/3)*50}%"></span><div><strong>${skill.name}</strong><small>${skill.description}</small></div><kbd>${skill.slot}</kbd>`;list.append(row);}
-      this.shortcutContent.append(list);
-    } else if(name==='quests'){
-      const snap=this.progression.snapshot();const p=document.createElement('p');p.className='shortcut-empty';p.textContent=this.#questText(snap);this.shortcutContent.append(p);
-    } else if(name==='map'){
-      const canvas=document.createElement('canvas');canvas.width=canvas.height=270;canvas.className='large-minimap';canvas.getContext('2d').drawImage(document.querySelector('.region-mini'),0,0,270,270);this.shortcutContent.append(canvas);
-    } else {
-      const p=document.createElement('p');p.className='shortcut-empty';p.textContent=name==='friends'?'Henüz arkadaşın yok.':name==='guild'?'Henüz bir loncaya katılmadın.':'Şu anda bir grupta değilsin.';this.shortcutContent.append(p);
+    if(name==='skills') this.shortcutContent.append(this.#skillCodex());
+    else if(name==='quests') this.shortcutContent.append(this.#questCodex());
+    else if(name==='map') this.shortcutContent.append(this.#mapCodex());
+    else if(name==='settings') this.shortcutContent.append(this.#settingsCodex());
+    else {
+      const copy = {
+        friends: "Arkadaş listesi bu sürümde yok. Yakındaki oyuncularla yazışmak için sol alttaki sohbet bu oturumda durur.",
+        guild: "Lonca bu sürümde yok. Kurulum, rütbe ve lonca sohbeti sonraki geliştirmede eklenecek.",
+        party: "Grup bu sürümde yok. Hedefini sol tıkla seçip tek başına savaşabilirsin.",
+      };
+      const p=document.createElement('p');p.className='shortcut-empty';p.textContent=copy[name]||'Bu menü henüz yok.';this.shortcutContent.append(p);
     }
+  }
+
+  #skillCodex() {
+    const groups=[['Temel',[1]],['Kombo ve alan',[2,3,4]],['Hareket',[5,6]],['Kendine',[7,8]],['Nihai',[9]]];
+    const root=document.createElement('div');root.className='codex';
+    for(const [title,slots] of groups){
+      const block=document.createElement('section');block.innerHTML=`<h3>${title}</h3>`;
+      const list=document.createElement('div');list.className='shortcut-skill-list';
+      for(const slot of slots){
+        const skill=SKILLS.find(entry=>entry.slot===slot);
+        const row=document.createElement('div');
+        const remain=this.skillSystem?.remaining?.(slot)||0;
+        row.innerHTML=`<span class="art-icon skill-art" style="background-position:${(slot-1)%3*50}% ${Math.floor((slot-1)/3)*50}%"></span><div><strong>${skill.name}</strong><small>${skill.description}</small><em>${remain>.05?'Beklemede '+remain.toFixed(1)+' sn':'Açık'} · Mana ${skill.mana} · Menzil ${skill.range} m · Hasar ${skill.damage}</em></div><kbd>${slot}</kbd>`;
+        list.append(row);
+      }
+      block.append(list);root.append(block);
+    }
+    return root;
+  }
+
+  #questCodex() {
+    const snap=this.progression.snapshot();
+    const root=document.createElement('div');root.className='codex';
+    const card=(quest,reward,open)=>{
+      const node=document.createElement('article');
+      const done=Boolean(quest.completed);
+      node.className=`quest-card${done?' is-done':''}${open?'':' is-waiting'}`;
+      const progress=open?`${quest.progress} / ${quest.goal}`:done?'Tamamlandı':'Henüz açık değil';
+      node.innerHTML=`<header><strong>${quest.title}</strong><small>${progress}</small></header><div class="quest-track"><i style="width:${Math.min(100,(quest.progress||0)/quest.goal*100)}%"></i></div><p>${reward}</p>`;
+      return node;
+    };
+    root.append(card(snap.quest,`Ödül · ${snap.quest.rewardXp} XP ve sonraki görev`,snap.quest.accepted||snap.quest.completed));
+    root.append(card(snap.secondQuest,'Ödül · Demir Kılıç, 30 altın ve 90 XP',snap.secondQuest.unlocked||snap.secondQuest.completed));
+    const note=document.createElement('p');note.className='panel-hint';note.textContent=snap.bossDefeated?'Kül Muhafızı yenildi.':'Kül Muhafızı, diş görevi bitince Kadim Harabe’de bekler.';root.append(note);
+    return root;
+  }
+
+  #mapCodex() {
+    const root=document.createElement('div');root.className='map-codex';
+    const frame=document.createElement('div');frame.className='map-frame';
+    const canvas=document.createElement('canvas');canvas.width=canvas.height=270;canvas.className='large-minimap';
+    const source=document.querySelector('.region-mini');if(source)canvas.getContext('2d').drawImage(source,0,0,270,270);
+    frame.append(canvas);
+    const tools=document.createElement('div');tools.className='map-tools';
+    const zoom=(dir)=>{frame.style.setProperty('--map-zoom',String(Math.min(2.2,Math.max(1,(Number(frame.style.getPropertyValue('--map-zoom'))||1)+dir))));};
+    for(const [text,dir,label] of [['−',-.25,'Uzaklaştır'],['+',.25,'Yakınlaştır']]){
+      const button=document.createElement('button');button.type='button';button.textContent=text;button.setAttribute('aria-label',label);button.addEventListener('click',()=>zoom(dir));tools.append(button);
+    }
+    const place=document.createElement('p');
+    const region=document.querySelector('.minimap>strong')?.textContent||'Bölge';
+    place.textContent=`${region} · konum ${this.player.position.x.toFixed(0)}, ${this.player.position.z.toFixed(0)}. Kapılar mini haritada işaretli.`;
+    place.className='panel-hint';
+    root.append(tools,frame,place);
+    return root;
+  }
+
+  #settingsCodex() {
+    const root=document.createElement('div');root.className='settings-grid';
+    const quality=document.body.dataset.quality||'medium';
+    const field=(label,control)=>`<label>${label}${control}</label>`;
+    root.innerHTML=[
+      field('Grafik',`<select data-setting="quality"><option value="low">Düşük</option><option value="medium">Orta</option><option value="high">Yüksek</option></select>`),
+      field('Efekt',`<input data-setting="effects" type="range" min="0" max="1" step="0.05" value="${document.getElementById('volume-effects')?.value||.65}">`),
+      field('Müzik',`<input data-setting="music" type="range" min="0" max="1" step="0.05" value="${document.getElementById('volume-music')?.value||.2}">`),
+      field('Ortam',`<input data-setting="ambient" type="range" min="0" max="1" step="0.05" value="${document.getElementById('volume-ambient')?.value||.35}">`),
+    ].join('')+'<p class="panel-hint">Grafik, efekt, müzik ve ortam aynı kayıtla duraklatma menüsüne bağlı. Kontroller sabit: fare yürür, tekerlek yakınlaştırır, sağ tık kamerayı döndürmez.</p>';
+    root.querySelector('[data-setting="quality"]').value=quality;
+    root.querySelector('[data-setting="quality"]').addEventListener('change',event=>this.onQuality(event.target.value));
+    for(const bus of ['effects','music','ambient']) root.querySelector(`[data-setting="${bus}"]`).addEventListener('input',event=>this.onVolume(bus,Number(event.target.value)));
+    return root;
   }
 
   refreshInventory() {
@@ -408,6 +540,14 @@ export class HUD {
     if(this.shortcutPanel)this.shortcutPanel.hidden=true;
     this.preview.hide();
     this.shortcutButtons.forEach(button=>button.classList.remove('active'));
+    for (const panel of [this.inventoryPanel, this.statsPanel, this.shortcutPanel]) {
+      if (!panel) continue;
+      panel.style.left = "";
+      panel.style.top = "";
+      panel.style.right = "";
+      panel.style.transform = "";
+      panel.classList.remove("is-dragging");
+    }
     this.#hideDropDialog();
     this.onPanelChange();
   }
@@ -502,6 +642,9 @@ export class HUD {
     document.removeEventListener("drop", this.onDocDrop);
     this.dropYes?.removeEventListener("click", this.onDropYes);
     this.dropNo?.removeEventListener("click", this.onDropNo);
+    this.root.removeEventListener("pointerdown", this.onPanelDragDown);
+    window.removeEventListener("pointermove", this.onPanelDragMove);
+    window.removeEventListener("pointerup", this.onPanelDragUp);
     this.minimapZoomIn?.removeEventListener('click',this.onMinimapZoom);
     this.minimapZoomOut?.removeEventListener('click',this.onMinimapZoom);
     this.preview.dispose();
@@ -582,11 +725,11 @@ export class HUD {
       button.type = "button";
       button.draggable = Boolean(item);
       const equipped = item && (snap.equipped.weapon === item.id || snap.equipped.armor === item.id);
-      button.className = `inv-slot${item ? "" : " empty"}${snap.selected === index ? " selected" : ""}${equipped ? " equipped" : ""}`;
+      button.className = `inv-slot${item ? "" : " empty"}${snap.selected === index ? " selected" : ""}${equipped ? " equipped" : ""}${item ? ` rarity-${item.rarity || "common"}` : ""}`;
       button.dataset.invSlot = String(index);
       if (item) {
-        const bonus=item.bonuses?Object.entries(item.bonuses).map(([key,value])=>`${key} +${value}`).join(' · '):item.description;
-        button.innerHTML = `${itemArt(item.id)}<span class="inv-name">${item.name}</span><span class="item-tooltip"><strong>${item.name}</strong><small>${item.rarity||'common'} · ${item.type}</small><em>${bonus}</em><b>Satış değeri: ${item.type==='weapon'?20:8} altın</b></span>`;
+        const bonus = bonusText(item);
+        button.innerHTML = `${itemArt(item.id)}<span class="inv-name">${item.name}</span><span class="item-tooltip"><strong>${item.name}</strong><small>${item.rarity === "uncommon" ? "Nadir" : "Sıradan"} · ${item.type}</small><em>${bonus}</em><b>${equipped ? "Kuşanılmış" : "Çift tıkla kullan"}</b></span>`;
         button.title = `${item.name}\n${item.description}`;
       } else {
         button.innerHTML = `<span class="inv-empty" aria-hidden="true"></span>`;
@@ -599,7 +742,20 @@ export class HUD {
       ? `${selected.name} — sürükle taşı / dışarı bırakınca at`
       : "Eşyayı sürükle; dışarı bırakınca yere at.";
     if (this.equipSummary) {
-      this.equipSummary.innerHTML = `<span>${snap.equipped.weapon?itemArt(snap.equipped.weapon):""}<small>Silah<strong>${itemName(snap.equipped.weapon)}</strong></small></span><span>${snap.equipped.armor?itemArt(snap.equipped.armor):""}<small>Zırh<strong>${itemName(snap.equipped.armor)}</strong></small></span>`;
+      const slotHtml = (key, label) => {
+        const id = snap.equipped[key];
+        return `<button type="button" data-equip-slot="${key}">${id ? itemArt(id) : ""}<small>${label}<strong>${itemName(id)}</strong></small></button>`;
+      };
+      this.equipSummary.innerHTML = slotHtml("weapon", "Silah") + slotHtml("armor", "Zırh");
+    }
+    const compare = document.getElementById("gear-compare");
+    if (compare) {
+      const wornId = selected?.slot ? snap.equipped[selected.slot] : null;
+      const worn = wornId ? ITEM_DEFS[wornId] : null;
+      if (selected?.bonuses && worn && worn.id !== selected.id) {
+        compare.hidden = false;
+        compare.innerHTML = `<div><small>Kuşanılan</small><strong>${worn.name}</strong><span>${bonusText(worn)}</span></div><div><small>Seçilen</small><strong>${selected.name}</strong><span>${bonusText(selected)}</span></div>`;
+      } else compare.hidden = true;
     }
     const gold=document.getElementById('inventory-gold');if(gold)gold.textContent=`${snap.gold??this.inventory.gold} ALTIN`;
     document.querySelectorAll('[data-character-name]').forEach(node=>node.textContent=this.player.name);
@@ -623,6 +779,10 @@ export class HUD {
       this.statsList.append(row);
     }
     this.statsSummary.textContent = `Hasar bonus: +${snap.damageBonus.toFixed(0)} • Kritik: %${(snap.critChance * 100).toFixed(0)} • ${snap.unspent} puan`;
+    const readout = document.getElementById("combat-readout");
+    if (readout) {
+      readout.innerHTML = `<span><small>Can</small><b>${this.player.maxHealth}</b></span><span><small>Mana</small><b>${this.player.maxMana}</b></span><span><small>Hasar</small><b>+${snap.damageBonus.toFixed(0)}</b></span><span><small>Kritik</small><b>%${(snap.critChance * 100).toFixed(0)}</b></span>`;
+    }
   }
 
   #minimapPosition(node, position, rotation, isPlayer) {

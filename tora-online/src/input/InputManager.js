@@ -15,7 +15,7 @@ export class InputManager {
     this.onKeyDown = (event) => {
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
       if(event.repeat)return;
-      if(["Escape","KeyI","KeyC"].includes(event.code)){event.preventDefault();if(event.code==="Escape")this.onEscape?.();if(event.code==="KeyI")this.onInventory?.();if(event.code==="KeyC")this.onStats?.();return;}
+      if(["Escape","KeyI","KeyC","KeyK","KeyJ","KeyM"].includes(event.code)){event.preventDefault();if(event.code==="Escape")this.onEscape?.();if(event.code==="KeyI")this.onInventory?.();if(event.code==="KeyC")this.onStats?.();if(event.code==="KeyK")this.onPanel?.("skills");if(event.code==="KeyJ")this.onPanel?.("quests");if(event.code==="KeyM")this.onPanel?.("map");return;}
       if (!this.enabled) return;
       const code = event.code;
       this.keys.add(code);

@@ -92,6 +92,7 @@ export class Game {
       this.inventory = new InventorySystem(this.player, this.stats);
       this.progression = new ProgressionSystem(this.player, this.stats, this.inventory);
       this.camera = new IsometricCamera(this.scene, this.canvas, this.player, GAME_CONFIG.camera);
+      this.#faceView();
 
       console.info("[Tora Startup] 7/10 Animasyon ve combat hazırlanıyor.");
       this.animator = new PlayerAnimator(visual);
@@ -119,6 +120,8 @@ export class Game {
         onPanelChange: () => this.syncInputGate(),
         map: this.map,
         onSettings: () => this.togglePause(),
+        onQuality: (name) => { window.ToraMenu?.applyQuality(name, true); this.applyQuality(name); const pause = document.getElementById("pause-quality"); if (pause) pause.value = name; },
+        onVolume: (bus, value) => { this.audio?.setVolume(bus, value); const input = document.getElementById("volume-" + bus); if (input) input.value = String(value); },
       });
       this.worldUI = new WorldUI(this);
       this.cursor = new CursorManager(this.scene, this.canvas, this.player, this.entities);
@@ -222,6 +225,12 @@ export class Game {
     this.map?.applyQuality(this.runtime.profile, name);
   }
 
+  #faceView() {
+    const ahead = this.camera?.forwardOnGround();
+    if (!ahead || !this.player) return;
+    this.player.face(this.player.position.add(ahead));
+  }
+
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
@@ -292,6 +301,10 @@ export class Game {
     this.input.onStats = () => {
       if (!this.running || this.paused) return;
       this.hud.togglePanel("stats");
+    };
+    this.input.onPanel = (name) => {
+      if (!this.running || this.paused || !this.worldUI.modal.hidden) return;
+      this.hud.togglePanel(name);
     };
     this.input.onClearTarget = () => {
       if (!this.running || this.paused) return;
@@ -510,7 +523,7 @@ export class Game {
       this.entities.reset(world.spawns,visuals);this.hud.syncEntities();
       this.player.position.copyFrom(world.spawn);this.player.respawnPoint=world.spawn.clone();this.player.velocity.setAll(0);this.player.grounded=true;this.player.verticalVelocity=0;
       this.map.addShadowCaster(this.player.root);for(const mob of this.entities.mobs)this.map.addShadowCaster(mob.root);
-      this.#disarm();this.camera.snap(world.spawn);this.worldUI.setRegion();
+      this.#disarm();this.camera.snap(world.spawn);this.#faceView();this.worldUI.setRegion();
       this.hud.setStatus(REGIONS[id].name+' · Bölge hazır');
     } catch(error) {console.error('[Tora Region]',error);this.hud.setStatus('Bölge yüklenemedi: '+error.message);}
     finally {this.transitioning=false;this.paused=false;this.input.enabled=true;this.worldUI.loading(false);this.canvas.focus();this.lastTime=performance.now();}

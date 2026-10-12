@@ -37,7 +37,9 @@ export class AssetManager {
     if (!loaded.skeletons.length) throw new Error("Oyuncu GLB içinde iskelet bulunamadı; fallback kapalı.");
     const root = this.#wrap("player-model-root", loaded.meshes, loaded.transformNodes);
     root.scaling.setAll(this.manifest.player.scale || 1);
-    root.metadata = { assetType: "rigged-gltf" };
+    // The glTF root already converts the Z-up bind into a Y-up mesh that faces +Z.
+    // Gameplay yaw uses the same axis (atan2(x, z)), so no extra pivot is applied.
+    root.metadata = { assetType: "rigged-gltf", facingOffset: 0 };
     const skeleton = loaded.skeletons[0];
     console.info(`[Tora Animations] Oyuncu iskeleti: ${skeleton.name || "isimsiz"}, ${skeleton.bones.length} kemik.`);
     // glTF skinning is driven by each Bone's linked TransformNode. Prefer that

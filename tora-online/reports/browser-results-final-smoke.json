@@ -1,11 +1,11 @@
 {
-  "date": "2026-10-12T11:47:22.712Z",
-  "url": "http://127.0.0.1:57725/",
+  "date": "2026-10-12T12:19:34.284Z",
+  "url": "http://127.0.0.1:63288/",
   "softwareCI": false,
   "soakSeconds": 0,
   "checks": [
     "Şifresiz profil, ilk yükleme, raster portre ve dokuz atlas ikon",
-    "WASD hareket",
+    "WASD hareket ve karakter kamerayla aynı yöne bakar",
     "Sabit izometrik kamera, sağ tık dönüş yok, zoom sınırları",
     "Zıplama, havada kalma ve iniş",
     "Sol tıkla yürüme, basılı tutarak ilerleme ve WASD ile yol iptali",
@@ -42,34 +42,34 @@
     "tora-1-Sword_Heavy_Combo"
   ],
   "ikSamples": [
-    0.029128627854254047,
-    0.00016208282473238384,
-    0.045227293179188915,
-    0.00032583080668100443,
-    0.024095674796963343,
-    0.05052902327164641,
-    0.006276230618391653,
-    0.013521222510611905,
-    0.009033277947886062
+    0.029065035253671247,
+    0.0001991083497016194,
+    0.0455949186086573,
+    0.00031910001441457983,
+    0.024066613398261036,
+    0.05039652878818888,
+    0.0063263603332872,
+    0.012919492649972887,
+    0.009315762720374227
   ],
   "fps": [
     {
       "quality": "low",
       "width": 1920,
       "height": 1080,
-      "fps": 59.9520383703759
+      "fps": 59.98800239844737
     },
     {
       "quality": "medium",
       "width": 1920,
       "height": 1080,
-      "fps": 60.000000000000135
+      "fps": 60.01200239976418
     },
     {
       "quality": "high",
       "width": 1920,
       "height": 1080,
-      "fps": 60.01200239976467
+      "fps": 59.9880023984472
     }
   ],
   "errors": [],
