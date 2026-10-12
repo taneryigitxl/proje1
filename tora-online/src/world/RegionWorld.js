@@ -10,7 +10,7 @@ export const REGIONS = Object.freeze({
 export class RegionWorld {
   constructor(scene,navigation,profile,quality='medium') {
     this.scene=scene;this.navigation=navigation;this.profile=profile;this.quality=quality;this.roots=[];this.owned=[];this.cullTimer=0;
-    this.region='village';this.assets=null;this.grass=null;
+    this.region='village';this.assets=null;this.grass=null;this.chests=[];
   }
   async build(assets,{id='village'}={}) { this.assets=assets;this.#lighting();return this.load(id); }
   async load(id) {
@@ -79,7 +79,11 @@ export class RegionWorld {
     }
   }
   async place(key,name,x,z,yaw=0,scale=1,metadata=null,obstacle=0,elevation=0) {
-    const root=await this.assets.instantiateStatic(key,name,new BABYLON.Vector3(x,0,z),yaw,scale,metadata);
+    const position=new BABYLON.Vector3(x,0,z);
+    const root=key==='chest'
+      ?await this.assets.instantiateChest(name,position,yaw,scale,metadata,()=>this.onChestOpen?.(name))
+      :await this.assets.instantiateStatic(key,name,position,yaw,scale,metadata);
+    if(key==='chest')this.chests.push(root.metadata.chestState);
     root.computeWorldMatrix(true);const bounds=root.getHierarchyBoundingVectors(true);
     root.position.y=this.heightAt(x,z)-bounds.min.y+elevation;
     root.getChildMeshes(false).forEach(m=>{if(m instanceof BABYLON.InstancedMesh)m.sourceMesh.receiveShadows=true;else m.receiveShadows=true;m.isPickable=Boolean(metadata);});
@@ -175,8 +179,8 @@ export class RegionWorld {
   getGrassStats() { return this.grass?.getStats() || {}; }
   clear() {
     this.grass?.dispose();this.grass=null;
-    for(const root of this.roots){root.metadata?.animationGroups?.forEach(g=>g.dispose());root.metadata?.skeletons?.forEach(s=>s.dispose());root.getChildMeshes(false).forEach(m=>this.shadowGenerator?.removeShadowCaster(m,false));root.dispose(false,false);}this.roots=[];
-    for(const mat of this.owned)mat.dispose(false,true);this.owned=[];this.npc=null;this.waterMaterial=null;
+    for(const root of this.roots){root.metadata?.chestState?.dispose();root.metadata?.animationGroups?.forEach(g=>g.dispose());root.metadata?.skeletons?.forEach(s=>s.dispose());root.getChildMeshes(false).forEach(m=>this.shadowGenerator?.removeShadowCaster(m,false));root.dispose(false,false);}this.roots=[];
+    for(const mat of this.owned)mat.dispose(false,true);this.owned=[];this.npc=null;this.waterMaterial=null;this.chests=[];
   }
   dispose() {this.clear();this.shadowGenerator?.dispose();this.hemi?.dispose();this.sun?.dispose();}
   #random(seed) {return ()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};}

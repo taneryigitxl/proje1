@@ -2,6 +2,20 @@ import { itemArt } from "./Art.js";
 import { SkillBar } from "./SkillBar.js";
 import { TargetFrame } from "./TargetFrame.js";
 import { ITEM_DEFS } from "../progression/InventorySystem.js";
+import { SKILLS } from "../core/Config.js";
+import { CharacterPreview } from "./CharacterPreview.js";
+
+const SHORTCUTS = [
+  ['stats','Karakter','C','M12 3a4 4 0 1 0 4 4 4 4 0 0 0-4-4 4-4Zm-8 17v-2a8 8 0 0 1 16 0v2'],
+  ['inventory','Envanter','I','M4 8h16l-1 12H5L4 8Zm4 0V6a4 4 0 0 1 8 0v2'],
+  ['skills','Yetenekler','K','m5 19 14-14M9 5l10 10M4 14l6 6'],
+  ['quests','Görevler','J','M6 3h12v18H6zM9 8h6M9 12h6M9 16h4'],
+  ['friends','Arkadaşlar','—','M8 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm8-1a2.5 2.5 0 1 0 0-5M2 20v-2a6 6 0 0 1 12 0v2Zm13-6a5 5 0 0 1 7 5v1h-5'],
+  ['guild','Lonca','—','M12 2 4 5v6c0 5 3 8 8 11 5-3 8-6 8-11V5l-8-3Zm0 5v10m-4-6h8'],
+  ['party','Grup','—','M12 10a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5ZM4 11a2 2 0 1 0 0-4m16 4a2 2 0 1 1 0-4M7 20v-2a5 5 0 0 1 10 0v2M1 20v-2a4 4 0 0 1 4-4m18 6v-2a4 4 0 0 0-4-4'],
+  ['map','Harita','M','m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2V5Zm6-2v16m6-14v16'],
+  ['settings','Ayarlar','Esc','M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm0-13 1 2 2 .5 2-1 2 2-1 2 .5 2 2 1v3l-2 1-.5 2 1 2-2 2-2-1-2 .5-1 2h-3l-1-2-2-.5-2 1-2-2 1-2-.5-2-2-1v-3l2-1 .5-2-1-2 2-2 2 1 2-.5 1-2h3Z'],
+];
 
 function itemName(id) {
   return ITEM_DEFS[id]?.name || id || "—";
@@ -16,6 +30,8 @@ export class HUD {
     this.progression = progression;
     this.stats = stats;
     this.inventory = inventory;
+    this.map = options.map;
+    this.onSettings = options.onSettings || (()=>{});
     this.onDropItem = options.onDropItem || null;
     this.onPanelChange = options.onPanelChange || (()=>{});
     this.root = document.getElementById("hud");
@@ -45,11 +61,29 @@ export class HUD {
     this.damageCursor = 0;
     this.minimapPlayer = document.getElementById("minimap-player");
     this.minimapMobs = document.getElementById("minimap-mobs");
+    this.minimapSites = document.getElementById("minimap-sites");
+    this.minimapContent = document.getElementById("minimap-content");
+    this.minimapZoom = 1;
+    this.minimapZoomIn = document.getElementById('minimap-zoom-in');
+    this.minimapZoomOut = document.getElementById('minimap-zoom-out');
     this.chatLog = document.getElementById("chat-log");
     this.chatForm = document.getElementById("chat-form");
     this.chatInput = document.getElementById("chat-input");
     this.inventoryPanel = document.getElementById("inventory-panel");
     this.statsPanel = document.getElementById("stats-panel");
+    this.shortcutPanel = document.getElementById('shortcut-panel');
+    this.shortcutTitle = document.getElementById('shortcut-title');
+    this.shortcutContent = document.getElementById('shortcut-content');
+    this.shortcutBar = document.getElementById('shortcut-bar');
+    this.preview = new CharacterPreview(scene, player);
+    this.shortcutButtons = new Map();
+    const glyphs={stats:'♙',inventory:'▣',skills:'✦',quests:'✧',friends:'♧',guild:'⚑',party:'♟',map:'⌖',settings:'⚙'};
+    for(const [id,label,key] of SHORTCUTS){
+      const button=document.createElement('button');button.type='button';button.className='shortcut-button';button.dataset.shortcut=id;
+      button.setAttribute('aria-label',`${label} · ${key}`);
+      button.innerHTML=`<span class="shortcut-glyph" aria-hidden="true">${glyphs[id]}</span><span class="shortcut-tip">${label}<small>${key}</small></span><i class="shortcut-badge" hidden></i>`;
+      this.shortcutBar.append(button);this.shortcutButtons.set(id,button);
+    }
     this.inventoryGrid = document.getElementById("inventory-grid");
     this.inventoryHint = document.getElementById("inventory-hint");
     this.statsList = document.getElementById("stats-list");
@@ -80,6 +114,8 @@ export class HUD {
       this.#labelFor(mob);
       const dot = document.createElement("i");
       dot.dataset.entityId = mob.id;
+      dot.className=mob.definition?.boss?'boss':mob.level>1?'elite':'';
+      dot.title=mob.name;
       this.minimapMobs.append(dot);
     }
 
@@ -97,6 +133,12 @@ export class HUD {
       }
     };
     this.onPanelClick = (event) => {
+      const shortcut=event.target.closest('[data-shortcut]');
+      if(shortcut){
+        const name=shortcut.dataset.shortcut;
+        if(name==='settings')this.onSettings();else this.togglePanel(name);
+        return;
+      }
       const close = event.target.closest("[data-close]");
       if (close) {
         this.togglePanel(close.dataset.close, false);
@@ -193,6 +235,12 @@ export class HUD {
     this.onDropNo = () => this.#hideDropDialog();
 
     this.chatForm.addEventListener("submit", this.onChatSubmit);
+    this.onMinimapZoom = event => {
+      this.minimapZoom = BABYLON.Scalar.Clamp(this.minimapZoom + (event.currentTarget===this.minimapZoomIn ? .3 : -.3), 1, 1.9);
+      this.minimapContent.style.transform=`scale(${this.minimapZoom})`;
+    };
+    this.minimapZoomIn?.addEventListener('click',this.onMinimapZoom);
+    this.minimapZoomOut?.addEventListener('click',this.onMinimapZoom);
     addEventListener("keydown", this.onGlobalKeyDown);
     this.root.addEventListener("click", this.onPanelClick);
     this.inventoryGrid?.addEventListener("dragstart", this.onDragStart);
@@ -205,12 +253,26 @@ export class HUD {
     this.dropNo?.addEventListener("click", this.onDropNo);
     this.#renderInventory();
     this.#renderStats();
+    this.refreshMinimapSites();
     this.applyIdentity({ username: player.name, isAdmin: player.isAdmin });
   }
 
   syncEntities() {
     for(const node of this.labels.values())node.remove();this.labels.clear();this.minimapMobs.replaceChildren();
-    for(const mob of this.entities.mobs){this.#labelFor(mob);const dot=document.createElement('i');dot.dataset.entityId=mob.id;dot.classList.toggle('boss',Boolean(mob.boss||mob.name.includes('Muhafız')));this.minimapMobs.append(dot);}
+    this.minimapDots=new Map();
+    for(const mob of this.entities.mobs){this.#labelFor(mob);const dot=document.createElement('i');dot.dataset.entityId=mob.id;dot.classList.toggle('boss',Boolean(mob.definition?.boss));dot.classList.toggle('elite',mob.level>1&&!mob.definition?.boss);dot.title=mob.name;this.minimapMobs.append(dot);this.minimapDots.set(mob.id,dot);}
+    this.refreshMinimapSites();
+  }
+  refreshMinimapSites() {
+    if(!this.minimapSites||!this.map?.definition)return;
+    this.minimapSites.replaceChildren();
+    const add=(kind,name,x,z,glyph)=>{
+      const icon=document.createElement('span');icon.className='mini-site '+kind;icon.textContent=glyph;icon.title=name;
+      this.minimapSites.append(icon);this.#minimapPosition(icon,{x,z},0,false);
+    };
+    for(const exit of this.map.definition.exits)add('portal',exit.name,exit.x,exit.z,'⌂');
+    if(this.map.npc){const {x,z}=this.map.npc.position;add('quest','Demirci Ayame · Görev',x,z,'!');}
+    for(const chest of this.map.chests||[]){const {x,z}=chest.root.position;add('chest','Sandık',x,z,'▣');}
   }
   applyIdentity(identity) {
     const name = identity?.username || this.player.name || "Oyuncu";
@@ -302,12 +364,35 @@ export class HUD {
     if (!next) return;
     this.openPanel = name;
     this.onPanelChange();
+    this.shortcutButtons.forEach((button,id)=>button.classList.toggle('active',id===name));
     if (name === "inventory") {
       this.inventoryPanel.hidden = false;
       this.#renderInventory();
+      this.preview.attach(document.getElementById('inventory-preview-host'));
     } else if (name === "stats") {
       this.statsPanel.hidden = false;
       this.#renderStats();
+      this.preview.attach(document.getElementById('stats-preview-host'));
+    } else {
+      this.shortcutPanel.hidden=false;
+      this.#renderShortcutPanel(name);
+    }
+  }
+
+  #renderShortcutPanel(name) {
+    const label=SHORTCUTS.find(entry=>entry[0]===name)?.[1]||'Menü';
+    this.shortcutTitle.textContent=label.toLocaleUpperCase('tr');
+    this.shortcutContent.replaceChildren();
+    if(name==='skills'){
+      const list=document.createElement('div');list.className='shortcut-skill-list';
+      for(const skill of SKILLS){const row=document.createElement('div');row.innerHTML=`<span class="art-icon skill-art" style="background-position:${(skill.slot-1)%3*50}% ${Math.floor((skill.slot-1)/3)*50}%"></span><div><strong>${skill.name}</strong><small>${skill.description}</small></div><kbd>${skill.slot}</kbd>`;list.append(row);}
+      this.shortcutContent.append(list);
+    } else if(name==='quests'){
+      const snap=this.progression.snapshot();const p=document.createElement('p');p.className='shortcut-empty';p.textContent=this.#questText(snap);this.shortcutContent.append(p);
+    } else if(name==='map'){
+      const canvas=document.createElement('canvas');canvas.width=canvas.height=270;canvas.className='large-minimap';canvas.getContext('2d').drawImage(document.querySelector('.region-mini'),0,0,270,270);this.shortcutContent.append(canvas);
+    } else {
+      const p=document.createElement('p');p.className='shortcut-empty';p.textContent=name==='friends'?'Henüz arkadaşın yok.':name==='guild'?'Henüz bir loncaya katılmadın.':'Şu anda bir grupta değilsin.';this.shortcutContent.append(p);
     }
   }
 
@@ -319,6 +404,9 @@ export class HUD {
     this.openPanel = null;
     if (this.inventoryPanel) this.inventoryPanel.hidden = true;
     if (this.statsPanel) this.statsPanel.hidden = true;
+    if(this.shortcutPanel)this.shortcutPanel.hidden=true;
+    this.preview.hide();
+    this.shortcutButtons.forEach(button=>button.classList.remove('active'));
     this.#hideDropDialog();
     this.onPanelChange();
   }
@@ -327,7 +415,12 @@ export class HUD {
     const stamp=performance.now(); if(stamp-(this._uiStamp||0)<50)return;this._uiStamp=stamp;
     const p = this.player;
     const progress = this.progression.snapshot();
-    this.hpBar.style.width = `${Math.max(0, p.health / p.maxHealth) * 100}%`;
+    const hpPercent=Math.max(0,p.health/p.maxHealth)*100;
+    if(this.hpBar.style.width!==`${hpPercent}%`)this.hpBar.style.width=`${hpPercent}%`;
+    const lag=document.getElementById('player-hp-lag');if(lag&&lag.style.width!==`${hpPercent}%`)lag.style.width=`${hpPercent}%`;
+    if(this.previousHp!=null&&p.health<this.previousHp){const frame=document.querySelector('.player-frame');frame.classList.remove('taking-hit');void frame.offsetWidth;frame.classList.add('taking-hit');}
+    else if(this.previousHp!=null&&p.health>this.previousHp){const frame=document.querySelector('.player-frame');frame.classList.remove('healing');void frame.offsetWidth;frame.classList.add('healing');}
+    this.previousHp=p.health;
     this.hpText.textContent = `${Math.ceil(p.health)} / ${p.maxHealth}`;
     this.manaBar.style.width = `${Math.max(0, p.mana / p.maxMana) * 100}%`;
     this.manaText.textContent = `${Math.floor(p.mana)} / ${p.maxMana}`;
@@ -374,10 +467,11 @@ export class HUD {
     this.skillBar.update(this.skillSystem, p, this.entities.selected);
     this.fps.textContent = `${this.engine.getFps().toFixed(0)} FPS`;
     this.#updateBuffs();
+    this.preview.update(stamp);
     this.#minimapPosition(this.minimapPlayer, p.position, p.rotation, true);
     for (const mob of this.entities.mobs) {
       const node = this.labels.get(mob.id);
-      const dot = this.minimapMobs.querySelector(`[data-entity-id="${mob.id}"]`);
+      const dot = this.minimapDots?.get(mob.id)||this.minimapMobs.querySelector(`[data-entity-id="${mob.id}"]`);
       node.hidden = !mob.alive;
       dot.hidden = !mob.alive;
       if (!mob.alive) continue;
@@ -411,6 +505,9 @@ export class HUD {
     document.removeEventListener("drop", this.onDocDrop);
     this.dropYes?.removeEventListener("click", this.onDropYes);
     this.dropNo?.removeEventListener("click", this.onDropNo);
+    this.minimapZoomIn?.removeEventListener('click',this.onMinimapZoom);
+    this.minimapZoomOut?.removeEventListener('click',this.onMinimapZoom);
+    this.preview.dispose();
     this.skillBar.dispose();
     for (const node of this.labels.values()) node.remove();
     for (const node of this.damagePool) node.remove();
@@ -466,11 +563,17 @@ export class HUD {
 
   #updateBuffs() {
     if (!this.buffBar) return;
-    const buffs = [];
-    if (this.player.buffs?.guard > 0) buffs.push(`<span class="buff guard">Savunma ${this.player.buffs.guard.toFixed(0)}s</span>`);
-    if (this.player.buffs?.rage > 0) buffs.push(`<span class="buff rage">Öfke ${this.player.buffs.rage.toFixed(0)}s</span>`);
-    const markup=buffs.join("");if(this.buffBar.innerHTML!==markup)this.buffBar.innerHTML=markup;
-    this.buffBar.hidden = buffs.length === 0;
+    const defs=[['guard','Savaşçı Savunması','Alınan hasarı azaltır.','assets/vfx/wind.webp'],['rage','Öfke','Saldırı ve hareket hızını artırır.','assets/vfx/rage.webp']];
+    for(const [type,name,description,image] of defs){
+      let node=this.buffBar.querySelector(`[data-buff="${type}"]`);
+      const seconds=Number(this.player.buffs?.[type]||0);
+      if(seconds<=0){node?.remove();continue;}
+      if(!node){node=document.createElement('span');node.className=`buff ${type}`;node.dataset.buff=type;node.innerHTML=`<span class="buff-icon" style="background-image:url('${image}')"></span><i class="buff-cooldown"></i><b class="buff-seconds"></b><span class="buff-tooltip"><strong>${name}</strong><small>${description}</small><em></em></span>`;this.buffBar.append(node);}
+      node.querySelector('.buff-seconds').textContent=seconds.toFixed(1);
+      node.querySelector('.buff-cooldown').style.setProperty('--buff-angle',`${Math.min(1,seconds/(type==='guard'?6:8))*360}deg`);
+      node.querySelector('.buff-tooltip em').textContent=`Kalan süre: ${seconds.toFixed(1)} sn`;
+    }
+    this.buffBar.hidden=!this.buffBar.children.length;
   }
 
   #renderInventory() {
@@ -485,7 +588,8 @@ export class HUD {
       button.className = `inv-slot${item ? "" : " empty"}${snap.selected === index ? " selected" : ""}${equipped ? " equipped" : ""}`;
       button.dataset.invSlot = String(index);
       if (item) {
-        button.innerHTML = `${itemArt(item.id)}<span class="inv-name">${item.name}</span>`;
+        const bonus=item.bonuses?Object.entries(item.bonuses).map(([key,value])=>`${key} +${value}`).join(' · '):item.description;
+        button.innerHTML = `${itemArt(item.id)}<span class="inv-name">${item.name}</span><span class="item-tooltip"><strong>${item.name}</strong><small>${item.rarity||'common'} · ${item.type}</small><em>${bonus}</em><b>Satış değeri: ${item.type==='weapon'?20:8} altın</b></span>`;
         button.title = `${item.name}\n${item.description}`;
       } else {
         button.innerHTML = `<span class="inv-empty" aria-hidden="true"></span>`;
@@ -500,6 +604,9 @@ export class HUD {
     if (this.equipSummary) {
       this.equipSummary.innerHTML = `<span>${snap.equipped.weapon?itemArt(snap.equipped.weapon):""}<small>Silah<strong>${itemName(snap.equipped.weapon)}</strong></small></span><span>${snap.equipped.armor?itemArt(snap.equipped.armor):""}<small>Zırh<strong>${itemName(snap.equipped.armor)}</strong></small></span>`;
     }
+    const gold=document.getElementById('inventory-gold');if(gold)gold.textContent=`${snap.gold??this.inventory.gold} ALTIN`;
+    document.querySelectorAll('[data-character-name]').forEach(node=>node.textContent=this.player.name);
+    document.querySelectorAll('[data-character-level]').forEach(node=>node.textContent=this.progression.snapshot().level);
     if (this.useItemButton) this.useItemButton.disabled = snap.selected < 0;
   }
 

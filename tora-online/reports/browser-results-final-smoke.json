@@ -1,6 +1,6 @@
 {
-  "date": "2026-10-12T06:08:10.136Z",
-  "url": "http://127.0.0.1:52398/",
+  "date": "2026-10-12T07:31:00.807Z",
+  "url": "http://127.0.0.1:49568/",
   "softwareCI": false,
   "soakSeconds": 0,
   "checks": [
@@ -17,6 +17,8 @@
     "Köyden ormana gerçek kapı geçişi",
     "TAB hedef seçimi ve menzil dışından güvenli yaklaşarak saldırı",
     "1–9 yetenekler: dokuz ayrı rig klibi, hasar anı, mana tüketimi, cooldown ve buff",
+    "Savunma kalkanı, öfke silah parçacığı ve gerçek buff ikonları",
+    "Buff VFX ve ikon sayaçları ortak süre state ile kapanıyor",
     "Yetersiz mana durumu saldırıyı reddediyor",
     "Hedef ölümü, yeni hedef ve loot oluşumu",
     "Dolu envanterde loot kaybolmuyor; boş yer açılınca alınabiliyor (kontrollü fixture)",
@@ -24,6 +26,7 @@
     "Ormandan harabeye geçiş ve farklı boss ekipmanı",
     "1920×1080 yeniden boyutlandırma, üç kalite profili ve bağımsız ses ayarları",
     "Kayıt, bölge ve konum geri yükleme",
+    "Sandık CLOSED → OPENING → OPEN → LOOTED: tek animasyon, tek ses ve tekrar açılmama",
     "Console error, uncaught promise, 404 ve başarısız asset isteği yok"
   ],
   "castStates": [
@@ -38,34 +41,34 @@
     "tora-1-Sword_Heavy_Combo"
   ],
   "ikSamples": [
-    0.028402112321321338,
-    0.00021094522810496757,
-    0.0455421998509373,
-    0.0003306089254079463,
-    0.02418142910823235,
-    0.05037675995014755,
-    0.010150485652325188,
-    0.007995744477208149,
-    0.009418466125365585
+    0.028286123246777938,
+    0.0002715923429151362,
+    0.045907827750468956,
+    0.0001673599052117692,
+    0.023979147472191587,
+    0.05052907076991091,
+    0.005797419790389262,
+    0.015879502796227407,
+    0.00930607649232593
   ],
   "fps": [
     {
       "quality": "low",
       "width": 1920,
       "height": 1080,
-      "fps": 59.988002399341504
+      "fps": 60.000000000000455
     },
     {
       "quality": "medium",
       "width": 1920,
       "height": 1080,
-      "fps": 60.03602161350505
+      "fps": 59.988002399341894
     },
     {
       "quality": "high",
       "width": 1920,
       "height": 1080,
-      "fps": 59.97600959669769
+      "fps": 60.03602161261026
     }
   ],
   "errors": [],

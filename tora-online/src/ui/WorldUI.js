@@ -10,7 +10,7 @@ export class WorldUI {
     this.loader=document.createElement('div');this.loader.className='region-loading';this.loader.hidden=true;document.body.append(this.loader);
     this.onClick=e=>{
       const action=e.target.closest('[data-world-action]')?.dataset.worldAction;if(!action)return;
-      if((action==='npc'||action.startsWith('travel:'))&&(!game.running||game.paused||game.hud.openPanel||!this.modal.hidden))return;
+      if((action==='npc'||action.startsWith('travel:')||action.startsWith('chest:'))&&(!game.running||game.paused||game.hud.openPanel||!this.modal.hidden))return;
       if(action==='close')this.close();
       if(action==='npc') {
         if(BABYLON.Vector3.Distance(game.player.position,game.map.npc.position)<=4)this.openNpc();
@@ -21,13 +21,20 @@ export class WorldUI {
         if(Math.hypot(game.player.position.x-exit.x,game.player.position.z-exit.z)<5)void game.switchRegion(exit.id);
         else {game.combat.playerCombat.cancelApproach();game.player.setDestination(new BABYLON.Vector3(exit.x,0,exit.z));game.hud.setStatus('Kapıya yaklaş ve yeniden tıkla.');}
       }
+      if(action.startsWith('chest:'))game.interactChest(game.map.chests.find(chest=>chest.id===action.slice(6)));
       if(action==='quest'){game.progression.acceptQuest();this.openNpc();}
       if(action==='claim'){const result=game.progression.claimCollector();game.hud.setStatus(result.message);this.openNpc();}
       if(action.startsWith('buy:')){game.hud.setStatus(game.inventory.buy(action.slice(4))?'Eşya satın alındı.':'Altın veya çantada yer yetersiz.');game.hud.refreshInventory();this.openNpc();}
     };
     this.modal.addEventListener('click',this.onClick);
     this.landmarks.addEventListener('click',this.onClick);
-    this.onKey=e=>{if(e.code==='Escape'&&!this.modal.hidden){e.preventDefault();this.close();}};window.addEventListener('keydown',this.onKey);
+    this.onKey=e=>{
+      if(e.code==='Escape'&&!this.modal.hidden){e.preventDefault();this.close();return;}
+      if(e.code==='KeyE'&&!e.repeat&&!(e.target instanceof HTMLInputElement)&&!game.hud.openPanel&&this.modal.hidden){
+        const nearest=(this.markers||[]).filter(m=>!m.button.hidden).sort((a,b)=>a.distance-b.distance)[0];
+        if(nearest){e.preventDefault();nearest.button.click();}
+      }
+    };window.addEventListener('keydown',this.onKey);
     this.canvas=document.createElement('canvas');this.canvas.width=this.canvas.height=180;this.canvas.className='region-mini';document.querySelector('.minimap-map').prepend(this.canvas);
     this.setRegion();
   }
@@ -39,8 +46,10 @@ export class WorldUI {
     document.querySelector('.minimap>span').textContent='Kapıya yaklaş · sol tık ile geç';
     this.drawMinimap();
     this.landmarks.replaceChildren();this.markers=[];
-    for(const exit of def.exits)this.#marker(exit.name+' →','travel:'+exit.id,new BABYLON.Vector3(exit.x,this.game.map.heightAt(exit.x,exit.z)+2.5,exit.z));
-    if(this.game.map.npc)this.#marker('Ayame · Görev / Dükkân','npc',this.game.map.npc.position.add(new BABYLON.Vector3(0,2.1,0)));
+    for(const exit of def.exits)this.#marker(exit.name+' →','travel:'+exit.id,new BABYLON.Vector3(exit.x,this.game.map.heightAt(exit.x,exit.z)+2.5,exit.z),'Geçiş Yap');
+    if(this.game.map.npc)this.#marker('Ayame · Görev / Dükkân','npc',this.game.map.npc.position.add(new BABYLON.Vector3(0,2.1,0)),'Konuş','Ayame · Demirci');
+    for(const chest of this.game.map.chests||[])this.#marker('Sandık · '+chest.id,'chest:'+chest.id,chest.root.position.add(new BABYLON.Vector3(0,1.5,0)),'Sandığı Aç');
+    this.game.hud?.refreshMinimapSites();
   }
   drawMinimap() {
     const ctx=this.canvas.getContext('2d'),world=this.game.map,size=180,at=v=>(v+25)/50*size,atz=v=>(25-v)/50*size;
@@ -59,14 +68,27 @@ export class WorldUI {
     if(world.npc){const x=at(world.npc.position.x),y=atz(world.npc.position.z);ctx.font='bold 15px Georgia';ctx.textAlign='center';ctx.fillStyle='#ecd194';ctx.strokeStyle='#24352a';ctx.lineWidth=2;ctx.strokeText('!',x,y+4);ctx.fillText('!',x,y+4);}
     ctx.strokeStyle='#4a4431';ctx.lineWidth=2;ctx.strokeRect(1,1,178,178);ctx.font='9px Georgia';ctx.fillStyle='#e2d3af';ctx.textAlign='left';ctx.fillText('K',7,13);
   }
-  #marker(text,action,position) {const button=document.createElement('button');button.textContent=text;button.dataset.worldAction=action;this.landmarks.append(button);this.markers.push({button,position});}
+  #marker(text,action,position,prompt,nameplate='') {
+    const button=document.createElement('button');button.type='button';button.className='interaction-prompt';button.setAttribute('aria-label',text);button.innerHTML=`<kbd>E</kbd><span>${prompt}</span>`;button.dataset.worldAction=action;button.hidden=true;
+    const label=nameplate?document.createElement('small'):null;if(label){label.className='npc-nameplate';label.textContent=nameplate;this.landmarks.append(label);}
+    this.landmarks.append(button);this.markers.push({button,label,position,action,distance:Infinity});
+  }
   update() {
     const now=performance.now();if(now-(this.stamp||0)<80)return;this.stamp=now;
     const gold=this.game.inventory.gold+' altın';if(this.goldText&&this.goldText.textContent!==gold)this.goldText.textContent=gold;
     const engine=this.game.engine,cam=this.game.camera.camera,canvas=this.game.canvas;
     const width=engine.getRenderWidth(),height=engine.getRenderHeight(),viewport=cam.viewport.toGlobal(width,height);
-    for(const marker of this.markers||[]){const p=BABYLON.Vector3.Project(marker.position,BABYLON.Matrix.IdentityReadOnly,this.game.scene.getTransformMatrix(),viewport);const dist=BABYLON.Vector3.Distance(marker.position,this.game.player.position);
-      marker.button.hidden=p.z<0||p.z>1||(!marker.button.dataset.worldAction.startsWith("travel:")&&dist>26);const sx=p.x/width*canvas.clientWidth,sy=p.y/height*canvas.clientHeight,gate=marker.button.dataset.worldAction.startsWith('travel:');marker.button.style.left=(gate?BABYLON.Scalar.Clamp(sx,100,canvas.clientWidth-230):sx)+'px';marker.button.style.top=(gate?BABYLON.Scalar.Clamp(sy,185,canvas.clientHeight-165):sy)+'px';}
+    for(const marker of this.markers||[]){
+      const p=BABYLON.Vector3.Project(marker.position,BABYLON.Matrix.IdentityReadOnly,this.game.scene.getTransformMatrix(),viewport);
+      const dist=BABYLON.Vector3.Distance(marker.position,this.game.player.position);marker.distance=dist;
+      const sx=p.x/width*canvas.clientWidth,sy=p.y/height*canvas.clientHeight;
+      const visible=p.z>0&&p.z<1&&sx>30&&sx<canvas.clientWidth-30&&sy>30&&sy<canvas.clientHeight-65;
+      const chest=marker.action.startsWith('chest:')?this.game.map.chests.find(c=>c.id===marker.action.slice(6)):null;
+      const show=visible&&dist<5.4&&!this.game.hud.openPanel&&this.modal.hidden&&chest?.state!=='LOOTED';
+      marker.button.hidden=!show;
+      if(show){marker.button.style.left=Math.round(sx)+'px';marker.button.style.top=Math.round(sy)+'px';}
+      if(marker.label){marker.label.hidden=!visible||dist>22;if(!marker.label.hidden){marker.label.style.left=Math.round(sx)+'px';marker.label.style.top=Math.round(sy-37)+'px';}}
+    }
   }
   loading(value,text='Bölge yükleniyor…') {this.loader.hidden=!value;this.loader.textContent=text;}
   openNpc() {

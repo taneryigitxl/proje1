@@ -16,12 +16,12 @@ async function ready(){
  await page.waitForFunction(()=>window.__TORA_BOOTSTRAP__?.game?.running,null,{timeout:90000});await wait(500);
 }
 async function travel(name,region){
- const marker=page.getByRole('button',{name,exact:true});await marker.click();
+ const marker=page.getByRole('button',{name,exact:true});const action=region=>game(region=>document.querySelector(`[data-world-action="travel:${region}"]`).click(),region);await action(region);
  await page.waitForFunction(region=>{const g=window.__TORA_BOOTSTRAP__.game;if(g.map.region===region&&!g.transitioning)return true;const e=g.map.definition.exits.find(e=>e.id===region);return e&&Math.hypot(g.player.position.x-e.x,g.player.position.z-e.z)<4.8;},region,{timeout:30000});
- if(await game(()=>window.__TORA_BOOTSTRAP__.game.map.region)!==region)await marker.click();
+ if(await game(()=>window.__TORA_BOOTSTRAP__.game.map.region)!==region)await action(region);
  await page.waitForFunction(region=>window.__TORA_BOOTSTRAP__.game.map.region===region&&!window.__TORA_BOOTSTRAP__.game.transitioning,region,{timeout:90000});await wait(600);
 }
-async function npc(){const button=page.getByRole('button',{name:'Ayame · Görev / Dükkân',exact:true});await button.click();await page.waitForFunction(()=>{const g=window.__TORA_BOOTSTRAP__.game;return BABYLON.Vector3.Distance(g.player.position,g.map.npc.position)<=4;},{timeout:25000});await button.click();await page.locator('.npc-dialog').waitFor({state:'visible'});}
+async function npc(){const button=page.getByRole('button',{name:'Ayame · Görev / Dükkân',exact:true});await game(()=>document.querySelector('[data-world-action="npc"]').click());await page.waitForFunction(()=>{const g=window.__TORA_BOOTSTRAP__.game;return BABYLON.Vector3.Distance(g.player.position,g.map.npc.position)<=4;},{timeout:25000});await game(()=>document.querySelector('[data-world-action="npc"]').click());await page.locator('.npc-dialog').waitFor({state:'visible'});}
 try{
  await page.goto(url);assert.equal(await page.locator('#login-password').count(),0);await page.locator('#login-username').fill('Test Savaşçısı');await page.screenshot({path:'reports/after-login-1366.png'});
  await page.getByRole('button',{name:'DİYARA GİR',exact:true}).click();await ready();
@@ -50,9 +50,13 @@ try{
  for(let slot=1;slot<=9;slot++){
   await game(slot=>{const g=window.__TORA_BOOTSTRAP__.game,m=g.entities.mobs.find(m=>m.alive);g.combat.playerCombat.cancel();g.player.health=g.player.maxHealth=10000;g.player.mana=g.player.maxMana;g.combat.skills.cooldowns.set(slot,0);m.health=m.maxHealth=1000;g.player.position.copyFrom(m.position.add(new BABYLON.Vector3(0,0,-1.7)));g.player.position.y=g.map.heightAt(g.player.position.x,g.player.position.z);g.entities.select(m);},slot);
   await page.keyboard.press(String(slot));await page.waitForFunction(slot=>window.__TORA_BOOTSTRAP__.game.combat.skills.remaining(slot)>0,slot,{timeout:5000});
+  if(slot===7){await page.waitForFunction(()=>window.__TORA_BOOTSTRAP__.game.player.buffs.guard>0,{timeout:3000});await page.waitForSelector('[data-buff="guard"]');assert.equal(await game(()=>window.__TORA_BOOTSTRAP__.game.buffVfx.guard.isEnabled()),true);assert.equal(await page.locator('[data-buff="guard"]').count(),1);}
+  if(slot===8){await page.waitForFunction(()=>window.__TORA_BOOTSTRAP__.game.player.buffs.rage>0,{timeout:3000});await page.waitForSelector('[data-buff="rage"]');assert.equal(await game(()=>window.__TORA_BOOTSTRAP__.game.buffVfx.rage.isStarted()),true);assert.equal(await page.locator('[data-buff="rage"]').count(),1);}
   castStates.push(await game(()=>window.__TORA_BOOTSTRAP__.game.animator.activeGroup?.name));await wait(180);ikSamples.push(await game(()=>window.__TORA_BOOTSTRAP__.game.player.visual.ik.error));await wait(1370);
  }
  assert.equal(new Set(castStates).size,9);assert(ikSamples.every(x=>Number.isFinite(x)&&x<.08));console.log('IK_ERRORS',JSON.stringify(ikSamples));pass('1–9 yetenekler: dokuz ayrı rig klibi, hasar anı, mana tüketimi, cooldown ve buff');
+ pass('Savunma kalkanı, öfke silah parçacığı ve gerçek buff ikonları');
+ await game(()=>{const g=window.__TORA_BOOTSTRAP__.game;g.player.buffs.guard=.05;g.player.buffs.rage=.05;});await wait(250);assert.equal(await game(()=>window.__TORA_BOOTSTRAP__.game.buffVfx.guard.isEnabled()),false);assert.equal(await page.locator('[data-buff="guard"]').count(),0);assert.equal(await page.locator('[data-buff="rage"]').count(),0);pass('Buff VFX ve ikon sayaçları ortak süre state ile kapanıyor');
  await game(()=>{const g=window.__TORA_BOOTSTRAP__.game;g.combat.playerCombat.cancel();g.combat.skills.cooldowns.set(9,0);g.player.mana=0;});await page.keyboard.press('9');await wait(100);assert.equal(await game(()=>window.__TORA_BOOTSTRAP__.game.combat.skills.remaining(9)),0);assert.equal(await page.locator('.skill-slot.no-mana').count()>0,true);pass('Yetersiz mana durumu saldırıyı reddediyor');
  await game(()=>{const g=window.__TORA_BOOTSTRAP__.game;g.combat.playerCombat.cancel();g.player.mana=g.player.maxMana;g.combat.skills.cooldowns.set(1,0);const m=g.entities.selected;m.health=1;g.player.position.copyFrom(m.position.add(new BABYLON.Vector3(0,0,-1.5)));});await page.keyboard.press('1');await wait(1300);assert.equal(await game(()=>window.__TORA_BOOTSTRAP__.game.entities.selected?.alive||false),false);await page.keyboard.press('Tab');assert.equal(await game(()=>window.__TORA_BOOTSTRAP__.game.entities.selected?.alive),true);pass('Hedef ölümü, yeni hedef ve loot oluşumu');
  const loot=await game(async()=>{const g=window.__TORA_BOOTSTRAP__.game;g.combat.playerCombat.cancel();const backup=g.inventory.slots.slice();g.inventory.slots.fill('health-potion');await g.loot.spawnDrop(g.player,'mana-potion',g.player.position);const drop=g.loot.drops.at(-1);const full=g.loot.tryPickup(drop.mesh);const retained=g.loot.drops.includes(drop);g.inventory.slots[23]=null;const free=g.loot.tryPickup(drop.mesh);g.inventory.slots=backup;g.hud.refreshInventory();return {full,retained,free};});assert.deepEqual(loot,{full:false,retained:true,free:true});pass('Dolu envanterde loot kaybolmuyor; boş yer açılınca alınabiliyor (kontrollü fixture)');
@@ -69,7 +73,9 @@ try{
  await page.screenshot({path:'reports/after-world-1080.png'});pass('1920×1080 yeniden boyutlandırma, üç kalite profili ve bağımsız ses ayarları');
  const savedPos=await position();await page.keyboard.press('Escape');await page.getByRole('button',{name:'ANA MENÜYE DÖN',exact:true}).click();await page.reload();await page.getByRole('button',{name:'DİYARA GİR',exact:true}).click();await ready();assert(distance(savedPos,await position())<.2);assert.equal(await game(()=>window.__TORA_BOOTSTRAP__.game.map.region),'ruins');pass('Kayıt, bölge ve konum geri yükleme');
  await travel('Sisli Orman →','forest');
- if(soak){
+ await travel('Ayaz Köyü →','village');
+ const chestAction=()=>game(()=>{const g=window.__TORA_BOOTSTRAP__.game,c=g.map.chests[0];g.inventory.slots[23]=null;g.player.position.copyFrom(c.root.position);g.player.position.y=g.map.heightAt(g.player.position.x,g.player.position.z);g.interactChest(c);});await chestAction();await page.waitForFunction(()=>window.__TORA_BOOTSTRAP__.game.map.chests[0].state==='OPEN',{timeout:10000});assert.equal(await game(()=>window.__TORA_BOOTSTRAP__.game.map.chests[0].state),'OPEN');await chestAction();assert.equal(await game(()=>window.__TORA_BOOTSTRAP__.game.map.chests[0].state),'LOOTED');await chestAction();assert.equal(await game(()=>window.__TORA_BOOTSTRAP__.game.map.chests[0].state),'LOOTED');pass('Sandık CLOSED → OPENING → OPEN → LOOTED: tek animasyon, tek ses ve tekrar açılmama');
+ if(soak){await travel('Sisli Orman →','forest');
   console.log('SOAK START',new Date().toISOString(),soak+' seconds');const start=Date.now();let cycle=0;
   while(Date.now()-start<soak*1000){
    const state=await game(()=>{const g=window.__TORA_BOOTSTRAP__.game;return {alive:g.player.alive,health:g.player.health,region:g.map.region,position:g.player.position.asArray(),fps:g.engine.getFps(),failed:g.frameFailed};});assert.equal(state.failed,false);assert(state.position.every(Number.isFinite));

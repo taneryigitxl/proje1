@@ -17,6 +17,8 @@ import { StatsSystem } from "../progression/StatsSystem.js";
 import { InventorySystem } from "../progression/InventorySystem.js";
 import { GlbLoot as LootSystem } from "../progression/GlbLoot.js";
 import { AmbientAudio } from "../audio/AmbientAudio.js";
+import { BuffVFXManager } from "../combat/BuffVFXManager.js";
+import { CHEST } from "../world/ChestState.js";
 
 export class Game {
   constructor(runtime, onProgress = () => {}, onFatal = () => {}) {
@@ -69,8 +71,10 @@ export class Game {
 
       console.info("[Tora Startup] 4/10 Zorunlu harita assetleri ve harita hazırlanıyor.");
       this.map = new RegionWorld(this.scene, this.navigation, this.runtime.profile, this.runtime.quality);
+      this.map.onChestOpen = () => this.audio?.play('ui', 'effects', .65);
       let savedWorld=null;try{savedWorld=JSON.parse(localStorage.getItem('tora-world-v1'));}catch{}
       const world = await this.map.build(assets, { id: REGIONS[savedWorld?.region]?savedWorld.region:'village' });
+      this.#restoreChests();
 
       this.onProgress(68, "Savaşçı ve düşmanlar hazırlanıyor…");
       console.info("[Tora Startup] 5/10 Karakter, animasyon kütüphaneleri ve moblar yükleniyor.");
@@ -95,6 +99,7 @@ export class Game {
         onDamage: (entity, result) => this.hud?.showDamage(entity, result),
         onKill: (mob) => this.#onMobDefeated(mob),
         onStatus: (message) => this.hud?.setStatus(message),
+        onBuff: (type, duration) => this.buffVfx?.applyBuff(type, duration),
         onActionStart: (skill) => {this.player.visual?.weaponSheath?.markCombat(skill?.duration || 1.2);this.audio?.playSwing(skill);},
         onCameraShake: (amp, dur) => {
           this.camera?.shake(amp, dur);
@@ -103,11 +108,14 @@ export class Game {
       }, this.stats);
       this.loot = new LootSystem(this.scene, this.inventory, (message) => this.hud?.setStatus(message), this.navigation, assets);
       this.audio = new AmbientAudio();
+      this.buffVfx = new BuffVFXManager(this.scene, this.player, this.combat.vfx.materials[4].diffuseTexture);
 
       console.info("[Tora Startup] 8/10 HUD ve cursor bağlanıyor.");
       this.hud = new HUD(this.scene, this.engine, this.player, this.entities, this.combat.skills, this.progression, (slot) => this.#useSkill(slot), this.stats, this.inventory, {
         onDropItem: (itemId) => this.#dropInventoryItem(itemId),
         onPanelChange: () => this.syncInputGate(),
+        map: this.map,
+        onSettings: () => this.togglePause(),
       });
       this.worldUI = new WorldUI(this);
       this.cursor = new CursorManager(this.scene, this.canvas, this.player, this.entities);
@@ -230,6 +238,7 @@ export class Game {
     this.loot?.dispose();
     this.audio?.dispose();
     this.player?.visual?.ik?.dispose();
+    this.buffVfx?.dispose();
     this.combat?.vfx?.dispose();
     this.scene?.dispose();
     if (window.__TORA_DEBUG__?.map === this.map) delete window.__TORA_DEBUG__;
@@ -304,8 +313,10 @@ export class Game {
         } else if (data.npc || data.interactive) {
           if(BABYLON.Vector3.Distance(this.player.position,this.map.npc.position)>4){this.combat.playerCombat.cancelApproach();this.player.setDestination(this.map.npc.position,2.5);this.hud.setStatus('Ayame’ye yaklaş ve yeniden tıkla.');}
           else this.worldUI.openNpc();
+        } else if (data.chest) {
+          this.interactChest(data.chest);
         } else if (data.loot) {
-          this.hud.setStatus("Sandık mühürlü. Önce görevleri tamamla.");
+          this.hud.setStatus("Sandığı açmak için yaklaş.");
         } else this.hud.setStatus("Demirci tezgâhı.");
         return;
       }
@@ -316,6 +327,36 @@ export class Game {
         this.player.setDestination(groundPick.pickedPoint, .18);
       }
     });
+  }
+
+  #restoreChests() {
+    let looted=[];try{looted=JSON.parse(localStorage.getItem('tora-chests-v1')||'[]');}catch{}
+    for(const chest of this.map.chests||[])if(looted.includes(chest.id))chest.restoreLooted();
+  }
+
+  interactChest(chest) {
+    if (!chest || !this.running || this.paused || this.hud?.openPanel || !this.worldUI.modal.hidden) return;
+    const distance = BABYLON.Vector3.Distance(this.player.position, chest.root.position);
+    if (distance > 3.5) {
+      this.combat.playerCombat.cancelApproach();
+      this.player.setDestination(chest.root.position, 2.5);
+      this.hud.setStatus('Sandığa yaklaş ve yeniden etkileş.');
+      return;
+    }
+    if (chest.state === CHEST.CLOSED) {
+      chest.open();
+      this.hud.setStatus('Sandık açılıyor…');
+    } else if (chest.state === CHEST.OPEN) {
+      const prize = this.map.region === 'ruins' ? 'iron-blade' : 'health-potion';
+      if (!this.inventory.add(prize)) { this.hud.setStatus('Çantada yer yok.'); return; }
+      chest.loot();
+      try {
+        const saved = JSON.parse(localStorage.getItem('tora-chests-v1') || '[]');
+        localStorage.setItem('tora-chests-v1', JSON.stringify([...new Set([...saved, chest.id])]));
+      } catch {}
+      this.hud.refreshInventory();
+      this.hud.setStatus(`${this.map.region === 'ruins' ? 'Demir Kılıç' : 'Can İksiri'} sandıktan alındı.`);
+    } else if (chest.state === CHEST.LOOTED) this.hud.setStatus('Bu sandık boş.');
   }
 
   #bindPauseMenu() {
@@ -343,6 +384,7 @@ export class Game {
     try {
       this.entities.reset([],[]);this.hud.syncEntities();
       const world=await this.map.load(id);
+      this.#restoreChests();
       const visuals=await Promise.all(world.spawns.map(s=>this.assets.instantiateMob(s.type)));
       this.entities.reset(world.spawns,visuals);this.hud.syncEntities();
       this.player.position.copyFrom(world.spawn);this.player.respawnPoint=world.spawn.clone();this.player.velocity.setAll(0);this.player.grounded=true;this.player.verticalVelocity=0;
@@ -385,6 +427,7 @@ export class Game {
         remaining -= dt;
         this.combat.update(dt);
         this.player.update(dt, this.camera);
+        this.buffVfx?.update(dt);
         this.animator.setState(this.player.state);
         this.animator.update(dt, this.player.speedRatio);
         this.player.visual?.weaponSheath?.update(dt, this.player.state);

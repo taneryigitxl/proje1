@@ -152,10 +152,12 @@ export class PlayerCombat {
     }
     if (skill.action === "guard") {
       this.player.buffs.guard = 6;
+      this.callbacks.onBuff?.('guard', 6);
       this.callbacks.onStatus?.("Savaşçı Savunması aktif: alınan hasar azaldı.");
     }
     if (skill.action === "rage") {
       this.player.buffs.rage = 8;
+      this.callbacks.onBuff?.('rage', 8);
       this.callbacks.onStatus?.("Öfke aktif: saldırı ve hareket hızı arttı.");
     }
     const victims = skill.aoe

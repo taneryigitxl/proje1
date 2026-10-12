@@ -1,5 +1,6 @@
 import {TwoHandIK} from "../player/TwoHandIK.js";
 import { WeaponSheath } from "../player/WeaponSheath.js";
+import { ChestState } from "../world/ChestState.js";
 
 export class AssetManager {
   constructor(scene, config, onProgress = () => {}) {
@@ -145,6 +146,23 @@ export class AssetManager {
     return root;
   }
 
+  async instantiateChest(name, position, rotationY = 0, scale = 1, metadata = null, onOpen = () => {}) {
+    // Each animated chest needs its own animation targets; static instancing shares
+    // geometry but cannot give independent lids their own AnimationGroups.
+    const loaded = await this.#load(this.manifest.environment.chest);
+    const root = this.#wrap(name, loaded.meshes, loaded.transformNodes);
+    root.position.copyFrom(position);
+    root.rotation.y = rotationY;
+    root.scaling.setAll(scale);
+    const chest = new ChestState(name, root, loaded.animationGroups, onOpen);
+    root.metadata = { chestState: chest, skeletons: loaded.skeletons };
+    root.getChildMeshes(false).forEach(mesh => {
+      mesh.isPickable = true;
+      mesh.metadata = { ...(mesh.metadata || {}), ...(metadata || {}), chest, cursor: 'loot' };
+    });
+    return root;
+  }
+
   async instantiateMob(index) {
     const definition = this.manifest.mobs[index % this.manifest.mobs.length];
     const loaded = await this.#load(definition.url);
@@ -222,6 +240,7 @@ export class AssetManager {
     const url = this.manifest.environment[key];
     if (!url) throw new Error(`Manifestte çevre varlığı yok: ${key}`);
     const promise = this.#load(url).then((loaded) => {
+      loaded.animationGroups.forEach(group => { group.stop(); group.dispose(); });
       const root = this.#wrap(`template-${key}`, loaded.meshes, loaded.transformNodes);
       root.setEnabled(false);
       return root;
