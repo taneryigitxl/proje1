@@ -33,7 +33,8 @@ export class WorldUI {
   }
   setRegion() {
     const def=REGIONS[this.game.map.region];
-    this.banner.innerHTML=`<small>TORA ONLINE</small><strong>${def.name}</strong><span>${def.subtitle}</span>`;
+    this.banner.innerHTML=`<small>TORA ONLINE</small><strong>${def.name}</strong><span>${def.subtitle}</span><div class="region-gold">${itemArt("gold","gold-icon")}<span data-gold-text>${this.game.inventory.gold} altın</span></div>`;
+    this.goldText=this.banner.querySelector("[data-gold-text]");
     document.querySelector('.minimap>strong').textContent=def.name;
     document.querySelector('.minimap>span').textContent='Kapıya yaklaş · sol tık ile geç';
     this.drawMinimap();
@@ -61,7 +62,7 @@ export class WorldUI {
   #marker(text,action,position) {const button=document.createElement('button');button.textContent=text;button.dataset.worldAction=action;this.landmarks.append(button);this.markers.push({button,position});}
   update() {
     const now=performance.now();if(now-(this.stamp||0)<80)return;this.stamp=now;
-    this.banner.dataset.gold=this.game.inventory.gold+' altın';
+    const gold=this.game.inventory.gold+' altın';if(this.goldText&&this.goldText.textContent!==gold)this.goldText.textContent=gold;
     const engine=this.game.engine,cam=this.game.camera.camera,canvas=this.game.canvas;
     const width=engine.getRenderWidth(),height=engine.getRenderHeight(),viewport=cam.viewport.toGlobal(width,height);
     for(const marker of this.markers||[]){const p=BABYLON.Vector3.Project(marker.position,BABYLON.Matrix.IdentityReadOnly,this.game.scene.getTransformMatrix(),viewport);const dist=BABYLON.Vector3.Distance(marker.position,this.game.player.position);
