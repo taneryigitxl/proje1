@@ -74,6 +74,7 @@ export class PlayerAnimator {
 
   playAction(state, duration) {
     this.setState(state, true, duration);
+    this.lastCastClip = this.activeGroup?.name || state;
   }
 
   hitStop(seconds){this.hitStopUntil=performance.now()+seconds*1000;}
