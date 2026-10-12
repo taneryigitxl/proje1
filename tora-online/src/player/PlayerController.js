@@ -55,7 +55,7 @@ export class PlayerController extends Entity {
     const horizontal = new BABYLON.Vector3(this.velocity.x * dt, 0, this.velocity.z * dt);
     const nextX = this.position.add(new BABYLON.Vector3(horizontal.x, 0, 0)); if (this.navigation.canOccupy(nextX)) this.position.x = nextX.x; else this.velocity.x = 0;
     const nextZ = this.position.add(new BABYLON.Vector3(0, 0, horizontal.z)); if (this.navigation.canOccupy(nextZ)) this.position.z = nextZ.z; else this.velocity.z = 0;
-    if (this.input.consume("Space") && this.grounded && !this.actionLocked && this.landingTimer <= 0) { this.verticalVelocity = 4.6; this.grounded = false; this.state = "jump"; }
+    if ((this.input.consume("Space") || this.input.keys.has("Space")) && this.grounded && !this.actionLocked && this.landingTimer <= 0) { this.verticalVelocity = 4.6; this.grounded = false; this.state = "jump"; }
     const groundY = this.navigation.heightAt(this.position.x, this.position.z);
     if (!this.grounded) {
       this.verticalVelocity -= 21 * dt; this.position.y += this.verticalVelocity * dt;
