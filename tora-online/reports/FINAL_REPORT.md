@@ -58,3 +58,6 @@ Canlı adres: https://yigittaner.online/tora-online/
 - Doğu mimarisine özel yeni bina seti yok; mevcut lisanslı yapılar yeniden yerleştirildi.
 - Ayrı uzak GLB LOD seti henüz yok; instancing, alpha yaprak kartları, hücre/mesafe elemesi var.
 - Bağımsız zayıf cihaz ve orta seviye farklı GPU ölçümü yapılmadı. Dokunmatik oynanış kabul testi yapılmadı.
+
+## Yazılım GPU yayın sunucusu düzeltmesi
+CI'de zıplama sabit milisaniye yerine gerçek airborne/grounded geçişini bekler. Çok yavaş karede bütün zıplamanın tek karede tüketilmemesi için simülasyon catch-up 250 ms ile sınırlandı. CI, tam 1366/1920 CSS arayüzünü 1/4 canvas çözünürlüğü ve tek gölge güncellemesiyle kontrol eder; FPS ölçümü için bu mod kullanılmaz. Yerel test normal render çözünürlüğünde tekrar çalıştırılır.

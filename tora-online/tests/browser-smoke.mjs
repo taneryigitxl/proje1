@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';import fs from 'node:fs/promises';import {chromium} from 'playwright';import {serve} from '../scripts/server.mjs';
+const softwareCI=process.env.CI==='true';
 const soak=Number(process.argv.find(a=>a.startsWith('--soak='))?.split('=')[1]||0);
 const {server,url}=await serve('dist');
 const browser=await chromium.launch({channel:process.env.SMOKE_CHANNEL||(process.platform==='win32'?'msedge':undefined),headless:!process.argv.includes('--headed'),args:['--disable-features=CalculateNativeWinOcclusion']});
@@ -10,7 +11,10 @@ const game=(fn,arg)=>page.evaluate(fn,arg),wait=ms=>page.waitForTimeout(ms),pass
 const position=()=>game(()=>window.__TORA_BOOTSTRAP__.game.player.position.asArray());
 const distance=(a,b)=>Math.hypot(a[0]-b[0],a[2]-b[2]);
 async function key(key,duration=100){await page.keyboard.down(key);await wait(duration);await page.keyboard.up(key);}
-async function ready(){await page.waitForFunction(()=>window.__TORA_BOOTSTRAP__?.game?.running,{timeout:90000});await wait(500);}
+async function ready(){
+ if(softwareCI){await page.waitForFunction(()=>window.__TORA_BOOTSTRAP__?.runtime?.engine,null,{timeout:90000});await game(()=>window.__TORA_BOOTSTRAP__.runtime.engine.setHardwareScalingLevel(4));await page.waitForFunction(()=>window.__TORA_BOOTSTRAP__?.game?.map?.shadowGenerator,null,{timeout:90000});await game(()=>{const g=window.__TORA_BOOTSTRAP__.game;g.map.shadowGenerator.getShadowMap().refreshRate=0;});}
+ await page.waitForFunction(()=>window.__TORA_BOOTSTRAP__?.game?.running,null,{timeout:90000});await wait(500);
+}
 async function travel(name,region){
  const marker=page.getByRole('button',{name,exact:true});await marker.click();
  await page.waitForFunction(region=>{const g=window.__TORA_BOOTSTRAP__.game;if(g.map.region===region&&!g.transitioning)return true;const e=g.map.definition.exits.find(e=>e.id===region);return e&&Math.hypot(g.player.position.x-e.x,g.player.position.z-e.z)<4.8;},region,{timeout:30000});
@@ -24,8 +28,8 @@ try{
  assert.equal(await page.locator('.skill-slot').count(),9);assert.equal(await page.locator('.skill-slot svg').count(),0);pass('Şifresiz profil, ilk yükleme, raster portre ve dokuz atlas ikon');
  const initial=await position();await page.locator("#game-canvas").focus();await key('w',700);assert(distance(initial,await position())>.4);pass('WASD hareket');
  const alpha=await game(()=>window.__TORA_BOOTSTRAP__.game.camera.camera.alpha);await page.mouse.move(683,385);await page.mouse.down({button:'right'});await page.mouse.move(790,386,{steps:12});await page.mouse.up({button:'right'});assert(Math.abs(alpha-await game(()=>window.__TORA_BOOTSTRAP__.game.camera.camera.alpha))>.1);const radius=await game(()=>window.__TORA_BOOTSTRAP__.game.camera.camera.radius);await page.mouse.wheel(0,200);await wait(500);assert(Math.abs(radius-await game(()=>window.__TORA_BOOTSTRAP__.game.camera.camera.radius))>.3);pass('Sağ sürükleme ve kamera zoom');
- await page.keyboard.press('Space');await wait(100);assert.equal(await game(()=>window.__TORA_BOOTSTRAP__.game.player.grounded),false);await wait(1100);assert.equal(await game(()=>window.__TORA_BOOTSTRAP__.game.player.grounded),true);pass('Zıplama, havada kalma ve iniş');
- const groundPoint=await game(()=>{const g=window.__TORA_BOOTSTRAP__.game,p=g.player.position.add(new BABYLON.Vector3(3,0,2));return BABYLON.Vector3.Project(p,BABYLON.Matrix.IdentityReadOnly,g.scene.getTransformMatrix(),g.camera.camera.viewport.toGlobal(g.engine.getRenderWidth(),g.engine.getRenderHeight())).asArray();});
+ await page.keyboard.press('Space');await page.waitForFunction(()=>!window.__TORA_BOOTSTRAP__.game.player.grounded,null,{timeout:20000});await page.waitForFunction(()=>window.__TORA_BOOTSTRAP__.game.player.grounded,null,{timeout:20000});pass('Zıplama, havada kalma ve iniş');
+ const groundPoint=await game(()=>{const g=window.__TORA_BOOTSTRAP__.game,p=g.player.position.add(new BABYLON.Vector3(3,0,2));const v=BABYLON.Vector3.Project(p,BABYLON.Matrix.IdentityReadOnly,g.scene.getTransformMatrix(),g.camera.camera.viewport.toGlobal(g.engine.getRenderWidth(),g.engine.getRenderHeight()));return [v.x/g.engine.getRenderWidth()*innerWidth,v.y/g.engine.getRenderHeight()*innerHeight,v.z];});
  await page.mouse.click(groundPoint[0],groundPoint[1]);await wait(100);await key('a',400);assert.equal(await game(()=>window.__TORA_BOOTSTRAP__.game.player.destination),null);pass('Mouse hareketi ve WASD ile yol iptali');
  await page.keyboard.press('i');await page.locator('#inventory-panel').waitFor({state:'visible'});await wait(100);const stopped=await position();await key('w',500);assert(distance(stopped,await position())<.02);await page.mouse.click(640,330);assert(distance(stopped,await position())<.02);
  await page.locator('[data-inv-slot="0"]').dblclick();assert.equal(await game(()=>window.__TORA_BOOTSTRAP__.game.inventory.equipped.weapon),null);assert.equal(await game(()=>window.__TORA_BOOTSTRAP__.game.player.visual.weaponRoot.isEnabled()),false);
@@ -56,7 +60,7 @@ try{
  await travel('Kadim Harabe →','ruins');assert.equal(await game(()=>window.__TORA_BOOTSTRAP__.game.entities.mobs.some(m=>m.definition.boss)),true);await page.screenshot({path:'reports/after-ruins-1366.png'});pass('Ormandan harabeye geçiş ve farklı boss ekipmanı');
  await page.setViewportSize({width:1920,height:1080});await wait(500);
  for(const quality of ['low','medium','high']){
-  await page.keyboard.press('Escape');await page.locator('#pause-quality').selectOption(quality);
+  await page.keyboard.press('Escape');await page.locator('#pause-quality').selectOption(quality);if(softwareCI)await game(()=>window.__TORA_BOOTSTRAP__.runtime.engine.setHardwareScalingLevel(4));
   await page.locator('#volume-effects').focus();await page.keyboard.press('Home');await page.keyboard.press('ArrowRight');
   await page.getByRole('button',{name:'DEVAM ET',exact:true}).click();await wait(1500);
   fps.push({quality,width:1920,height:1080,fps:await game(()=>window.__TORA_BOOTSTRAP__.game.engine.getFps())});assert.equal(await game(()=>window.__TORA_BOOTSTRAP__.game.runtime.quality),quality);
@@ -80,6 +84,6 @@ try{
   pass(soak+' saniye sürekli gerçek klavye/fare oynanışı; ölüm/respawn dahil kritik hata yok');
  }
  assert.deepEqual(errors,[]);assert.deepEqual(failedRequests,[]);pass('Console error, uncaught promise, 404 ve başarısız asset isteği yok');
- await fs.writeFile(soak?'reports/browser-results-soak.json':'reports/browser-results-final-smoke.json',JSON.stringify({date:new Date().toISOString(),url,soakSeconds:soak,checks,castStates,ikSamples,fps,errors,warnings,failedRequests},null,2));console.log('ALL PASSED',checks.length);
+ await fs.writeFile(soak?'reports/browser-results-soak.json':'reports/browser-results-final-smoke.json',JSON.stringify({date:new Date().toISOString(),url,softwareCI,soakSeconds:soak,checks,castStates,ikSamples,fps,errors,warnings,failedRequests},null,2));console.log('ALL PASSED',checks.length);
 }catch(error){await page.screenshot({path:'reports/test-failure.png'}).catch(()=>{});await fs.writeFile(soak?'reports/browser-results-soak.json':'reports/browser-results-final-smoke.json',JSON.stringify({checks,fps,errors,warnings,failedRequests,failure:error.stack},null,2));throw error;}
 finally{await browser.close();await new Promise(resolve=>server.close(resolve));}

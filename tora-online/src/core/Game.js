@@ -374,9 +374,8 @@ export class Game {
   #frame() {
     if (!this.scene || this.scene.isDisposed) return;
     const now = performance.now();
-    // Catch up wall time aggressively so blocked/low-FPS frames (SwiftShader, tab stall)
-    // still advance combat/movement near realtime instead of freezing at ~0.35s/frame.
-    const raw = Math.min(1.6, (now - this.lastTime) / 1000 || 0.016);
+    // Bound simulation catch-up: a stalled GPU frame must not skip an entire jump or attack.
+    const raw = Math.min(0.25, (now - this.lastTime) / 1000 || 0.016);
     this.lastTime = now;
     if (this.running && !this.paused) {
       this.syncInputGate();
