@@ -1,0 +1,261 @@
+[
+  {
+    "classId": "warrior",
+    "checks": [
+      "Equipped bone-attached weapon is included in inventory preview",
+      "Twenty equipment panel cycles preserve mesh/texture/renderer counts",
+      "Far loot uses native click and auto-approach; outside click only dismisses",
+      "Collector grants the selected class weapon",
+      "Repeated minimap draws keep DOM and region cache bounded",
+      "Settled shield and live weapon particles captured",
+      "Fifty buff refresh/expiry cycles reuse particles and stop cleanly",
+      "Reload while dead starts alive at safe spawn and retains class reward"
+    ],
+    "metrics": {
+      "minimap": {
+        "updates": 200,
+        "p95ms": 0.10000000009313226,
+        "meanMs": 0.013000000000465662,
+        "domBefore": 691,
+        "domAfter": 691,
+        "cache": 2
+      },
+      "flame": {
+        "weaponMatrix": {
+          "0": 1.0887079238891602,
+          "1": 0.46875590085983276,
+          "2": 0.5808460116386414,
+          "3": 0,
+          "4": -0.4395909607410431,
+          "5": -0.4274860918521881,
+          "6": 1.1689374446868896,
+          "7": 0,
+          "8": -0.6032196879386902,
+          "9": 1.1575502157211304,
+          "10": 0.19647476077079773,
+          "11": 0,
+          "12": -0.006123979110270739,
+          "13": 0.921539306640625,
+          "14": -17.46061134338379,
+          "15": 1
+        },
+        "tip": [
+          -0.4237353801727295,
+          0.5154275298118591,
+          -16.350120544433594
+        ],
+        "emitters": [
+          {
+            "count": 9,
+            "size": [
+              0.2,
+              0.38
+            ],
+            "world": [
+              -0.08595819296315312,
+              0.815048795580864,
+              -17.300027996212243
+            ],
+            "particle": [
+              -0.08968456730466426,
+              0.8684788205764511,
+              -17.264915003723022
+            ],
+            "local": [
+              -0.0012488697773803544,
+              0.16538796501980751,
+              0.01574530726317402
+            ]
+          },
+          {
+            "count": 9,
+            "size": [
+              0.2,
+              0.38
+            ],
+            "world": [
+              -0.2028893885202706,
+              0.7013374951481819,
+              -16.989090635925532
+            ],
+            "particle": [
+              -0.2138807091752802,
+              0.712952133247795,
+              -16.916705303435748
+            ],
+            "local": [
+              -0.004612690552004372,
+              0.46848516419656544,
+              -0.005316448013258168
+            ]
+          },
+          {
+            "count": 8,
+            "size": [
+              0.2,
+              0.38
+            ],
+            "world": [
+              -0.31982058407738806,
+              0.5876261947154999,
+              -16.67815327563882
+            ],
+            "particle": [
+              -0.3178422420578561,
+              0.6285023890603445,
+              -16.589025029574806
+            ],
+            "local": [
+              0.016944801881897106,
+              0.7352663666526058,
+              0.011521100266956161
+            ]
+          }
+        ]
+      }
+    },
+    "errors": []
+  },
+  {
+    "classId": "mage",
+    "checks": [
+      "Equipped bone-attached weapon is included in inventory preview",
+      "Twenty equipment panel cycles preserve mesh/texture/renderer counts",
+      "Far loot uses native click and auto-approach; outside click only dismisses",
+      "Collector grants the selected class weapon",
+      "Repeated minimap draws keep DOM and region cache bounded",
+      "Settled shield and live weapon particles captured",
+      "Fifty buff refresh/expiry cycles reuse particles and stop cleanly",
+      "Chain hits exactly three distinct targets, once each",
+      "Ice area affects multiple targets and slow expires",
+      "Native invalid blink telegraph rejects intervening obstacle without cooldown",
+      "Reload while dead starts alive at safe spawn and retains class reward"
+    ],
+    "metrics": {
+      "minimap": {
+        "updates": 200,
+        "p95ms": 0.10000000009313226,
+        "meanMs": 0.012499999997671693,
+        "domBefore": 691,
+        "domAfter": 691,
+        "cache": 2
+      },
+      "flame": {
+        "weaponMatrix": {
+          "0": -0.6846802830696106,
+          "1": -0.3979088366031647,
+          "2": -0.6106399297714233,
+          "3": 0,
+          "4": 0.5175390243530273,
+          "5": 0.32449713349342346,
+          "6": -0.7917414307594299,
+          "7": 0,
+          "8": -0.5131918787956238,
+          "9": 0.8581200838088989,
+          "10": 0.01624339446425438,
+          "11": 0,
+          "12": 0.047957003116607666,
+          "13": 0.9288602471351624,
+          "14": -17.412830352783203,
+          "15": 1
+        },
+        "tip": [
+          0.6276007294654846,
+          1.2922970056533813,
+          -18.29958152770996
+        ],
+        "emitters": [
+          {
+            "count": 7,
+            "size": [
+              0.2,
+              0.38
+            ],
+            "world": [
+              0.5711184973716736,
+              1.2266007341742515,
+              -18.15250002291426
+            ],
+            "particle": [
+              0.5340227622121321,
+              1.2560286858099876,
+              -18.181121565833894
+            ],
+            "local": [
+              0.006166548577590502,
+              0.9660116613230163,
+              0.018825043405288785
+            ]
+          },
+          {
+            "count": 8,
+            "size": [
+              0.2,
+              0.38
+            ],
+            "world": [
+              0.6057936120033264,
+              1.248342042118311,
+              -18.20554669877514
+            ],
+            "particle": [
+              0.6290440404897196,
+              1.2924269616332644,
+              -18.295571989938455
+            ],
+            "local": [
+              -0.003487831620690719,
+              1.1176152329096132,
+              -0.0005640981504130745
+            ]
+          },
+          {
+            "count": 8,
+            "size": [
+              0.2,
+              0.38
+            ],
+            "world": [
+              0.6404687266349792,
+              1.2700833500623703,
+              -18.258593374636025
+            ],
+            "particle": [
+              0.6160047768241893,
+              1.263457171118986,
+              -18.300462426192873
+            ],
+            "local": [
+              0.01995353185579087,
+              1.105338250987531,
+              -0.018811450355236656
+            ]
+          },
+          {
+            "count": 9,
+            "size": [
+              0.2,
+              0.38
+            ],
+            "world": [
+              0.04943916082382202,
+              0.8995076236128807,
+              -17.354424660708755
+            ],
+            "particle": [
+              0.06511165794680654,
+              0.9263102194811074,
+              -17.435080095238042
+            ],
+            "local": [
+              0.00285580883116887,
+              0.025666783407788205,
+              -0.011353275503195216
+            ]
+          }
+        ]
+      }
+    },
+    "errors": []
+  }
+]

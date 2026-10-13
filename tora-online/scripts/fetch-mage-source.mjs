@@ -1,0 +1,13 @@
+import { chromium } from 'playwright';
+const browser=await chromium.launch({channel:process.platform==='win32'?'msedge':undefined});
+const context=await browser.newContext({acceptDownloads:true});
+const page=await context.newPage();
+const base='https://quaternius.itch.io/modular-character-outfits-fantasy';
+await page.goto(base);
+await page.getByRole('link',{name:'Download Now',exact:true}).first().click();
+await page.getByText('No thanks, just take me to the downloads').click();
+const download=page.waitForEvent('download',{timeout:120000});
+await page.locator('[data-upload_id="16289385"]').click();
+await (await download).saveAs('reports/revision-2026-10-12/asset-sources/fantasy-standard.zip');
+await browser.close();
+console.log('Original CC0 outfit source downloaded.');

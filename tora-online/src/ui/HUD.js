@@ -2,7 +2,9 @@ import { itemArt } from "./Art.js";
 import { SkillBar } from "./SkillBar.js";
 import { TargetFrame } from "./TargetFrame.js";
 import { ITEM_DEFS } from "../progression/InventorySystem.js";
-import { SKILLS } from "../core/Config.js";
+import { classDef } from '../characters/ClassDefs.js';
+import { WorldMap } from './WorldMap.js';
+import { QuickItemBar } from './QuickItemBar.js';
 import { CharacterPreview } from "./CharacterPreview.js";
 import { placeAnchor } from "./screenAnchor.js";
 
@@ -31,7 +33,7 @@ function bonusText(item) {
 
 export class HUD {
   constructor(scene, engine, player, entities, skillSystem, progression, onSkill, stats, inventory, options = {}) {
-    this.scene = scene;
+    this.scene = scene;this.classDef=classDef(player.classId);this.isBlocked=options.isBlocked||(()=>false);this.quickItems=options.quickItems;
     this.engine = engine;
     this.player = player;
     this.entities = entities;
@@ -46,7 +48,7 @@ export class HUD {
     this.onVolume = options.onVolume || (()=>{});
     this.onDropItem = options.onDropItem || null;
     this.onPanelChange = options.onPanelChange || (()=>{});
-    this.root = document.getElementById("hud");
+    this.root = document.getElementById('hud');this.root.style.setProperty('--skill-atlas','url('+new URL(this.classDef.iconAtlas,document.baseURI).href+')');
     this.hpBar = document.getElementById("player-hp-bar");
     this.hpText = document.getElementById("player-hp-text");
     this.manaBar = document.getElementById("player-mana-bar");
@@ -64,20 +66,14 @@ export class HUD {
     this.toast = document.getElementById("progress-toast");
     this.toastTimer = 0;
     this.targetFrame = new TargetFrame(document.getElementById("target-frame"));
-    this.skillBar = new SkillBar(document.getElementById("skill-bar"), onSkill);
+    this.skillBar = new SkillBar(document.getElementById("skill-bar"), onSkill,this.classDef);
     this.skillSystem = skillSystem;
+    this.quickBar=new QuickItemBar(document.getElementById('quick-item-bar'),this.quickItems,options.onQuickItem);
     this.labelLayer = document.getElementById("world-labels");
     this.damageLayer = document.getElementById("damage-layer");
     this.labels = new Map();
     this.damagePool = this.#createDamagePool();
     this.damageCursor = 0;
-    this.minimapPlayer = document.getElementById("minimap-player");
-    this.minimapMobs = document.getElementById("minimap-mobs");
-    this.minimapSites = document.getElementById("minimap-sites");
-    this.minimapContent = document.getElementById("minimap-content");
-    this.minimapZoom = 1;
-    this.minimapZoomIn = document.getElementById('minimap-zoom-in');
-    this.minimapZoomOut = document.getElementById('minimap-zoom-out');
     this.chatLog = document.getElementById("chat-log");
     this.chatForm = document.getElementById("chat-form");
     this.chatInput = document.getElementById("chat-input");
@@ -126,15 +122,7 @@ export class HUD {
     this.bubbleLayer.className = "chat-bubbles";
     this.labelLayer.append(this.bubbleLayer);
 
-    for (const mob of entities.mobs) {
-      this.#labelFor(mob);
-      const dot = document.createElement("i");
-      dot.dataset.entityId = mob.id;
-      dot.className=mob.definition?.boss?'boss':mob.level>1?'elite':'';
-      dot.title=mob.name;
-      this.minimapMobs.append(dot);
-    }
-
+    for(const mob of entities.mobs)this.#labelFor(mob);
     this.onChatSubmit = (event) => {
       event.preventDefault();
       const message = this.chatInput.value.trim();
@@ -143,12 +131,14 @@ export class HUD {
       this.chatInput.blur();
     };
     this.onGlobalKeyDown = (event) => {
+      if(this.isBlocked()||event.target.closest?.('input,textarea,select,[contenteditable="true"]'))return;
       if (event.code === "Enter" && document.activeElement !== this.chatInput) {
         event.preventDefault();
         this.chatInput.focus();
       }
     };
     this.onPanelClick = (event) => {
+      if(this.isBlocked())return;
       const shortcut=event.target.closest('[data-shortcut]');
       if(shortcut){
         const name=shortcut.dataset.shortcut;
@@ -207,7 +197,8 @@ export class HUD {
       }
       this.dragFrom = Number(slot.dataset.invSlot);
       event.dataTransfer.setData("text/plain", String(this.dragFrom));
-      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("application/x-tora-inventory", String(this.dragFrom));
+      event.dataTransfer.effectAllowed = "copyMove";
       slot.classList.add("dragging");
     };
     this.onDragEnd = (event) => {
@@ -218,6 +209,7 @@ export class HUD {
       event.dataTransfer.dropEffect = "move";
     };
     this.onDrop = (event) => {
+      if(event.dataTransfer.getData('application/x-tora-quick')!=='')return;
       event.preventDefault();
       event.stopPropagation();
       const from = Number(event.dataTransfer.getData("text/plain") || this.dragFrom);
@@ -259,7 +251,7 @@ export class HUD {
       event.preventDefault();
       const from = this.dragFrom;
       this.dragFrom = -1;
-      if (event.target.closest?.("#inventory-panel")) return;
+      if (event.target.closest?.("#inventory-panel,#quick-item-bar")) return;
       this.#askDrop(from);
     };
     this.onDropYes = () => {
@@ -276,14 +268,6 @@ export class HUD {
     this.onDropNo = () => this.#hideDropDialog();
 
     this.chatForm.addEventListener("submit", this.onChatSubmit);
-    this.onMinimapZoom = event => {
-      this.minimapZoom = BABYLON.Scalar.Clamp(this.minimapZoom + (event.currentTarget===this.minimapZoomIn ? .3 : -.3), 1, 1.9);
-      this.minimapContent.style.transform=`scale(${this.minimapZoom})`;
-      if (this.minimapZoomIn) this.minimapZoomIn.disabled = this.minimapZoom >= 1.89;
-      if (this.minimapZoomOut) this.minimapZoomOut.disabled = this.minimapZoom <= 1.01;
-    };
-    this.minimapZoomIn?.addEventListener('click',this.onMinimapZoom);
-    this.minimapZoomOut?.addEventListener('click',this.onMinimapZoom);
     addEventListener("keydown", this.onGlobalKeyDown);
     this.root.addEventListener("click", this.onPanelClick);
     this.inventoryGrid?.addEventListener("dragstart", this.onDragStart);
@@ -321,35 +305,21 @@ export class HUD {
     this.root.addEventListener("pointerdown", this.onPanelDragDown);
     window.addEventListener("pointermove", this.onPanelDragMove);
     window.addEventListener("pointerup", this.onPanelDragUp);
+    this.worldMap=new WorldMap(this.map,this.player,this.entities,this.progression,this.loot);
     this.#renderInventory();
     this.#renderStats();
     this.refreshMinimapSites();
     this.applyIdentity({ username: player.name, isAdmin: player.isAdmin });
   }
 
-  syncEntities() {
-    for(const node of this.labels.values())node.remove();this.labels.clear();this.minimapMobs.replaceChildren();
-    this.minimapDots=new Map();
-    for(const mob of this.entities.mobs){this.#labelFor(mob);const dot=document.createElement('i');dot.dataset.entityId=mob.id;dot.classList.toggle('boss',Boolean(mob.definition?.boss));dot.classList.toggle('elite',mob.level>1&&!mob.definition?.boss);dot.title=mob.name;this.minimapMobs.append(dot);this.minimapDots.set(mob.id,dot);}
-    this.refreshMinimapSites();
-  }
-  refreshMinimapSites() {
-    if(!this.minimapSites||!this.map?.definition)return;
-    this.minimapSites.replaceChildren();
-    const add=(kind,name,x,z)=>{
-      const icon=document.createElement('span');icon.className='mini-site '+kind;icon.title=name;
-      this.minimapSites.append(icon);this.#minimapPosition(icon,{x,z},0,false);
-    };
-    for(const exit of this.map.definition.exits)add('portal',exit.name,exit.x,exit.z);
-    if(this.map.npc){const {x,z}=this.map.npc.position;add('quest','Demirci Ayame · Görev',x,z);}
-    for(const chest of this.map.chests||[]){const {x,z}=chest.root.position;add('chest','Sandık',x,z);}
-  }
+  syncEntities(){for(const node of this.labels.values())node.remove();this.labels.clear();for(const mob of this.entities.mobs)this.#labelFor(mob);this.refreshMinimapSites();}
+  refreshMinimapSites(){this.worldMap?.refresh();}
   applyIdentity(identity) {
     const name = identity?.username || this.player.name || "Oyuncu";
     this.player.name = name;
     this.player.isAdmin = Boolean(identity?.isAdmin);
     if (this.nameEl) this.nameEl.textContent = name;
-    if (this.portrait) { this.portrait.className = "portrait warrior-portrait"; this.portrait.replaceChildren(); }
+    if (this.portrait) { this.portrait.className = 'portrait class-portrait';this.portrait.style.backgroundImage='url('+this.classDef.portrait+')';this.portrait.replaceChildren(this.level);document.querySelector('.player-class').textContent=this.classDef.label.toLocaleUpperCase('tr'); }
     const labelName = this.playerLabel?.querySelector(".player-label-name");
     if (labelName) labelName.textContent = name;
   }
@@ -429,6 +399,7 @@ export class HUD {
   }
 
   togglePanel(name, force) {
+    if(this.isBlocked())return;
     const next = typeof force === "boolean" ? force : this.openPanel !== name;
     this.closePanels();
     if (!next) return;
@@ -444,7 +415,7 @@ export class HUD {
       this.#renderStats();
       this.preview.attach(document.getElementById('stats-preview-host'));
     } else {
-      this.shortcutPanel.hidden=false;
+      this.shortcutPanel.classList.toggle('world-map-panel',name==='map');this.shortcutPanel.hidden=false;
       this.#renderShortcutPanel(name);
     }
   }
@@ -474,7 +445,7 @@ export class HUD {
       const block=document.createElement('section');block.innerHTML=`<h3>${title}</h3>`;
       const list=document.createElement('div');list.className='shortcut-skill-list';
       for(const slot of slots){
-        const skill=SKILLS.find(entry=>entry.slot===slot);
+        const skill=this.skillSystem.get(slot);
         const row=document.createElement('div');
         const remain=this.skillSystem?.remaining?.(slot)||0;
         row.innerHTML=`<span class="art-icon skill-art" style="background-position:${(slot-1)%3*50}% ${Math.floor((slot-1)/3)*50}%"></span><div><strong>${skill.name}</strong><small>${skill.description}</small><em>${remain>.05?'Beklemede '+remain.toFixed(1)+' sn':'Açık'} · Mana ${skill.mana} · Menzil ${skill.range} m · Hasar ${skill.damage}</em></div><kbd>${slot}</kbd>`;
@@ -497,29 +468,12 @@ export class HUD {
       return node;
     };
     root.append(card(snap.quest,`Ödül · ${snap.quest.rewardXp} XP ve sonraki görev`,snap.quest.accepted||snap.quest.completed));
-    root.append(card(snap.secondQuest,'Ödül · Demir Kılıç, 30 altın ve 90 XP',snap.secondQuest.unlocked||snap.secondQuest.completed));
+    root.append(card(snap.secondQuest,'Ödül · '+itemName(this.classDef.rewardWeapon)+', 30 altın ve 90 XP',snap.secondQuest.unlocked||snap.secondQuest.completed));
     const note=document.createElement('p');note.className='panel-hint';note.textContent=snap.bossDefeated?'Kül Muhafızı yenildi.':'Kül Muhafızı, diş görevi bitince Kadim Harabe’de bekler.';root.append(note);
     return root;
   }
 
-  #mapCodex() {
-    const root=document.createElement('div');root.className='map-codex';
-    const frame=document.createElement('div');frame.className='map-frame';
-    const canvas=document.createElement('canvas');canvas.width=canvas.height=270;canvas.className='large-minimap';
-    const source=document.querySelector('.region-mini');if(source)canvas.getContext('2d').drawImage(source,0,0,270,270);
-    frame.append(canvas);
-    const tools=document.createElement('div');tools.className='map-tools';
-    const zoom=(dir)=>{frame.style.setProperty('--map-zoom',String(Math.min(2.2,Math.max(1,(Number(frame.style.getPropertyValue('--map-zoom'))||1)+dir))));};
-    for(const [text,dir,label] of [['−',-.25,'Uzaklaştır'],['+',.25,'Yakınlaştır']]){
-      const button=document.createElement('button');button.type='button';button.textContent=text;button.setAttribute('aria-label',label);button.addEventListener('click',()=>zoom(dir));tools.append(button);
-    }
-    const place=document.createElement('p');
-    const region=document.querySelector('.minimap>strong')?.textContent||'Bölge';
-    place.textContent=`${region} · konum ${this.player.position.x.toFixed(0)}, ${this.player.position.z.toFixed(0)}. Kapılar mini haritada işaretli.`;
-    place.className='panel-hint';
-    root.append(tools,frame,place);
-    return root;
-  }
+  #mapCodex(){return this.worldMap.largeView();}
 
   #settingsCodex() {
     const root=document.createElement('div');root.className='settings-grid';
@@ -563,7 +517,7 @@ export class HUD {
   update() {
     const stamp = performance.now();
     const dt = Math.min(0.05, (stamp - (this._labelTime || stamp)) / 1000 || 0.016);
-    this._labelTime = stamp;
+    this._labelTime = stamp;this.worldMap.update(stamp);this.quickBar.update();
     this.#placeMobLabels(dt);
     const playerScreen = this.#project(this.player.position.add(new BABYLON.Vector3(0, 1.95, 0)));
     this.playerLabel.hidden = !this.#onScreen(playerScreen);
@@ -615,20 +569,12 @@ export class HUD {
     this.quest.textContent = questText;
     document.getElementById("status-message").hidden=performance.now()>=this.statusUntil;
     const objective=progress.quest.completed&&!progress.secondQuest.completed?progress.secondQuest:progress.quest;document.getElementById("quest-progress").style.width=Math.min(100,objective.progress/objective.goal*100)+"%";
-    document.getElementById("quest-reward").textContent=progress.bossDefeated?"Diyarın yolları yeniden açık":progress.secondQuest.completed?"Ödül · Muhafız ganimeti":progress.quest.completed?"Ödül · Demir Kılıç, 30 altın ve 90 XP":"Ödül · 70 XP ve yeni görev";
+    document.getElementById("quest-reward").textContent=progress.bossDefeated?"Diyarın yolları yeniden açık":progress.secondQuest.completed?"Ödül · Muhafız ganimeti":progress.quest.completed?"Ödül · "+itemName(this.classDef.rewardWeapon)+", 30 altın ve 90 XP":"Ödül · 70 XP ve yeni görev";
     this.questPanel.classList.toggle("is-complete", progress.quest.completed && (!progress.secondQuest.unlocked || progress.secondQuest.completed));
     this.targetFrame.update(this.entities.selected);
     this.skillBar.update(this.skillSystem, p, this.entities.selected);
     this.fps.textContent = `${this.engine.getFps().toFixed(0)} FPS`;
     this.#updateBuffs();
-    this.#minimapPosition(this.minimapPlayer, p.position, p.rotation, true);
-    for (const mob of this.entities.mobs) {
-      const dot = this.minimapDots?.get(mob.id);
-      if (!dot) continue;
-      dot.hidden = !mob.alive;
-      if (mob.alive) this.#minimapPosition(dot, mob.position, 0, false);
-    }
-    this.#syncLootDots();
     if (this.openPanel === "stats" && this.statPoints) {
       this.statPoints.textContent = String(this.stats.unspent);
     }
@@ -650,15 +596,14 @@ export class HUD {
     this.root.removeEventListener("pointerdown", this.onPanelDragDown);
     window.removeEventListener("pointermove", this.onPanelDragMove);
     window.removeEventListener("pointerup", this.onPanelDragUp);
-    this.minimapZoomIn?.removeEventListener('click',this.onMinimapZoom);
-    this.minimapZoomOut?.removeEventListener('click',this.onMinimapZoom);
+    this.shortcutBar.replaceChildren();this.shortcutButtons.clear();this.worldMap.dispose();this.quickBar.dispose();
     this.preview.dispose();
     this.skillBar.dispose();
     for (const node of this.labels.values()) node.remove();
     for (const node of this.damagePool) node.remove();
     this.playerLabel?.remove();
     this.bubbleLayer?.remove();
-    this.minimapMobs.replaceChildren();
+
     this.labels.clear();
     this.chatBubbles = [];
     this.root.hidden = true;
@@ -717,55 +662,14 @@ export class HUD {
     }
   }
 
-  #syncLootDots() {
-    if (!this.minimapSites || !this.loot) return;
-    const drops = this.loot.drops || [];
-    const ids = new Set(drops.map((drop) => String(drop.id)));
-    for (const [id, node] of this.lootDots) {
-      if (!ids.has(id)) {
-        node.remove();
-        this.lootDots.delete(id);
-      }
-    }
-    for (const drop of drops) {
-      const id = String(drop.id);
-      let node = this.lootDots.get(id);
-      if (!node || !node.isConnected) {
-        node = document.createElement("span");
-        node.className = "mini-site loot";
-        node.title = "Ganimet";
-        this.minimapSites.append(node);
-        this.lootDots.set(id, node);
-      }
-      this.#minimapPosition(node, drop.mesh.position, 0, false);
-    }
-  }
-
-  #mobLabelHeight(mob) {
-    try {
-      const meshes = mob.root?.getChildMeshes?.(false) || [];
-      let maxY = null;
-      for (const mesh of meshes) {
-        mesh.computeWorldMatrix?.(true);
-        const bi = mesh.getBoundingInfo?.();
-        const y = bi?.boundingBox?.maximumWorld?.y;
-        if (Number.isFinite(y)) maxY = maxY == null ? y : Math.max(maxY, y);
-      }
-      if (maxY != null && Number.isFinite(mob.position?.y)) {
-        return Math.max(1.2, Math.min(2.8, maxY - mob.position.y + 0.18));
-      }
-    } catch (_) { /* fallback */ }
-    return 1.75 * (mob.root?.scaling?.y || 1);
-  }
-
   #updateBuffs() {
     if (!this.buffBar) return;
-    const defs=[['guard','Savaşçı Savunması','Alınan hasarı azaltır.','assets/vfx/wind.webp'],['rage','Öfke','Saldırı ve hareket hızını artırır.','assets/vfx/rage.webp']];
+    const defs=[['guard',this.skillSystem.get(7).name,'Alınan hasarı azaltır.','assets/vfx/wind.webp'],['rage',this.skillSystem.get(8).name,'Saldırı gücünü artırır.','assets/vfx/rage.webp']];
     for(const [type,name,description,image] of defs){
       let node=this.buffBar.querySelector(`[data-buff="${type}"]`);
       const seconds=Number(this.player.buffs?.[type]||0);
       if(seconds<=0){node?.remove();continue;}
-      if(!node){node=document.createElement('span');node.className=`buff ${type}`;node.dataset.buff=type;node.innerHTML=`<span class="buff-icon" style="background-image:url('${image}')"></span><i class="buff-cooldown"></i><b class="buff-seconds"></b><span class="buff-tooltip"><strong>${name}</strong><small>${description}</small><em></em></span>`;this.buffBar.append(node);}
+      if(!node){node=document.createElement('span');node.className=`buff ${type}`;node.dataset.buff=type;node.innerHTML=`<span class="buff-icon" style="background-image:url('${this.classDef.iconAtlas}');background-size:300% 300%;background-position:${type==='guard'?'0% 100%':'50% 100%'}"></span><i class="buff-cooldown"></i><b class="buff-seconds"></b><span class="buff-tooltip"><strong>${name}</strong><small>${description}</small><em></em></span>`;this.buffBar.append(node);}
       node.querySelector('.buff-seconds').textContent=seconds.toFixed(1);
       node.querySelector('.buff-cooldown').style.setProperty('--buff-angle',`${Math.min(1,seconds/(type==='guard'?6:8))*360}deg`);
       node.querySelector('.buff-tooltip em').textContent=`Kalan süre: ${seconds.toFixed(1)} sn`;
@@ -816,6 +720,7 @@ export class HUD {
     }
     const gold=document.getElementById('inventory-gold');if(gold)gold.textContent=`${snap.gold??this.inventory.gold} ALTIN`;
     document.querySelectorAll('[data-character-name]').forEach(node=>node.textContent=this.player.name);
+    document.querySelectorAll('[data-character-class]').forEach(node=>node.textContent=this.classDef.label.toLocaleUpperCase('tr'));
     document.querySelectorAll('[data-character-level]').forEach(node=>node.textContent=this.progression.snapshot().level);
     if (this.useItemButton) this.useItemButton.disabled = snap.selected < 0;
   }
@@ -840,14 +745,6 @@ export class HUD {
     if (readout) {
       readout.innerHTML = `<span><small>Can</small><b>${this.player.maxHealth}</b></span><span><small>Mana</small><b>${this.player.maxMana}</b></span><span><small>Hasar</small><b>+${snap.damageBonus.toFixed(0)}</b></span><span><small>Kritik</small><b>%${(snap.critChance * 100).toFixed(0)}</b></span>`;
     }
-  }
-
-  #minimapPosition(node, position, rotation, isPlayer) {
-    const x = (position.x + 25) / 50 * 100;
-    const y = (25 - position.z) / 50 * 100;
-    node.style.left = `${BABYLON.Scalar.Clamp(x, 3, 97)}%`;
-    node.style.top = `${BABYLON.Scalar.Clamp(y, 3, 97)}%`;
-    if (isPlayer) node.style.transform = `translate(-50%,-50%) rotate(${rotation}rad)`;
   }
 
   #labelFor(mob) {

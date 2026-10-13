@@ -1,2 +1,6 @@
 node_modules/
 dist/
+/reports/revision-2026-10-12/asset-sources/
+/reports/revision-2026-10-12/source-before.zip
+/reports/revision-2026-10-12/source-before.patch
+/reports/revision-2026-10-12/after/*failure.png

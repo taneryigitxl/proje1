@@ -24,6 +24,7 @@ export class GlbLoot {
     this.panel.id = "loot-window";
     this.panel.className = "loot-window panel";
     this.panel.hidden = true;
+    this.panel.tabIndex=-1;
     this.panel.setAttribute("role", "dialog");
     this.panel.setAttribute("aria-label", "Ganimet kesesi");
     (document.getElementById("hud") || document.body).append(this.panel);
@@ -59,7 +60,7 @@ export class GlbLoot {
   }
 
   rollFor(mob) {
-    return mob.definition.boss ? "iron-blade" : Math.random() < 0.6 ? "wolf-fang" : Math.random() < 0.5 ? "health-potion" : "mana-potion";
+    return mob.definition.boss ? this.inventory.classDef.rewardWeapon : Math.random() < 0.6 ? "wolf-fang" : Math.random() < 0.5 ? "health-potion" : "mana-potion";
   }
 
   async initialize(assets) {
@@ -126,6 +127,7 @@ export class GlbLoot {
     this.selected = 0;
     this.panel.hidden = false;
     this.#render();
+    this.panel.focus({preventScroll:true});
     this.onOpen?.();
   }
 
@@ -258,6 +260,6 @@ export class GlbLoot {
       const count = stack.count > 1 ? `<b>×${stack.count}</b>` : "";
       return `<button type="button" class="loot-row ${item.rarity || "common"}${index === this.selected ? " is-selected" : ""}" data-loot-index="${index}" data-loot-id="${stack.id}" title="${item.name} · ${item.rarity || "common"}"><span>${itemArt(stack.itemId)}<span><strong>${item.name}</strong><small>${item.rarity || "common"}</small></span></span>${count}</button>`;
     }).join("");
-    this.panel.innerHTML = `<header><strong>Ganimet Kesesi</strong><button type="button" data-loot="close">Kapat</button></header><div class="loot-list">${rows}</div><button type="button" class="loot-take" data-loot="all">Hepsini Al [E]</button><p>Tek tık seçer. Çift tık seçili yığını alır.</p>`;
+    this.panel.innerHTML = `<header><strong>Ganimet Kesesi</strong><button type="button" data-loot="close">Kapat</button></header><div class="loot-list">${rows}</div><button type="button" class="loot-take" data-loot="all">Hepsini Al [F]</button><p>Tek tık seçer. Çift tık seçili yığını alır.</p>`;
   }
 }

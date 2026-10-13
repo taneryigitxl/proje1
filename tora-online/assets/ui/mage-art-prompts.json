@@ -1,0 +1,18 @@
+{
+  "tool": "built-in image_gen.imagegen",
+  "created": "2026-10-12",
+  "assets": [
+    {
+      "path": "assets/ui/mage-skills-atlas.webp",
+      "prompt": "Create a production-ready square 3x3 atlas of nine original painted fantasy RPG spell icons for Tora Online's female Eastern-fantasy mage. No lettering, numerals, logos, border frames, gutters or interface. Exact equal grid of 3 columns by 3 rows, each symbol centered well within its cell on a dark charcoal painterly backdrop. Consistent polished hand-painted game art, clean silhouettes legible at 48 pixels, warm rim lighting, muted jeweled cyan/steel blue/bronze, restrained fiery gold-orange accents, no purple neon, no copied game assets. Row-major order: 1 a bright cyan arcane missile, 2 a molten fire orb, 3 a sharp translucent ice spear, 4 branching blue lightning bolts, 5 a cyan teleport gateway with two echoes, 6 a circular crown of icy spikes viewed from above, 7 a transparent blue arcane shield with a bronze rune, 8 a wood-and-bronze staff tip burning with a golden flame, 9 a fiery falling meteor with a fragment trail. Nine distinct professional icons in exactly aligned square cells."
+    },
+    {
+      "path": "assets/ui/portraits/mage.webp",
+      "prompt": "A single original professional fantasy RPG character portrait for Tora Online: adult female Eastern-fantasy mage, natural human facial proportions, warm brown eyes, long dark hair in a flowing half-up style, jade-green and deep desaturated teal wrapped silk robes, narrow antique bronze embroidered collar and belt, a small bronze hair circlet, ornate slender carved wooden staff with a small cyan jade crystal partially visible beside one shoulder. Chest-up three-quarter portrait, calm confident expression, restrained painterly game concept art with realistic face and cloth detail, dark charcoal softly textured backdrop, warm face lighting and subtle cool staff light, clean readable silhouette usable at 72 pixels. No text, frames, interface, watermark, purple neon, sexualized costume or resemblance to any existing game character. Square image, centered head and shoulders, generous dark margin."
+    },
+    {
+      "path": "assets/ui/mage-items-atlas.webp",
+      "prompt": "Square 2x2 atlas of exactly four original hand-painted fantasy RPG inventory icons, equal square cells, no gutters, no text, no digits, no frames. Consistent realistic painterly tabletop item lighting from top-left on near-black charcoal backgrounds with readable edges at 48px, antique bronze and jade Eastern-fantasy craftsmanship. Top-left: a slender carved walnut wizard staff with engraved bronze lotus collar and a cyan jade crystal tip, diagonal full item. Top-right: a folded deep jade silk mage robe with bronze embroidered belt and narrow collar. Bottom-left: a small linen ration packet with bread, dried fruit and tied cloth. Bottom-right: a rolled parchment magic scroll tied by a teal silk cord and a small bronze seal. Detailed tangible materials, subdued professional MMORPG inventory art, no copied copyrighted items, no neon."
+    }
+  ]
+}

@@ -1,8 +1,8 @@
-import { SKILLS } from '../core/Config.js';
+
 export class SkillBar {
- constructor(element, onActivate) {
-  this.element=element;this.slots=new Map();this.flashUntil=new Map();
-  for(const skill of SKILLS) {
+ constructor(element, onActivate, definition) {
+  this.skills=definition.skills;this.element=element;this.element.style.setProperty('--skill-atlas',"url("+new URL(definition.iconAtlas,document.baseURI).href+")");this.slots=new Map();this.flashUntil=new Map();
+  for(const skill of this.skills) {
    const button=document.createElement('button');button.type='button';button.className='skill-slot';
    button.setAttribute('aria-label',skill.slot+': '+skill.name);
    const i=skill.slot-1;
@@ -14,14 +14,14 @@ export class SkillBar {
  markPressed(slot){this.flashUntil.set(slot,performance.now()+220);}
  update(system,player,selected=null){
   const now=performance.now();
-  for(const skill of SKILLS){
+  for(const skill of this.skills){
    const {button,overlay,reason}=this.slots.get(skill.slot),remaining=system.remaining(skill.slot);
    overlay.hidden=remaining<=.05;const text=remaining>.05?remaining.toFixed(remaining<1?1:0):'';
    if(overlay.textContent!==text)overlay.textContent=text;
    overlay.style.setProperty('--cooldown-angle',Math.min(1,remaining/skill.cooldown)*360+'deg');
    const check=system.canUse(skill,player),needsTarget=skill.target==='enemy'&&!selected?.alive;
    button.classList.toggle('unavailable',!check.ok||player.actionLocked);button.classList.toggle('busy',player.actionLocked);button.classList.toggle('no-mana',player.mana<skill.mana);button.classList.toggle('needs-target',needsTarget);button.classList.toggle('flash',(this.flashUntil.get(skill.slot)||0)>now);
-   const message=!check.ok?check.reason:player.actionLocked?'Devam eden saldırının bitmesini bekle.':needsTarget?'Bir düşman seç · TAB veya sol tık':'Kullanıma hazır';
+   const message=!check.ok?check.reason:player.actionLocked?'Devam eden saldırının bitmesini bekle.':needsTarget?'Bir düşman seç · sol tık':'Kullanıma hazır';
    if(reason.textContent!==message)reason.textContent=message;
    const dist=selected?.alive&&player.position?BABYLON.Vector3.Distance(player.position,selected.position):Infinity;
    button.classList.toggle('out-of-range',skill.target==='enemy'&&selected?.alive&&dist>skill.range+.15);

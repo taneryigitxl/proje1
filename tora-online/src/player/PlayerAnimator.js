@@ -1,30 +1,9 @@
-/** Prefer exact UAL clip names first, then broader fallbacks. */
-const CLIP_ALIASES = {
-  idle: ["idle_loop", "sword_idle", "idle"],
-  combatIdle:["sword_idle","idle_loop"],
-  attack3:["sword_regular_c"],
-  walk: ["walk_loop", "walk_formal_loop", "walk", "jog_fwd_loop"],
-  run: ["sprint_loop", "jog_fwd_loop", "run"],
-  jump: ["jump_start", "ninjajump_start", "jump"],
-  fall: ["jump_loop", "ninjajump_idle_loop", "fall"],
-  land: ["jump_land", "ninjajump_land", "land"],
-  attack1: ["sword_regular_a", "sword_attack", "punch_jab", "attack"],
-  attack2: ["sword_regular_combo", "sword_regular_b", "sword_attack", "punch_cross"],
-  heavy: ["sword_attack"],
-  skill4: ["sword_regular_b"],
-  skill5: ["sword_dash", "roll", "shield_dash"],
-  skill6: ["sword_regular_c", "sword_attack", "spell_simple_shoot"],
-  skill7: ["sword_block", "idle_shield_loop"],
-  skill8: ["spell_simple_enter", "spell_simple_idle_loop", "sword_idle"],
-  skill9: ["sword_heavy_combo", "sword_regular_combo"],
-  hit: ["hit_knockback", "hit_chest", "hit_head", "hit"],
-  dead: ["death01", "death"],
-};
-
-const LOOPING = new Set(["idle", "combatIdle", "walk", "run", "fall"]);
+import { classDef } from '../characters/ClassDefs.js';
+const LOOPING = new Set(["idle", "combatIdle", "walk", "run"]);
 
 export class PlayerAnimator {
   constructor(visual) {
+    this.aliases = classDef(visual.classId).animations;
     this.groups = visual.animationGroups || [];
     this.state = "";
     this.activeGroup = null;
@@ -37,7 +16,7 @@ export class PlayerAnimator {
       group.blendingSpeed = 0.12;
       try { group.setWeightForAllAnimatables(1); } catch (_) { /* older Babylon */ }
     });
-    this.clips = new Map(Object.keys(CLIP_ALIASES).map((state) => [state, this.#findGroup(state)]));
+    this.clips = new Map(Object.keys(this.aliases).map((state) => [state, this.#findGroup(state)]));
     const bound = [...this.clips].filter(([, group]) => group).map(([state, group]) => `${state}=${this.#clipName(group)}`);
     console.info(`[Tora Animator] Bağlanan klipler (${bound.length}/${this.clips.size}): ${bound.join(", ") || "(yok)"}`);
     const missing = [...this.clips].filter(([, group]) => !group).map(([state]) => state);
@@ -115,7 +94,7 @@ export class PlayerAnimator {
   }
 
   #findGroup(state) {
-    const aliases = CLIP_ALIASES[state] || [state];
+    const aliases = this.aliases[state] || [state];
     for (const alias of aliases) {
       const exact = this.groups.find((candidate) => this.#clipName(candidate) === alias);
       if (exact) return exact;
@@ -126,6 +105,8 @@ export class PlayerAnimator {
     }
     return null;
   }
+
+  duration(state) { const group=this.clips.get(state); return group ? this.#duration(group) : 1.5; }
 
   #duration(group) {
     const fps = group.targetedAnimations?.[0]?.animation?.framePerSecond || 30;

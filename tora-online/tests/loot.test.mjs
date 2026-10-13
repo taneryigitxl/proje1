@@ -9,7 +9,7 @@ globalThis.BABYLON = {
  Vector3:{Distance:(a,b)=>Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z)},
 };
 globalThis.document = {
- createElement:()=>({hidden:true,setAttribute(){},addEventListener(){},removeEventListener(){},replaceChildren(){},remove(){}}),
+ createElement:()=>({hidden:true,focus(){},setAttribute(){},addEventListener(){},removeEventListener(){},replaceChildren(){},remove(){}}),
  getElementById:()=>({append(){}}),addEventListener(){},removeEventListener(){},
 };
 function fixture(contents, free=24) {

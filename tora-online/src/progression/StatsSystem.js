@@ -5,13 +5,14 @@ export const STAT_DEFS = Object.freeze([
   { id: "dexterity", label: "Çeviklik", short: "DEX", description: "Kritik vuruş şansını artırır.", perPoint: "+1% kritik" },
 ]);
 
-const BASE = Object.freeze({ strength: 5, vitality: 5, intelligence: 3, dexterity: 3 });
 const SAVE_KEY = "tora-stats-v1";
 
 export class StatsSystem {
-  constructor(player) {
+  constructor(player, save = null) {
     this.player = player;
-    this.values = { ...BASE };
+    this.save = save;
+    this.classDef = classDef(player.classId);
+    this.values = { ...this.classDef.stats };
     this.gearBonus = { strength: 0, vitality: 0, intelligence: 0, dexterity: 0 };
     this.unspent = 3;
     this.#load();
@@ -45,13 +46,13 @@ export class StatsSystem {
       unspent: this.unspent,
       damageBonus: this.damageBonus(),
       critChance: this.critChance(),
-      defs: STAT_DEFS,
+      defs: STAT_DEFS.map(def => ({ ...def, ...this.classDef.statOverrides?.[def.id] })),
     };
   }
 
   damageBonus() {
-    const strength = this.get("strength");
-    return Math.max(0, strength - BASE.strength) * 2 + strength * 0.35;
+    const stat = this.classDef.damageStat, value = this.get(stat);
+    return Math.max(0, value - this.classDef.stats[stat]) * 2 + value * 0.35;
   }
 
   critChance() {
@@ -79,8 +80,8 @@ export class StatsSystem {
   #applyDerived(fullHeal) {
     const vit = this.get("vitality");
     const intel = this.get("intelligence");
-    const nextMaxHealth = 100 + vit * 12;
-    const nextMaxMana = 70 + intel * 8;
+    const nextMaxHealth = this.classDef.baseHealth + vit * 12;
+    const nextMaxMana = this.classDef.baseMana + intel * 8;
     const healthRatio = this.player.maxHealth > 0 ? this.player.health / this.player.maxHealth : 1;
     const manaRatio = this.player.maxMana > 0 ? this.player.mana / this.player.maxMana : 1;
     this.player.maxHealth = nextMaxHealth;
@@ -92,17 +93,18 @@ export class StatsSystem {
 
   #save() {
     try {
-      localStorage.setItem(SAVE_KEY, JSON.stringify({ values: this.values, unspent: this.unspent }));
+      const data = { values: this.values, unspent: this.unspent };
+      if (this.save) this.save.write('stats', data); else localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     } catch (_) { /* optional */ }
   }
 
   #load() {
     try {
-      const raw = localStorage.getItem(SAVE_KEY);
-      if (!raw) return;
-      const data = JSON.parse(raw);
-      if (data.values) this.values = { ...BASE, ...data.values };
-      if (Number.isFinite(data.unspent)) this.unspent = data.unspent;
+      const data = this.save ? this.save.read('stats') : JSON.parse(localStorage.getItem(SAVE_KEY));
+      if (!data) return;
+      for (const key of Object.keys(this.values)) if (Number.isFinite(data.values?.[key])) this.values[key] = Math.max(0, Math.min(999, Math.floor(data.values[key])));
+      if (Number.isFinite(data.unspent)) this.unspent = Math.max(0, Math.min(999, Math.floor(data.unspent)));
     } catch (_) { /* optional */ }
   }
 }
+import { classDef } from '../characters/ClassDefs.js';

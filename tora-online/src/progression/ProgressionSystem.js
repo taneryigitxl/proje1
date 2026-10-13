@@ -14,7 +14,8 @@ export const COLLECTOR = Object.freeze({
 });
 
 export class ProgressionSystem {
-  constructor(player, stats = null, inventory = null) {
+  constructor(player, stats = null, inventory = null, save = null) {
+    this.save = save;
     this.player = player;
     this.stats = stats;
     this.inventory = inventory;
@@ -69,8 +70,10 @@ export class ProgressionSystem {
   }
   claimCollector() {
     if(!this.secondQuest.unlocked||this.secondQuest.completed||this.inventory.countItem(COLLECTOR.itemId)<3)return {ok:false,message:'Üç kadim diş getir.'};
-    this.inventory.consumeItems(COLLECTOR.itemId,3);this.inventory.add('iron-blade');this.inventory.addGold(30);
-    this.secondQuest.completed=true;this.#grantXp(90);this.#save();return {ok:true,message:'Demir Kılıç, 30 altın ve 90 XP aldın.'};
+    const reward=this.inventory.classDef.rewardWeapon;
+    if(!this.inventory.slots.includes(null)&&this.inventory.countItem(COLLECTOR.itemId)<3)return {ok:false,message:'Çantada yer yok.'};
+    this.inventory.consumeItems(COLLECTOR.itemId,3);this.inventory.add(reward);this.inventory.addGold(30);
+    this.secondQuest.completed=true;this.#grantXp(90);this.#save();return {ok:true,message:'Sınıf silahı, 30 altın ve 90 XP aldın.'};
   }
 
   snapshot() {
@@ -109,28 +112,28 @@ export class ProgressionSystem {
 
   #save() {
     try {
-      localStorage.setItem("tora-progress-v1", JSON.stringify({
+      const data = {
         bossDefeated:this.bossDefeated,
         level: this.player.level,
         xp: this.player.xp,
         nextLevelXp: this.player.nextLevelXp,
         quest: this.quest,
         secondQuest: this.secondQuest,
-      }));
+      };
+      if(this.save)this.save.write('progress',data);else localStorage.setItem('tora-progress-v1',JSON.stringify(data));
     } catch (_) { /* optional */ }
   }
 
   #load() {
     try {
-      const raw = localStorage.getItem("tora-progress-v1");
-      if (!raw) return;
-      const data = JSON.parse(raw);
+      const data=this.save?this.save.read('progress'):JSON.parse(localStorage.getItem('tora-progress-v1'));
+      if (!data) return;
       this.bossDefeated=Boolean(data.bossDefeated);
-      if (Number.isFinite(data.level)) this.player.level = data.level;
-      if (Number.isFinite(data.xp)) this.player.xp = data.xp;
-      if (Number.isFinite(data.nextLevelXp)) this.player.nextLevelXp = data.nextLevelXp;
-      if (data.quest) this.quest = { ...FIRST_TRIAL, accepted:true, ...data.quest };
-      if (data.secondQuest) this.secondQuest = { ...COLLECTOR, ...data.secondQuest };
+      if (Number.isFinite(data.level)) this.player.level = Math.max(1,Math.min(100,Math.floor(data.level)));
+      if (Number.isFinite(data.xp)) this.player.xp = Math.max(0,Math.min(100000,data.xp));
+      this.player.nextLevelXp=this.requiredXp(this.player.level);
+      if (data.quest) this.quest = { ...FIRST_TRIAL, accepted:Boolean(data.quest.accepted??true), completed:Boolean(data.quest.completed), progress:Number.isFinite(data.quest.progress)?Math.max(0,Math.min(FIRST_TRIAL.goal,data.quest.progress)):0 };
+      if (data.secondQuest) this.secondQuest = { ...COLLECTOR, unlocked:Boolean(data.secondQuest.unlocked), completed:Boolean(data.secondQuest.completed), progress:Number.isFinite(data.secondQuest.progress)?Math.max(0,Math.min(COLLECTOR.goal,data.secondQuest.progress)):0 };
     } catch (_) { /* optional */ }
   }
 }

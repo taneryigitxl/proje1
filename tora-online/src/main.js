@@ -1,3 +1,4 @@
+import { CharacterLobby } from './ui/CharacterLobby.js';
 import "../menu.js";
 import { EngineRuntime } from "./core/Engine.js";
 import { Game } from "./core/Game.js";
@@ -13,6 +14,7 @@ if (window.__TORA_BOOTSTRAP__) {
   const percent = document.getElementById("loading-percent");
   const fatal = document.getElementById("fatal-error");
   const retryButton = document.getElementById("retry-button");
+  const lobby=new CharacterLobby(menu);
   let runtime = null;
   let game = null;
   let starting = false;
@@ -54,7 +56,9 @@ if (window.__TORA_BOOTSTRAP__) {
       return;
     }
     lastQuality = quality || lastQuality;
+    if(game&&game.identity.characterId!==identity?.characterId)cleanup();
     lastIdentity = {
+      ...identity,
       username: identity?.username || "Ayaz",
       isAdmin: false,
     };
@@ -94,11 +98,13 @@ if (window.__TORA_BOOTSTRAP__) {
 
   const onEnter = (event) => void enter(event.detail.quality, {
     username: event.detail.username,
-    isAdmin: event.detail.isAdmin,
+    isAdmin: false,classId:event.detail.classId,characterId:event.detail.characterId,profile:event.detail.profile,
   });
   const onQuality = (event) => game?.applyQuality(event.detail.quality);
   const onWindowError = (event) => console.error("[Tora Online] Çalışma zamanı hatası:", event.error || event.message);
   const onUnhandledRejection = (event) => console.error("[Tora Online] Promise hatası:", event.reason);
+  document.addEventListener("tora:profile",event=>{window.ToraMenu.unlock();lobby.open(event.detail.username);});
+  document.addEventListener("tora:characters",()=>{cleanup();window.ToraMenu.unlock();lobby.open(lastIdentity.profile||lastIdentity.username);});
   document.addEventListener("tora:enter", onEnter);
   document.addEventListener("tora:quality", onQuality);
   retryButton.addEventListener("click", retry);
@@ -107,5 +113,5 @@ if (window.__TORA_BOOTSTRAP__) {
 
   window.addEventListener('tora:gpu-fallback',()=>{console.warn('[Tora Engine] GPU sürücüsü hatası, WebGL2 ile yeniden açılıyor.');cleanup();starting=false;void enter(lastQuality,lastIdentity);});
 
-  window.__TORA_BOOTSTRAP__ = { game, runtime, enter, retry, cleanup };
+  window.__TORA_BOOTSTRAP__ = { game, runtime, enter, retry, cleanup, lobby };
 }

@@ -31,6 +31,7 @@ export class EntityManager {
   }
   getById(id) { return this.mobs.find((mob) => mob.id === id) || null; }
   aliveMobs() { return this.mobs.filter((mob) => mob.alive); }
+  resetAggro(){for(const mob of this.mobs){mob.aggro=false;mob.targetId=null;mob.attackWindup=0;mob.attackTimer=2;mob.aggroLock=4;mob.wanderTarget=null;}}
 
   select(mob) {
     this.selected = mob?.alive ? mob : null;

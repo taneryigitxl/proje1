@@ -1,3 +1,4 @@
+import { classDef } from '../characters/ClassDefs.js';
 import {TwoHandIK} from "../player/TwoHandIK.js";
 import { WeaponSheath } from "../player/WeaponSheath.js";
 import { ChestState } from "../world/ChestState.js";
@@ -30,10 +31,12 @@ export class AssetManager {
     return this.manifest;
   }
 
-  async loadPlayerVisual() {
+  async loadPlayerVisual(classId = 'warrior') {
+    const definition=classDef(classId);
+    const model=definition.model,weaponDef=definition.weapon;
     if (!this.manifest) throw new Error("AssetManager.initialize() çağrılmadan oyuncu yüklenemez.");
-    this.onProgress(45, "Rigli savaşçı yükleniyor…");
-    const loaded = await this.#load(this.manifest.player.url);
+    this.onProgress(45, `${definition.label} yükleniyor…`);
+    const loaded = await this.#load(model);
     if (!loaded.skeletons.length) throw new Error("Oyuncu GLB içinde iskelet bulunamadı; fallback kapalı.");
     const root = this.#wrap("player-model-root", loaded.meshes, loaded.transformNodes);
     root.scaling.setAll(this.manifest.player.scale || 1);
@@ -60,13 +63,15 @@ export class AssetManager {
 
     this.onProgress(57, "Skeletal animasyonlar bağlanıyor…");
     const animationGroups = [];
-    for (const [libraryIndex, url] of this.manifest.animationLibraries.entries()) {
+    for (const [libraryIndex, url] of (definition.animationLibraries || this.manifest.animationLibraries).entries()) {
       try {
         console.info(`[Tora Animations] Kütüphane yükleniyor: ${url}`);
         const source = await this.#load(url);
         source.meshes.forEach((mesh) => mesh.setEnabled(false));
         let cloned = 0;
         for (const group of source.animationGroups) {
+          const wanted=Object.values(definition.animations).flat();
+          if(!wanted.some(alias=>group.name.toLowerCase()===alias))continue;
           const clone = group.clone(`tora-${libraryIndex}-${group.name}`, (target) => {
             const name = target?.name;
             if (!name) return null;
@@ -89,41 +94,44 @@ export class AssetManager {
         console.error(`[Tora Animations] Animasyon kütüphanesi kullanılamadı: ${url}. Oyun kalan kliplerle devam edecek.`, error);
       }
     }
-    const required = ["idle", "walk", "jump", "sword", "hit", "death"];
+    const required = ['idle', definition.animations.run[0], 'hit', definition.animations.dead[0]];
     const names = animationGroups.map((group) => group.name.toLowerCase()).join(" ");
     const absent = required.filter((name) => !names.includes(name));
     if (absent.length) console.error(`[Tora Animations] Eksik oyuncu klipleri: ${absent.join(", ")}. İlgili state'ler mevcut kliple devam edecek.`);
 
-    this.onProgress(66, "Büyük kılıç ele bağlanıyor…");
-    const weapon = await this.#load(this.manifest.weapon.url);
+    this.onProgress(66, `${definition.weaponName} ele bağlanıyor…`);
+    const weapon = await this.#load(weaponDef.url);
     const weaponRoot = this.#wrap("greatsword-root", weapon.meshes, weapon.transformNodes);
-    const hand = skeleton.bones.find((bone) => bone.name.toLowerCase() === this.manifest.weapon.bone.toLowerCase());
+    const hand = skeleton.bones.find((bone) => bone.name.toLowerCase() === weaponDef.bone.toLowerCase());
     const skinnedMesh = loaded.meshes.find((mesh) => mesh.skeleton === skeleton);
-    if (!hand || !skinnedMesh) throw new Error(`Kılıç bağlama kemiği bulunamadı: ${this.manifest.weapon.bone}`);
+    if (!hand || !skinnedMesh) throw new Error(`Kılıç bağlama kemiği bulunamadı: ${weaponDef.bone}`);
     weaponRoot.attachToBone(hand, skinnedMesh);
-    weaponRoot.position.copyFrom(BABYLON.Vector3.FromArray(this.manifest.weapon.position));
-    weaponRoot.rotation.copyFrom(BABYLON.Vector3.FromArray(this.manifest.weapon.rotation));
-    weaponRoot.scaling.setAll(this.manifest.weapon.scale || 1);
+    weaponRoot.position.copyFrom(BABYLON.Vector3.FromArray(weaponDef.position));
+    weaponRoot.rotation.copyFrom(BABYLON.Vector3.FromArray(weaponDef.rotation));
+    weaponRoot.scaling.setAll(weaponDef.scale || 1);
     weaponRoot.getChildMeshes(false).forEach((mesh) => {
       mesh.isPickable = false;
       mesh.receiveShadows = true;
       // Normalize nested GLB offsets so grip comes from weaponRoot only
       if (!mesh.parent || mesh.parent === weaponRoot) return;
     });
-    console.info(`[Tora Assets] Kılıç '${hand.name}' kemiğine bağlandı (scale=${this.manifest.weapon.scale}).`);
+    console.info(`[Tora Assets] Kılıç '${hand.name}' kemiğine bağlandı (scale=${weaponDef.scale}).`);
 
     this.playerGroups = animationGroups;
     this.onProgress(70, "Yüz detayı ekleniyor…");
-    await this.#attachHead(root, targetByName);
+    await this.#attachHead(root, targetByName, definition.head);
 
     const handPose = {
-      position: BABYLON.Vector3.FromArray(this.manifest.weapon.position),
-      rotation: BABYLON.Vector3.FromArray(this.manifest.weapon.rotation),
-      scale: this.manifest.weapon.scale || 1,
+      position: BABYLON.Vector3.FromArray(weaponDef.position),
+      rotation: BABYLON.Vector3.FromArray(weaponDef.rotation),
+      scale: weaponDef.scale || 1,
     };
-    const weaponSheath = new WeaponSheath(weaponRoot, skeleton, skinnedMesh, hand, handPose);
+    const weaponSheath = weaponDef.twoHanded ? new WeaponSheath(weaponRoot, skeleton, skinnedMesh, hand, handPose) : null;
 
-    const visual={root,skeleton,weaponRoot,weaponSheath,animationGroups,previewMeshes:root.getChildMeshes(false)};visual.ik=new TwoHandIK(visual,this.scene);
+    const tip=new BABYLON.TransformNode('weapon-tip',this.scene);tip.parent=weaponRoot;tip.position.copyFrom(BABYLON.Vector3.FromArray(weaponDef.tip));
+    // Bone attachments are outside TransformNode descendants; include equipment explicitly.
+    const previewMeshes=[...new Set([...root.getChildMeshes(false),...weaponRoot.getChildMeshes(false)])];
+    const visual={classId,root,skeleton,weaponRoot,weaponSheath,tip,animationGroups,previewMeshes};if(weaponDef.twoHanded)visual.ik=new TwoHandIK(visual,this.scene);
     visual.weaponMaterials=[...new Set(weaponRoot.getChildMeshes(false).map(m=>m.material).filter(Boolean))];
     return visual;
   }
@@ -194,9 +202,9 @@ export class AssetManager {
     weapon.getChildMeshes(false).forEach(m=>m.isPickable=false);
   }
 
-  async #attachHead(root, targets) {
-    if (!this.manifest.player.head) throw new Error('Karakterin lisanslı yüz modeli eksik.');
-    const loaded = await this.#load(this.manifest.player.head);
+  async #attachHead(root, targets, headUrl) {
+    if (!headUrl) throw new Error('Karakterin lisanslı yüz modeli eksik.');
+    const loaded = await this.#load(headUrl);
     const head = this.#wrap('warrior-head',loaded.meshes,loaded.transformNodes); head.parent = root;
     this.headTargets = new Map(loaded.transformNodes.map(n=>[n.name.toLowerCase(),n]));
     loaded.skeletons.forEach(s=>s.bones.forEach(b=>this.headTargets.set(b.name.toLowerCase(), b.getTransformNode() || b)));

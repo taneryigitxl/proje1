@@ -16,7 +16,7 @@ export class PlayerCombat {
     this.autoAttack = false;
   }
 
-  request(slot, target, fallbackDirection) {
+  request(slot, target, fallbackDirection, ground = null) {
     const skill = this.skills.get(slot);
     if (!skill || this.active || this.pending) return false;
     const check = this.skills.canUse(skill, this.player);
@@ -29,7 +29,7 @@ export class PlayerCombat {
       this.callbacks.onStatus?.("Önce bir hedef seç.");
       return false;
     }
-    this.pending = { skill, target };
+    this.pending = { skill, target, ground: ground?.clone() || null };
     this.approachTime = 0;
     this.player.targetId = target?.id || null;
     return true;
@@ -40,7 +40,8 @@ export class PlayerCombat {
     if(!ok) return false;
     this.autoAttack = true;
     this.combo=((this.combo??-1)+1)%3;
-    this.pending.skill={...this.pending.skill,animation:["attack1","attack2","attack3"][this.combo]};
+    const animations=this.player.classDef?.basicAnimations||['attack1','attack2','attack3'];
+    this.pending.skill={...this.pending.skill,animation:animations[this.combo%animations.length]};
     return true;
   }
   cancelApproach() {
@@ -92,7 +93,7 @@ export class PlayerCombat {
       this.active.skill.impact?.forEach((moment, index) => {
         if (this.elapsed >= moment && !this.applied.has(index)) {
           this.applied.add(index);
-          this.#impact(this.active.skill, this.active.target, index);
+          this.#impact(this.active.skill, this.active.target, index, this.active.ground);
         }
       });
       if (this.elapsed >= this.active.skill.duration) this.#finish();
@@ -133,6 +134,7 @@ export class PlayerCombat {
     this.player.state = state;
     this.animator.playAction(state, skill.duration);
     this.callbacks.onActionStart?.(skill);
+    this.player.invulnerable = 0;
     this.callbacks.onCast?.(skill, this.player.position, target?.position);
   }
 
@@ -176,12 +178,18 @@ export class PlayerCombat {
     const base = this.skills.get(1);
     if (!base || !target?.alive) { this.autoAttack = false; return; }
     this.combo = ((this.combo ?? -1) + 1) % 3;
-    this.pending = { skill: { ...base, animation: ["attack1", "attack2", "attack3"][this.combo] }, target };
+    const animations=this.player.classDef?.basicAnimations||['attack1','attack2','attack3'];
+    this.pending = { skill: { ...base, animation: animations[this.combo%animations.length] }, target };
     this.approachTime = 0;
     this.player.targetId = target.id;
   }
 
-  #impact(skill, target, index) {
+  #impact(skill, target, index, ground) {
+    if (skill.effect) { this.callbacks.onEffect?.(skill,target,ground); return; }
+    if (skill.action === 'blink' && ground) {
+      const safe=this.player.navigation.findReachable(this.player.position,ground);
+      if (BABYLON.Vector3.Distance(safe,ground)<.3) {this.callbacks.onImpact?.(skill,this.player.position,null);this.player.position.copyFrom(safe);this.callbacks.onImpact?.(skill,safe,null);}
+    }
     if (skill.action === "dash") {
       let direction = target?.position.subtract(this.player.position) || this.fallbackDirection.clone();
       direction.y = 0;
@@ -190,12 +198,12 @@ export class PlayerCombat {
     if (skill.action === "guard") {
       this.player.buffs.guard = 6;
       this.callbacks.onBuff?.('guard', 6);
-      this.callbacks.onStatus?.("Savaşçı Savunması aktif: alınan hasar azaldı.");
+      this.callbacks.onStatus?.(`${skill.name} aktif: alınan hasar azaldı.`);
     }
     if (skill.action === "rage") {
       this.player.buffs.rage = 8;
       this.callbacks.onBuff?.('rage', 8);
-      this.callbacks.onStatus?.("Öfke aktif: saldırı ve hareket hızı arttı.");
+      this.callbacks.onStatus?.(`${skill.name} aktif: saldırı ve hareket hızı arttı.`);
     }
     const victims = skill.aoe
       ? this.entities.inRadius(this.player.position, skill.range)
@@ -204,6 +212,7 @@ export class PlayerCombat {
       const damage = Math.round(skill.damage * (index > 0 ? 0.75 : 1));
       const result = mob.takeHit(this.player, damage, this.callbacks.stats || null);
       if (result) {
+        if(skill.slow)mob.slowTime=skill.slow;
         this.callbacks.onDamage?.(mob, result, skill);
         if (!mob.alive) this.callbacks.onKill?.(mob, skill);
       }

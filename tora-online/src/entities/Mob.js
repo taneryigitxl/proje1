@@ -51,6 +51,8 @@ export class Mob extends Entity {
 
   update(dt, player) {
     if(this.disposed)return;
+    this.slowTime=Math.max(0,(this.slowTime||0)-dt);this.aggroLock=Math.max(0,(this.aggroLock||0)-dt);
+    if(!player.alive){this.aggro=false;this.targetId=null;this.attackWindup=0;}
     if(this.feetTimer>0){this.feetTimer-=dt;if(this.feetTimer<=0)this.#snapFeetToGround();}
     if(this.attackWindup>0){this.attackWindup-=dt;if(this.attackWindup<=0 && this.alive && player.alive && BABYLON.Vector3.Distance(this.position,player.position)<2.65){const result=DamageSystem.apply(this,player,this.definition.boss?24:9+this.level*2);if(result)this.onDamage?.(player,result,this);}}
     if (!this.alive) {
@@ -77,7 +79,7 @@ export class Mob extends Entity {
     }
 
     // Passive until damaged — only chase/attack after first hit
-    if ((this.aggro || (this.definition.boss && distance<7)) && distance < 11 && player.alive) {
+    if ((this.aggro || (this.definition.boss && distance<7)) && distance < 11 && player.alive && !this.aggroLock && !player.invulnerable) {
       this.targetId = player.id;
       if (distance > 2.15) {
         this.state = "chase";
@@ -214,6 +216,7 @@ export class Mob extends Entity {
   }
 
   #move(direction, speed, dt) {
+    if(this.slowTime>0)speed*=.55;
     if (!direction || !Number.isFinite(direction.x) || !Number.isFinite(direction.z)) {
       this.wanderTarget = null;
       return;

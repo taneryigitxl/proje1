@@ -10,7 +10,7 @@ export class DamageSystem {
   }
 
   static apply(attacker, target, baseDamage, stats = null) {
-    if (!target?.alive || baseDamage <= 0) return null;
+    if (!target?.alive || target.invulnerable > 0 || baseDamage <= 0) return null;
     const result = this.roll(baseDamage, attacker, target, stats);
     target.health = Math.max(0, target.health - result.amount);
     if (target.health === 0) {

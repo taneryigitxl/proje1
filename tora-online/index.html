@@ -25,13 +25,13 @@
           <div class="menu-card panel">
             <form id="login-form" class="login-form">
               <small class="section-label">YEREL DEMO PROFİLİ</small>
-              <label for="login-username">Savaşçının adı<input id="login-username" name="username" type="text" minlength="2" maxlength="24" autocomplete="nickname" placeholder="Ayaz" required /></label>
+              <label for="login-username">Profil adı<input id="login-username" name="username" type="text" minlength="2" maxlength="24" autocomplete="nickname" placeholder="Ayaz" required /></label>
               <p class="profile-note">Şifre gerekmez. İlerlemen bu tarayıcıda saklanır.</p>
               <button id="start-button" type="submit">DİYARA GİR</button>
             </form>
             <div class="menu-options">
               <label class="quality-setting" for="quality-select">Görüntü kalitesi<select id="quality-select" aria-label="Grafik kalitesi"><option value="low">Düşük</option><option value="medium" selected>Orta</option><option value="high">Yüksek</option></select></label>
-              <details class="controls-menu"><summary>Kontroller</summary><div class="control-grid"><span><kbd>SOL TIK</kbd> Yürü / hedef</span><span><kbd>BASILI TUT</kbd> İmlece ilerle</span><span><kbd>WASD</kbd> Koş</span><span><kbd>SPACE</kbd> Zıpla</span><span><kbd>1–9</kbd> Yetenek, sonra hedef</span><span><kbd>TEKERLEK</kbd> Yakınlaştır</span><span><kbd>I</kbd> Envanter</span><span><kbd>C</kbd> Karakter</span><span><kbd>K</kbd> Yetenekler</span><span><kbd>J</kbd> Görevler</span><span><kbd>M</kbd> Harita</span><span><kbd>TAB</kbd> Hedef</span><span><kbd>ESC</kbd> İptal / menü</span></div></details>
+              <details class="controls-menu"><summary>Kontroller</summary><div class="control-grid"><span><kbd>SOL TIK</kbd> Yürü / hedef</span><span><kbd>BASILI TUT</kbd> İmlece ilerle</span><span><kbd>Q W E R</kbd> Hızlı eşya</span><span><kbd>F</kbd> Lootu al</span><span><kbd>1–9</kbd> Yetenek, sonra hedef</span><span><kbd>TEKERLEK</kbd> Yakınlaştır</span><span><kbd>I</kbd> Envanter</span><span><kbd>C</kbd> Karakter</span><span><kbd>K</kbd> Yetenekler</span><span><kbd>J</kbd> Görevler</span><span><kbd>M</kbd> Harita</span><span><kbd>ESC</kbd> İptal / menü</span></div></details>
             </div>
             <p id="menu-status" class="menu-status" role="status" aria-live="polite"><span>Diyar seni bekliyor.</span></p>
           </div>
@@ -50,7 +50,7 @@
       <aside class="minimap panel" aria-label="Bölge haritası"><div class="minimap-tools"><span>BÖLGE HARİTASI</span><div><button type="button" id="minimap-zoom-out" aria-label="Haritayı uzaklaştır">−</button><button type="button" id="minimap-zoom-in" aria-label="Haritayı yakınlaştır">+</button></div></div><div class="minimap-map"><div id="minimap-content"><i id="minimap-player" aria-label="Oyuncu"></i><div id="minimap-mobs"></div><div id="minimap-sites"></div></div></div><strong>AYAZ VADİSİ</strong><span>Kadim Sınır</span></aside>
       <section id="inventory-panel" class="game-panel inventory-panel panel" hidden aria-label="Envanter">
         <header><small>TORBA</small><strong>ENVANTER <kbd>I</kbd></strong><button type="button" class="panel-close" data-close="inventory" aria-label="Kapat">Kapat</button></header>
-        <div class="character-panel-heading"><strong data-character-name>Ayaz</strong><span>SAVAŞÇI · SEVİYE <b data-character-level>1</b></span></div>
+        <div class="character-panel-heading"><strong data-character-name>Ayaz</strong><span><em data-character-class>SAVAŞÇI</em> · SEVİYE <b data-character-level>1</b></span></div>
         <div class="inventory-layout"><div class="equipment-side"><div id="inventory-preview-host" class="preview-host"></div><div id="equip-summary" class="equip-summary"></div><div class="equipment-unavailable" aria-label="Henüz kullanılmayan ekipman yuvaları"><span>KASK</span><span>ELDİVEN</span><span>AYAKKABI</span><span>KOLYE</span><span>YÜZÜK</span><span>PELERİN</span></div></div><div class="bag-side"><div class="bag-caption"><span>ÇANTA · 24 YUVA</span><b id="inventory-gold">0 ALTIN</b></div><div id="inventory-grid" class="inventory-grid"></div><div id="gear-compare" class="gear-compare" hidden></div><div class="inventory-actions"><button type="button" id="inventory-use" disabled>KULLAN / KUŞAN</button></div><p id="inventory-hint" class="panel-hint">Eşyayı sürükle; dışarı bırakınca yere at.</p></div></div>
       </section>
       <div id="drop-confirm" class="drop-confirm panel" hidden role="dialog" aria-modal="true" aria-labelledby="drop-confirm-title">
@@ -60,12 +60,12 @@
       </div>
       <section id="stats-panel" class="game-panel stats-panel panel" hidden aria-label="Karakter özellikleri">
         <header><small>KARAKTER</small><strong>KARAKTER <kbd>C</kbd></strong><button type="button" class="panel-close" data-close="stats" aria-label="Kapat">Kapat</button></header>
-        <div class="character-panel-heading"><strong data-character-name>Ayaz</strong><span>SAVAŞÇI · SEVİYE <b data-character-level>1</b></span></div>
+        <div class="character-panel-heading"><strong data-character-name>Ayaz</strong><span><em data-character-class>SAVAŞÇI</em> · SEVİYE <b data-character-level>1</b></span></div>
         <div class="stats-layout"><div id="stats-preview-host" class="preview-host"></div><div><div id="combat-readout" class="combat-readout"></div><p class="stat-points">Dağıtılacak puan: <b id="stat-points">0</b></p><ul id="stats-list" class="stats-list"></ul><p id="stats-summary" class="panel-hint">Güç hasarı artırır. Canlılık can ve dayanıklılık verir.</p></div></div>
       </section>
       <section id="shortcut-panel" class="game-panel shortcut-panel panel" hidden aria-label="Oyun menüsü"><header><small>TORA ONLINE</small><strong id="shortcut-title">MENÜ</strong><button type="button" class="panel-close" data-close="shortcut" aria-label="Kapat">Kapat</button></header><div id="shortcut-content"></div></section>
       <section class="chat-panel panel" aria-label="Sohbet"><div id="chat-log"><p><b>Sistem</b> Ayaz Vadisi kanalına katıldın. <b>I</b> envanter, <b>C</b> statlar.</p></div><form id="chat-form"><label for="chat-input">SOHBET</label><input id="chat-input" maxlength="90" autocomplete="off" placeholder="Enter ile yaz…" /></form></section>
-      <div id="world-labels" class="world-labels" aria-hidden="true"></div><div id="damage-layer" class="damage-layer" aria-hidden="true"></div><div id="skill-bar" class="skill-bar"></div>
+      <div id="world-labels" class="world-labels" aria-hidden="true"></div><div id="damage-layer" class="damage-layer" aria-hidden="true"></div><div id="quick-item-bar" class="quick-item-bar" aria-label="QWER hızlı eşya yuvaları"></div><div id="skill-bar" class="skill-bar"></div>
       <output id="debug-fps" class="debug-fps" hidden>0 FPS</output>
     </section>
     <section id="pause-menu" class="pause-menu" hidden><div class="pause-card panel"><img src="assets/tora-symbol.svg" alt="" /><small>OYUN DURAKLATILDI</small><h2>TORA ONLINE</h2><button id="resume-button" type="button">DEVAM ET</button><label>Grafik Kalitesi<select id="pause-quality"><option value="low">LOW</option><option value="medium">MEDIUM</option><option value="high">HIGH</option></select></label><fieldset class="audio-settings"><legend>Sesler</legend><label>Efekt<input id="volume-effects" type="range" min="0" max="1" step=".05" value=".65"></label><label>Müzik<input id="volume-music" type="range" min="0" max="1" step=".05" value=".2"></label><label>Ortam<input id="volume-ambient" type="range" min="0" max="1" step=".05" value=".35"></label></fieldset><a class="credits-link" href="THIRD_PARTY_LICENSES.md" target="_blank" rel="noopener">Sanat ve ses kaynakları</a><button id="exit-button" class="secondary" type="button">ANA MENÜYE DÖN</button></div></section>

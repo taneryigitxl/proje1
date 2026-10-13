@@ -11,7 +11,7 @@ form.addEventListener('submit',event=>{
  if(name.length<2 || !/^[\p{L}\p{N} _-]+$/u.test(name)){status.textContent='2–24 harf veya rakamdan oluşan bir profil adı yaz.';username.focus();return;}
  try{localStorage.setItem('tora-profile',name);}catch{}
  button.disabled=true;status.textContent='Diyar kapısı açılıyor…';
- document.dispatchEvent(new CustomEvent('tora:enter',{detail:{quality:quality.value,username:name,isAdmin:false}}));
+ document.dispatchEvent(new CustomEvent('tora:profile',{detail:{quality:quality.value,username:name,isAdmin:false}}));
 });
 quality.addEventListener('change',e=>apply(e.target.value,true));
 let saved='medium';try{saved=localStorage.getItem('tora-quality')||saved;username.value=localStorage.getItem('tora-profile')||'Ayaz';}catch{username.value='Ayaz';}

@@ -1,19 +1,19 @@
 export const ITEM_DEFS = Object.freeze({
   "rusty-sword": {
     id: "rusty-sword", name: "Paslı Kılıç", type: "weapon", slot: "weapon", rarity: "common",
-    description: "Başlangıç kılıcı. Güç +2.", bonuses: { strength: 2 },
+    description: "Başlangıç kılıcı. Güç +2.", bonuses: { strength: 2 }, allowedClasses: ['warrior'],
   },
   "leather-vest": {
     id: "leather-vest", name: "Deri Yelek", type: "armor", slot: "armor", rarity: "common",
-    description: "Hafif zırh. Canlılık +2.", bonuses: { vitality: 2 },
+    description: "Hafif zırh. Canlılık +2.", bonuses: { vitality: 2 }, allowedClasses: ['warrior'],
   },
   "health-potion": {
     id: "health-potion", name: "Can İksiri", type: "consumable", rarity: "common",
-    description: "40 can yeniler.",
+    description: "40 can yeniler.", effect: { health: 40 }, cooldown: 5,
   },
   "mana-potion": {
     id: "mana-potion", name: "Mana İksiri", type: "consumable", rarity: "common",
-    description: "35 mana yeniler.",
+    description: "35 mana yeniler.", effect: { mana: 35 }, cooldown: 5,
   },
   "wolf-fang": {
     id: "wolf-fang", name: "Kadim Diş", type: "material", rarity: "uncommon",
@@ -25,24 +25,26 @@ export const ITEM_DEFS = Object.freeze({
   },
   "iron-blade": {
     id: "iron-blade", name: "Demir Kılıç", type: "weapon", slot: "weapon", rarity: "uncommon",
-    description: "Demirci işi kılıç. Güç +4.", bonuses: { strength: 4 },
+    description: "Demirci işi kılıç. Güç +4.", bonuses: { strength: 4 }, allowedClasses: ['warrior'],
   },
+  'apprentice-staff': {id:'apprentice-staff',name:'Acemi Asası',type:'weapon',slot:'weapon',rarity:'common',description:'Yeşim uçlu başlangıç asası. Zeka +2.',bonuses:{intelligence:2},allowedClasses:['mage']},
+  'jade-staff': {id:'jade-staff',name:'Yeşim Asası',type:'weapon',slot:'weapon',rarity:'uncommon',description:'Ayame tarafından işlenmiş asa. Zeka +4.',bonuses:{intelligence:4},allowedClasses:['mage']},
+  'cloth-robe': {id:'cloth-robe',name:'Kumaş Cübbe',type:'armor',slot:'armor',rarity:'common',description:'Büyücü cübbesi. Canlılık +1, Zeka +1.',bonuses:{vitality:1,intelligence:1},allowedClasses:['mage']},
+  'trail-ration': {id:'trail-ration',name:'Yol Azığı',type:'consumable',rarity:'common',description:'25 can ve 10 mana yeniler.',effect:{health:25,mana:10},cooldown:8},
+  'arcane-scroll': {id:'arcane-scroll',name:'Arkane Parşömen',type:'consumable',rarity:'uncommon',description:'50 mana yeniler.',effect:{mana:50},cooldown:10},
 });
 
-const STARTER = [
-  "rusty-sword", "leather-vest", "health-potion", "health-potion", "mana-potion", null, null, null,
-  null, null, null, null, null, null, null, null,
-  null, null, null, null, null, null, null, null,
-];
 
 const SAVE_KEY = "tora-inventory-v1";
 
 export class InventorySystem {
-  constructor(player, stats, capacity = 24) {
+  constructor(player, stats, capacity = 24, save = null) {
     this.player = player;
     this.stats = stats;
     this.capacity = capacity;
-    this.slots = STARTER.slice(0, capacity);
+    this.save = save;
+    this.classDef = classDef(player.classId);
+    this.slots = this.classDef.starter.slice(0, capacity);
     while (this.slots.length < capacity) this.slots.push(null);
     this.gold = 50;
     this.selected = -1;
@@ -75,15 +77,9 @@ export class InventorySystem {
     if (!item) return { ok: false, message: "Bilinmeyen eşya." };
 
     if (item.type === "consumable") {
-      if (id === "health-potion") {
-        if (this.player.health >= this.player.maxHealth) return { ok: false, message: "Canın zaten dolu." };
-        this.player.health = Math.min(this.player.maxHealth, this.player.health + 40);
-      } else if (id === "mana-potion") {
-        if (this.player.mana >= this.player.maxMana) return { ok: false, message: "Manan zaten dolu." };
-        this.player.mana = Math.min(this.player.maxMana, this.player.mana + 35);
-      } else {
-        return { ok: false, message: "Bu iksir kullanılamıyor." };
-      }
+      const check = this.canConsume(id);
+      if (!check.ok) return check;
+      for (const [stat, amount] of Object.entries(item.effect || {})) this.player[stat] = Math.min(this.player['max'+stat[0].toUpperCase()+stat.slice(1)], this.player[stat] + amount);
       this.slots[this.selected] = null;
       this.selected = -1;
       this.#save();
@@ -98,7 +94,7 @@ export class InventorySystem {
   }
 
   add(itemId) {
-    if (!ITEM_DEFS[itemId]) return false;
+    if (!Object.hasOwn(ITEM_DEFS,itemId)) return false;
     const empty = this.slots.findIndex((slot) => slot === null);
     if (empty < 0) return false;
     this.slots[empty] = itemId;
@@ -111,7 +107,8 @@ export class InventorySystem {
   }
 
   buy(itemId) {
-    const prices={'health-potion':12,'mana-potion':15,'iron-blade':80};const price=prices[itemId];
+    const prices={'health-potion':12,'mana-potion':15,'iron-blade':80,'jade-staff':80,'trail-ration':10,'arcane-scroll':25};const price=prices[itemId];
+    if (ITEM_DEFS[itemId]?.allowedClasses && !ITEM_DEFS[itemId].allowedClasses.includes(this.classDef.id)) return false;
     if(!price||this.gold<price||!this.add(itemId))return false;
     this.gold-=price;this.#save();return true;
   }
@@ -147,6 +144,7 @@ export class InventorySystem {
   }
 
   #equip(item) {
+    if (item.allowedClasses && !item.allowedClasses.includes(this.classDef.id)) return {ok:false,message:'Bu ekipman sınıfına uygun değil.'};
     const slot = item.slot || item.type;
     const previous = this.equipped[slot];
     if (previous === item.id) {
@@ -163,11 +161,11 @@ export class InventorySystem {
 
   #autoEquipStarters() {
     if (!this.equipped.weapon) {
-      const weaponId = this.slots.find((id) => id && ITEM_DEFS[id]?.type === "weapon");
+      const weaponId = this.slots.find((id) => id && ITEM_DEFS[id]?.type === "weapon" && ITEM_DEFS[id].allowedClasses?.includes(this.classDef.id));
       if (weaponId) this.equipped.weapon = weaponId;
     }
     if (!this.equipped.armor) {
-      const armorId = this.slots.find((id) => id && ITEM_DEFS[id]?.type === "armor");
+      const armorId = this.slots.find((id) => id && ITEM_DEFS[id]?.type === "armor" && ITEM_DEFS[id].allowedClasses?.includes(this.classDef.id));
       if (armorId) this.equipped.armor = armorId;
     }
     if (this.equipped.weapon || this.equipped.armor) this.#save();
@@ -183,24 +181,36 @@ export class InventorySystem {
       }
     }
     this.stats?.setGearBonus?.(this.gearBonus);
-    const visual=this.player?.visual;if(visual?.weaponRoot){visual.weaponRoot.setEnabled(Boolean(this.equipped.weapon));const steel=this.equipped.weapon==="iron-blade";for(const material of visual.weaponMaterials||[]){material.albedoColor=steel?new BABYLON.Color3(.78,.82,.83):new BABYLON.Color3(.58,.43,.28);material.metallic=steel?.88:.5;material.roughness=steel?.28:.82;}for(const mesh of visual.root.getChildMeshes(false)){if(mesh.name.includes("Bracer"))mesh.setEnabled(Boolean(this.equipped.armor));}}
+    const visual=this.player?.visual;if(visual?.weaponRoot){visual.weaponRoot.setEnabled(Boolean(this.equipped.weapon));const steel=this.equipped.weapon==="iron-blade";for(const material of visual.weaponMaterials||[]){if(!this.classDef.weapon.tintMaterials)continue;material.albedoColor=steel?new BABYLON.Color3(.78,.82,.83):new BABYLON.Color3(.58,.43,.28);material.metallic=steel?.88:.5;material.roughness=steel?.28:.82;}for(const mesh of visual.root.getChildMeshes(false)){if(mesh.name.includes("Bracer"))mesh.setEnabled(Boolean(this.equipped.armor));}}
   }
 
   #save() {
     try {
-      localStorage.setItem(SAVE_KEY, JSON.stringify({ slots: this.slots, equipped: this.equipped, gold: this.gold }));
+      const data = { slots: this.slots, equipped: this.equipped, gold: this.gold };
+      if (this.save) this.save.write('inventory', data); else localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     } catch (_) { /* optional */ }
   }
 
   #load() {
     try {
-      const raw = localStorage.getItem(SAVE_KEY);
-      if (!raw) return;
-      const data = JSON.parse(raw);
+      const data = this.save ? this.save.read('inventory') : JSON.parse(localStorage.getItem(SAVE_KEY));
+      if (!data) return;
       if(Number.isFinite(data.gold))this.gold=Math.max(0,data.gold);
-      if (Array.isArray(data.slots)) this.slots = data.slots.slice(0, this.capacity);
+      if (Array.isArray(data.slots)) this.slots = data.slots.slice(0, this.capacity).map(id=>typeof id==='string'&&Object.hasOwn(ITEM_DEFS,id)?id:null);
       while (this.slots.length < this.capacity) this.slots.push(null);
       if (data.equipped) this.equipped = { weapon: data.equipped.weapon || null, armor: data.equipped.armor || null };
+      for (const key of Object.keys(this.equipped)) {const id=this.equipped[key];if(!this.slots.includes(id)||!ITEM_DEFS[id]?.allowedClasses?.includes(this.classDef.id))this.equipped[key]=null;}
     } catch (_) { /* optional */ }
   }
+
+  canConsume(id) {
+    const item=ITEM_DEFS[id];
+    if(!this.player.alive)return {ok:false,message:'Ölüm sırasında eşya kullanılamaz.'};
+    if(item?.type!=='consumable'||!item.effect)return {ok:false,message:'Bu eşya kullanılamaz.'};
+    if(!this.countItem(id))return {ok:false,message:'Çantanda kalmadı.'};
+    const useful=Object.keys(item.effect).some(stat=>this.player[stat]<this.player['max'+stat[0].toUpperCase()+stat.slice(1)]);
+    return useful?{ok:true}:{ok:false,message:'Can / mana zaten dolu.'};
+  }
+  consume(id) {const check=this.canConsume(id);if(!check.ok)return check;const selected=this.selected;this.selected=this.slots.indexOf(id);const result=this.useSelected();this.selected=selected;return result;}
 }
+import { classDef } from '../characters/ClassDefs.js';

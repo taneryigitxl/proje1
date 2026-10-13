@@ -1,15 +1,13 @@
-import { SKILLS } from "../core/Config.js";
+import { classDef } from '../characters/ClassDefs.js';
 
 export class SkillSystem {
-  constructor() { this.skills = SKILLS; this.cooldowns = new Map(SKILLS.map((skill) => [skill.slot, 0])); }
+  constructor(classId='warrior') { this.skills = classDef(classId).skills; this.cooldowns = new Map(this.skills.map((skill) => [skill.slot, 0])); }
   get(slot) { return this.skills.find((skill) => skill.slot === slot) || null; }
   update(dt) { for (const [slot, value] of this.cooldowns) this.cooldowns.set(slot, Math.max(0, value - dt)); }
   remaining(slot) { return this.cooldowns.get(slot) || 0; }
   canUse(skill, player) {
     if (!skill) return { ok: false, reason: "Yetenek bulunamadı." };
     if (!player.alive) return { ok: false, reason: "Karakter savaşamaz." };
-    // Grounded only — landingTimer is animation polish, must not block hotbar combat
-    if (!player.grounded) return { ok: false, reason: "Yetenek için yere basmalısın." };
     if (this.remaining(skill.slot) > 0) return { ok: false, reason: "Yetenek bekleme süresinde." };
     if (player.mana < skill.mana) return { ok: false, reason: "Yeterli mana yok." };
     return { ok: true };

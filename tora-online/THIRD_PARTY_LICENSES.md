@@ -1,15 +1,17 @@
 # Third-party art and runtime licenses
 
-Tora Online'ın özgün oyun kodu ve `assets/ui/parchment-minimap.png` görseli bu proje için üretildi. Ganimet kesesi ayrı bir model dosyası değildir: `GlbLoot` içindeki lathe geometrisi bu proje için yazıldı, üçüncü taraf bir `loot-bag.glb` kullanılmaz. Menü ikonları da aynı şekilde elle yazılmış SVG yollarıdır. Aşağıdaki üçüncü taraf paketleri değiştirilmiş/optimize edilmiş biçimde yerel olarak dağıtılır.
+Tora Online'ın oyun kodu, özgün ganimet GLB'si ve elle yazılmış menü/harita ikonları bu proje için üretildi. Aşağıdaki üçüncü taraf paketleri değiştirilmiş/optimize edilmiş biçimde yerel olarak dağıtılır.
 
 ## Quaternius — CC0 1.0
 
 Creator: Quaternius. License: Creative Commons Zero v1.0 Universal (CC0-1.0). Attribution is not required, but included here for provenance.
 
 - [Modular Character Outfits Fantasy](https://quaternius.com/packs/modularcharacteroutfitsfantasy.html): `female-ranger.glb`.
+- Aynı paketin CC0 Standard sürümündeki ayrı `Female_Peasant.gltf` rigli kadın kıyafeti, `female-mage.glb` için temel alındı. Warrior/Ranger geometrisi Mage'e kopyalanmadı. Mage'e eklenen ağırlıklı pileli cübbe, omuz örtüsü, bronz şeritler, saç ve taç geometrileri bu proje için yazıldı. Tekrar üretim: `scripts/prepare-mage.mjs`. Orijinal kaynak arşivi yalnızca yerel `reports/revision-2026-10-12/asset-sources` dizinindedir; üretim paketinde bulunmaz.
 - [Universal Base Characters Standard](https://quaternius.itch.io/universal-base-characters): `warrior-head.glb`; CC0 Standard arşivindeki rigli kadın modelinden baş/boyun, göz ve kaş meshleri ayrıldı; özgün iskelet ve skin korunup texturelar 1024 px ile sınırlandı.
 - [Universal Animation Library](https://quaternius.com/packs/universalanimationlibrary.html): `ual1-standard.glb`.
 - [Universal Animation Library 2](https://quaternius.com/packs/universalanimationlibrary2.html): `ual2-standard.glb`.
+- `mage-library.glb`: bu iki CC0 kütüphanenin idle/run/spell/roll/hit/death/LayToIdle kliplerinden 17 sınıf eşleştirmesi çıkarıldı. Dokuz savaş state'i ayrı adlara sahip; bazı spell klipleri el/kol dönüşleri düzenlenerek varyantlaştırıldı. Bunlar özgün motion-capture kayıtları olarak sunulmaz. Mage baş/yüzü aynı CC0 Universal Base Characters kadın kafa geometrisini kullanır.
 - [Ultimate Modular Women](https://quaternius.com/packs/ultimatemodularcharacters.html): `village-blacksmith.glb`.
 - [Ultimate Monsters](https://quaternius.com/packs/ultimatemonsters.html): `ashen-demon.glb`, `skull-orc.glb`, `ghost.glb`. Kül Muhafızı aynı ork modelini farklı ölçek ve savaş değerleriyle kullanır.
 - [Stylized Nature MegaKit](https://quaternius.com/packs/stylizednaturemegakit.html): trees, bushes, grass, ferns and rocks under `assets/models/nature/`.
@@ -38,6 +40,10 @@ Creator: Poly Haven. License: CC0-1.0.
 ## Original interface and loot assets — 2026-10-12
 
 `assets/models/props/loot-bag.glb` is an original pleated leather pouch with drawstring, knot and hanging cord geometry, created for Tora Online. It contains no third-party geometry, imagery or textures. Its reproducible source is `scripts/prepare-loot.mjs`; the generated model is dedicated under CC0-1.0. The nine hand-authored menu SVG paths in `src/ui/HUD.js`, ground movement rune and map marker shapes are original project artwork, also CC0-1.0. No artwork from another game is included.
+
+`assets/models/weapons/jade-staff.glb`: carved shaft, bronze collars/lotus crown and cut jade crystal are original procedural geometry, CC0-1.0. `scripts/prepare-mage.mjs` includes its reproducible source. The flame opacity texture, guard rune arcs and map marker shapes are original runtime canvas/geometry artwork, CC0-1.0. Mage spell sounds are original Web Audio synthesis; no third-party recording is used for those spell tones.
+
+`assets/ui/portraits/mage.webp`, `assets/ui/mage-skills-atlas.webp` and `assets/ui/mage-items-atlas.webp` are original raster assets generated with the built-in OpenAI image generation tool, then resized/encoded with Sharp. Exact prompts and final file paths are recorded in `assets/ui/mage-art-prompts.json`. No Albion artwork, interface or icons were copied.
 
 Generation libraries: @gltf-transform/core and @gltf-transform/functions, MIT (development only).
 

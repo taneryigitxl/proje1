@@ -11,6 +11,7 @@ export class CombatVFX{
   m.scaling.setAll(size);m.visibility=1;effect.life=effect.duration=duration;effect.spin=spin;m.setEnabled(true);return effect;
  }
  cast(skill,from,to){
+  if(!skill.trail){const effect=this.spawn(3,from,skill.target==='self-area'?skill.radius*2:1.2,true,.3);effect.mesh.material.emissiveColor=BABYLON.Color3.FromHexString(skill.color);return;}
   const yaw=this.player.rotation||0;
   if(skill.slot===1)this.spawn(0,from,1.65,false,.22,0,yaw);
   if(skill.slot===2){this.spawn(0,from,1.7,false,.26);const e=this.spawn(0,from,1.7,false,.35);e.mesh.rotation.z=Math.PI/2;}
@@ -23,6 +24,7 @@ export class CombatVFX{
   if(skill.slot===9)this.spawn(5,from,2.5,false,.3);
  }
  impact(skill,from,to){
+  if(!skill.trail){const at=to||from;const effect=this.spawn(skill.effect==='meteor'?2:3,at,skill.radius?skill.radius*2:1.2,true,skill.effect==='meteor'?.7:.3);effect.mesh.material.emissiveColor=BABYLON.Color3.FromHexString(skill.color);if(!skill.damage)return;}
   if(!skill.damage)return;const at=to||from;
   this.spawn(1,at,skill.slot===9?1.5:.85,false,.19);
   if(skill.slot===3||skill.slot===9)this.spawn(2,at,skill.slot===9?2.2:1.5,true,.65);
@@ -30,5 +32,6 @@ export class CombatVFX{
   this.particles.manualEmitCount=quality==='low'?4:quality==='high'?16:8;
  }
  update(dt){for(const e of this.pool){if(e.life<=0)continue;e.life-=dt;const t=Math.max(0,e.life/e.duration);e.mesh.visibility=Math.min(1,t*1.8);e.mesh.rotation.z+=e.spin*dt;if(e.destination&&e.origin){BABYLON.Vector3.LerpToRef(e.origin,e.destination,1-t,e.mesh.position);e.mesh.position.y+=1;}if(e.life<=0){e.mesh.setEnabled(false);e.origin=e.destination=null;}}}
+ clear(){for(const e of this.pool){e.life=0;e.origin=e.destination=null;e.mesh.setEnabled(false);}this.particles.stop();this.particles.start();}
  dispose(){this.particles.dispose();for(const e of this.pool)e.mesh.dispose();for(const m of this.materials)m.dispose(false,true);}
 }

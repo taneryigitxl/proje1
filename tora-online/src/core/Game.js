@@ -1,3 +1,8 @@
+import { classDef } from '../characters/ClassDefs.js';
+import { SaveService } from '../characters/SaveService.js';
+import { CharacterStore } from '../characters/CharacterStore.js';
+import { QuickItems } from '../progression/QuickItems.js';
+import { DeathScreen } from '../ui/DeathScreen.js';
 import { GAME_CONFIG } from "./Config.js";
 import { AssetManager } from "./AssetManager.js";
 import { Navigation } from "../world/Navigation.js";
@@ -56,8 +61,11 @@ export class Game {
       this.loadStarted=performance.now();
       this.identity = {
         username: identity?.username || "Ayaz",
+        classId: identity?.classId || "warrior", characterId: identity?.characterId || "legacy-warrior", profile: identity?.profile || identity?.username || "Ayaz",
         isAdmin: false,
       };
+      this.classDef=classDef(this.identity.classId);this.save=new SaveService(this.identity.characterId);this.characterStore=new CharacterStore(this.identity.profile);
+      document.body.dataset.class=this.classDef.id;document.body.style.setProperty('--class-accent',this.classDef.accent);
       this.onProgress(28, "Yerel dünya oturumu açılıyor…");
       this.network = new NetworkAdapter();
       await this.network.connect();
@@ -74,24 +82,25 @@ export class Game {
       console.info("[Tora Startup] 4/10 Zorunlu harita assetleri ve harita hazırlanıyor.");
       this.map = new RegionWorld(this.scene, this.navigation, this.runtime.profile, this.runtime.quality);
       this.map.onChestOpen = () => this.audio?.play('ui', 'effects', .65);
-      let savedWorld=null;try{savedWorld=JSON.parse(localStorage.getItem('tora-world-v1'));}catch{}
-      const world = await this.map.build(assets, { id: REGIONS[savedWorld?.region]?savedWorld.region:'village' });
+      const savedWorld=this.save.read('world');
+      const world = await this.map.build(assets, { id: Object.hasOwn(REGIONS,savedWorld?.region)?savedWorld.region:'village' });
       this.#restoreChests();
 
-      this.onProgress(68, "Savaşçı ve düşmanlar hazırlanıyor…");
+      this.onProgress(68, `${this.classDef.label} ve düşmanlar hazırlanıyor…`);
       console.info("[Tora Startup] 5/10 Karakter, animasyon kütüphaneleri ve moblar yükleniyor.");
-      const visual = await assets.loadPlayerVisual();
+      const visual = await assets.loadPlayerVisual(this.classDef.id);
       const mobVisuals = await Promise.all(world.spawns.map(spawn => assets.instantiateMob(spawn.type)));
 
       console.info("[Tora Startup] 6/10 Input ve kamera bağlanıyor.");
       this.input = new InputManager(this.canvas);
       this.player = new PlayerController(visual, this.input, this.navigation, this.identity);
       this.player.position.copyFrom(world.spawn);
-      if(savedWorld?.position?.every(Number.isFinite)) {const p=BABYLON.Vector3.FromArray(savedWorld.position);if(this.navigation.canOccupy(p)){p.y=this.navigation.heightAt(p.x,p.z);this.player.position.copyFrom(p);}}
+      if(Array.isArray(savedWorld?.position)&&savedWorld.position.length===3&&savedWorld.position.every(Number.isFinite)) {const p=BABYLON.Vector3.FromArray(savedWorld.position);if(this.navigation.canOccupy(p)){p.y=this.navigation.heightAt(p.x,p.z);this.player.position.copyFrom(p);}}
       this.player.respawnPoint=world.spawn.clone();
-      this.stats = new StatsSystem(this.player);
-      this.inventory = new InventorySystem(this.player, this.stats);
-      this.progression = new ProgressionSystem(this.player, this.stats, this.inventory);
+      this.stats = new StatsSystem(this.player,this.save);
+      this.inventory = new InventorySystem(this.player, this.stats,24,this.save);
+      this.progression = new ProgressionSystem(this.player, this.stats, this.inventory,this.save);
+      this.quickItems=new QuickItems(this.inventory,this.save);
       this.camera = new IsometricCamera(this.scene, this.canvas, this.player, GAME_CONFIG.camera);
       this.#faceView();
 
@@ -99,7 +108,7 @@ export class Game {
       this.animator = new PlayerAnimator(visual);
       this.entities = new EntityManager(this.scene, this.navigation, world.spawns, (entity, result, attacker) => this.combat?.damagePlayer(result,attacker), mobVisuals);
       this.combat = new CombatSystem(this.scene, this.player, this.animator, this.entities, {
-        onDamage: (entity, result) => this.hud?.showDamage(entity, result),
+        onDamage: (entity, result) => {if(entity===this.player)this.buffVfx?.impact();this.hud?.showDamage(entity, result);},
         onKill: (mob) => this.#onMobDefeated(mob),
         onStatus: (message) => this.hud?.setStatus(message),
         onBuff: (type, duration) => this.buffVfx?.applyBuff(type, duration),
@@ -108,9 +117,11 @@ export class Game {
           this.camera?.shake(amp, dur);
           this.audio?.playHit(amp > 0.02);
         },
+        onDeath:()=>this.handleDeath(),onDeathChoice:()=>this.deathScreen.show(),onRespawnComplete:()=>{this.deathScreen.hide();this.syncInputGate();this.canvas.focus();this.#saveWorld();},
         onRespawn: () => { this.camera?.snap(this.player.position); this.#faceView(); this.loot?.close?.(); },
         onTargetLost: () => { if (this.entities.selected && !this.entities.selected.alive) this.entities.clear(); },
       }, this.stats);
+      this.deathScreen=new DeathScreen(mode=>this.combat.death.choose(mode));
       this.skillMarker = new SkillMarker(this.scene);
       this.loot = new LootSystem(this.scene, this.inventory, (message) => this.hud?.setStatus(message), this.navigation);
       await this.loot.initialize(assets);
@@ -123,7 +134,7 @@ export class Game {
         const collector = this.progression.syncCollectorQuest();
         if (collector) this.hud?.announceProgress({ ...collector, questCompleted: true });
       };
-      this.audio = new AmbientAudio();
+      this.audio = new AmbientAudio(this.classDef);
       this.buffVfx = new BuffVFXManager(this.scene, this.player, this.combat.vfx.materials[4].diffuseTexture);
 
       console.info("[Tora Startup] 8/10 HUD ve cursor bağlanıyor.");
@@ -134,7 +145,7 @@ export class Game {
         onSettings: () => this.togglePause(),
         onQuality: (name) => { window.ToraMenu?.applyQuality(name, true); this.applyQuality(name); const pause = document.getElementById("pause-quality"); if (pause) pause.value = name; },
         onVolume: (bus, value) => { this.audio?.setVolume(bus, value); const input = document.getElementById("volume-" + bus); if (input) input.value = String(value); },
-        loot: this.loot,
+        isBlocked:()=>this.combat.death.blocked,loot: this.loot, quickItems:this.quickItems, onQuickItem:index=>this.useQuickItem(index),
       });
       this.worldUI = new WorldUI(this);
       this.cursor = new CursorManager(this.scene, this.canvas, this.player, this.entities);
@@ -157,7 +168,7 @@ export class Game {
         getGrassStats: () => this.map.getGrassStats(),
       };
 
-      this.input.onManualMove=()=>{this.combat.playerCombat.cancelApproach();this.loot.cancelApproach();this.moveMarker.hide();};
+
       this.onProgress(92, "Opsiyonel çevre ayrıntıları hazırlanıyor…");
       await this.map.buildOptional();
       try {
@@ -219,13 +230,13 @@ export class Game {
 
   syncInputGate() {
     if(!this.input)return;
-    const blocked=this.hud?.openPanel || this.loot?.isOpen() || (this.worldUI && !this.worldUI.modal.hidden) || document.activeElement===this.hud?.chatInput;
+    const blocked=this.combat?.death.blocked || this.hud?.openPanel || this.loot?.isOpen() || (this.worldUI && !this.worldUI.modal.hidden) || document.activeElement===this.hud?.chatInput;
     this.input.enabled=this.running&&!this.paused&&!this.transitioning&&!blocked;
-    if(blocked){this.input.reset();this.combat?.playerCombat.cancelApproach();this.#endSteer();if(this.armedSkill)this.#disarm();this.player?.cancelDestination?.();if(this.player?.velocity){this.player.velocity.x=0;this.player.velocity.z=0;}}
+    if(blocked){this.moveMarker?.hide();this.pendingInteraction=null;this.input.reset();this.combat?.playerCombat.cancelApproach();this.#endSteer();if(this.armedSkill)this.#disarm();this.player?.cancelDestination?.();if(this.player?.velocity){this.player.velocity.x=0;this.player.velocity.z=0;}}
   }
 
   togglePause(force) {
-    if (!this.running) return;
+    if (!this.running || this.combat?.death.blocked) return;
     this.paused = typeof force === "boolean" ? force : !this.paused;
     this.syncInputGate();
     this.audio?.suspend(this.paused);
@@ -256,6 +267,7 @@ export class Game {
       window.removeEventListener('pointerup', this.onSteerRelease);
       window.removeEventListener('pointercancel', this.onSteerRelease);
     }
+    this.deathScreen?.dispose();this.combat?.projectiles.dispose();
     this.skillMarker?.dispose();
     this.moveMarker?.dispose();
     this.#unbindPauseMenu();
@@ -276,7 +288,11 @@ export class Game {
     console.info("[Tora Startup] Başarısız/sonlandırılmış oyun instance kaynakları temizlendi.");
   }
 
-  #saveWorld() {if(!this.player||!this.map||this.transitioning)return;try{localStorage.setItem('tora-world-v1',JSON.stringify({region:this.map.region,position:this.player.position.asArray()}));}catch{}}
+  #saveWorld() {if(!this.player||!this.map||this.transitioning)return;const position=this.combat?.death.blocked?this.player.respawnPoint:this.player.position;this.save.write('world',{region:this.map.region,position:position.asArray()});this.characterStore.update(this.identity.characterId,{level:this.player.level,region:this.map.region,lastPlayed:Date.now()});}
+
+  handleDeath() {this.#disarm();this.#endSteer();this.pendingInteraction=null;this.#clearTarget();this.moveMarker.hide();this.loot.close();this.hud.closePanels();this.worldUI.close();this.combat.clearEffects();this.buffVfx.clear();this.player.actionLocked=true;this.player.state='dead';this.syncInputGate();this.#saveWorld();}
+  useQuickItem(index){if(!this.running||this.paused||this.combat.death.blocked||this.loot.isOpen()||!this.worldUI.modal.hidden||this.hud.openPanel||document.activeElement===this.hud.chatInput)return;const result=this.quickItems.use(index);this.hud.setStatus(result.message);this.hud.refreshInventory();}
+  approachNpc(){if(!this.player.alive||this.combat.death.blocked)return;this.combat.playerCombat.cancel();this.moveMarker.hide();this.loot.cancelApproach();if(BABYLON.Vector3.Distance(this.player.position,this.map.npc.position)<=4)this.worldUI.openNpc();else {this.player.setDestination(this.map.npc.position,2.5);this.pendingInteraction={type:'npc'};this.hud.setStatus('Ayame’ye yaklaşıyorsun.');}}
 
   #clearTarget() {
     this.entities?.clear();
@@ -298,6 +314,8 @@ export class Game {
 
   #bindInput() {
     this.input.onEscape = () => {
+      if(this.combat.death.blocked)return;
+      if(document.activeElement===this.hud.chatInput){this.hud.chatInput.blur();this.syncInputGate();return;}
       if (this.loot?.isOpen?.()) { this.loot.close(); return; }
       if(!this.worldUI.modal.hidden){this.worldUI.close();return;}
       if (this.hud?.openPanel) {
@@ -307,25 +325,26 @@ export class Game {
       if (this.armedSkill) { this.#disarm('Yetenek iptal edildi.'); return; }
       this.togglePause();
     };
-    this.input.onTab = () => this.entities.cycle(this.player.position);
+    this.input.onQuickItem=index=>this.useQuickItem(index);
+    this.input.onLootAll=()=>{if(this.running&&!this.paused&&!this.combat.death.blocked&&this.loot.isOpen())this.loot.takeAll();};
     this.input.onSkill = (slot) => this.#useSkill(slot);
     this.input.onInventory = () => {
-      if (!this.running || this.paused || !this.worldUI.modal.hidden) return;
+      if (!this.running || this.paused || this.combat.death.blocked || !this.worldUI.modal.hidden) return;
       this.hud.togglePanel("inventory");
     };
     this.input.onStats = () => {
-      if (!this.running || this.paused) return;
+      if (!this.running || this.paused || this.combat.death.blocked) return;
       this.hud.togglePanel("stats");
     };
     this.input.onPanel = (name) => {
-      if (!this.running || this.paused || !this.worldUI.modal.hidden) return;
+      if (!this.running || this.paused || this.combat.death.blocked || !this.worldUI.modal.hidden) return;
       this.hud.togglePanel(name);
     };
     this.input.onClearTarget = () => {
-      if (!this.running || this.paused) return;
+      if (!this.running || this.paused || this.combat.death.blocked) return;
       this.#clearTarget();
     };
-    this.steer = null;
+    this.steer = null;this.input.onReset=()=>this.#endSteer();
     this.armedSkill = null;
     this.onSecondaryInteract = null;
     this.onSteerRelease = (event) => { if (this.steer && event.pointerId === this.steer.id) this.#endSteer(); };
@@ -361,11 +380,6 @@ export class Game {
     return Boolean(this.running && !this.paused && !this.transitioning && this.worldUI?.modal.hidden && !this.hud?.openPanel && !this.loot?.isOpen?.() && this.input?.enabled && info.event?.target === this.canvas);
   }
 
-  #manualIdle() {
-    const axis = this.input?.axis?.() || { x: 0, z: 0 };
-    return !axis.x && !axis.z;
-  }
-
   #pickAction() {
     return this.scene.pick(this.scene.pointerX, this.scene.pointerY, (mesh) => Boolean(mesh.metadata?.portal || mesh.metadata?.mob || mesh.metadata?.npc || mesh.metadata?.loot || mesh.metadata?.interactive || mesh.metadata?.lootPickup || mesh.metadata?.chest));
   }
@@ -375,29 +389,29 @@ export class Game {
   }
 
   #beginGroundMove(event, point) {
-    this.loot.cancelApproach();
+    this.pendingInteraction=null;this.loot.cancelApproach();
     this.combat.playerCombat.cancel();
     this.entities.clear();
     this.steer = { id: event.pointerId, x: event.clientX, y: event.clientY, hold: false, next: 0 };
-    if (this.#manualIdle()) {
+    {
       const ok = this.player.setDestination(point, 0.2);
-      this.moveMarker?.show(point, ok);
+      this.moveMarker?.show(this.player.resolvedDestination||point,ok&&this.navigation.canOccupy(point));
       this._markerAt = performance.now();
     }
   }
 
   #steerMove(event) {
-    if (!this.steer || event.pointerId !== this.steer.id || !this.#manualIdle()) return;
+    if (!this.steer || event.pointerId !== this.steer.id) return;
     if (Math.hypot(event.clientX - this.steer.x, event.clientY - this.steer.y) > 12) this.steer.hold = true;
     if (!this.steer.hold || performance.now() < this.steer.next) return;
-    this.steer.next = performance.now() + 90;
+    this.steer.next = performance.now() + 180;
     const ground = this.#pickGround();
     if (ground?.hit) {
       const ok = this.player.setDestination(ground.pickedPoint, 0.45);
       const now = performance.now();
       if (now - (this._markerAt || 0) > 450) {
         this._markerAt = now;
-        this.moveMarker?.show(ground.pickedPoint, ok);
+        this.moveMarker?.show(this.player.resolvedDestination||ground.pickedPoint,ok&&this.navigation.canOccupy(ground.pickedPoint));
       }
     }
   }
@@ -406,7 +420,7 @@ export class Game {
     if (!this.steer) return;
     const hold = this.steer.hold;
     this.steer = null;
-    if (hold && this.#manualIdle()) this.player?.cancelDestination();
+    if (hold) this.player?.cancelDestination();
   }
 
   #useWorldPick(actionPick) {
@@ -427,11 +441,7 @@ export class Game {
       if (mob?.alive) { this.entities.select(mob); this.combat.basicAttack(mob, this.camera.forwardOnGround()); }
       return;
     }
-    if (data.npc || data.interactive) {
-      if (BABYLON.Vector3.Distance(this.player.position, this.map.npc.position) > 4) { this.combat.playerCombat.cancelApproach(); this.player.setDestination(this.map.npc.position, 2.5); this.hud.setStatus('Ayame’ye yaklaş ve yeniden tıkla.'); }
-      else this.worldUI.openNpc();
-      return;
-    }
+    if (data.npc || data.interactive) { this.approachNpc(); return; }
     if (data.chest) { this.interactChest(data.chest); return; }
     if (data.loot) { this.hud.setStatus('Sandığı açmak için yaklaş.'); return; }
     this.hud.setStatus('Demirci tezgâhı.');
@@ -452,6 +462,14 @@ export class Game {
     const check = this.combat.skills.canUse(skill, this.player);
     if (!check.ok) { this.hud.setStatus(check.reason); return; }
     const ground = this.#pickGround();
+    if(skill.target==='ground'){
+      if(!ground?.hit){this.hud.setStatus('Geçerli bir zemin seç.');return;}
+      const point=ground.pickedPoint;
+      if(BABYLON.Vector3.Distance(this.player.position,point)>skill.range+.2||!this.navigation.canOccupy(point)){this.hud.setStatus('Bu noktaya yetenek kullanılamaz.');return;}
+      if(skill.action==='blink'&&BABYLON.Vector3.Distance(this.navigation.findReachable(this.player.position,point),point)>.3){this.hud.setStatus('Işınlanma engel veya suyu aşamaz.');return;}
+      this._groundTarget=point.clone();this.#castArmed(skill,null,point.subtract(this.player.position));return;
+    }
+
     if (skill.aoe) {
       const point = ground?.pickedPoint || this.player.position;
       if (BABYLON.Vector3.Distance(this.player.position, point) > skill.range + 0.45) { this.hud.setStatus('Menzil dışı.'); return; }
@@ -490,11 +508,11 @@ export class Game {
     this.armedSkill = null;
     this.skillMarker?.hide();
     this.hud?.skillBar?.setArmed(null);
-    this.combat.useSkill(skill.slot, target, forward || this.camera.forwardOnGround());
+    this.combat.useSkill(skill.slot, target, forward || this.camera.forwardOnGround(), this._groundTarget);this._groundTarget=null;
   }
 
   #restoreChests() {
-    let looted=[];try{looted=JSON.parse(localStorage.getItem('tora-chests-v1')||'[]');}catch{}
+    const value=this.save.read('chests',[]);const looted=Array.isArray(value)?value:[];
     for(const chest of this.map.chests||[])if(looted.includes(chest.id))chest.restoreLooted();
   }
 
@@ -511,15 +529,15 @@ export class Game {
       chest.open();
       this.hud.setStatus('Sandık açılıyor…');
     } else if (chest.state === CHEST.OPEN) {
-      const prize = this.map.region === 'ruins' ? 'iron-blade' : 'health-potion';
+      const prize = this.map.region === 'ruins' ? this.classDef.rewardWeapon : 'health-potion';
       if (!this.inventory.add(prize)) { this.hud.setStatus('Çantada yer yok.'); return; }
       chest.loot();
       try {
-        const saved = JSON.parse(localStorage.getItem('tora-chests-v1') || '[]');
-        localStorage.setItem('tora-chests-v1', JSON.stringify([...new Set([...saved, chest.id])]));
+        const saved=this.save.read('chests',[]);
+        this.save.write('chests',[...new Set([...(Array.isArray(saved)?saved:[]),chest.id])]);
       } catch {}
       this.hud.refreshInventory();
-      this.hud.setStatus(`${this.map.region === 'ruins' ? 'Demir Kılıç' : 'Can İksiri'} sandıktan alındı.`);
+      this.hud.setStatus(`${this.inventory.snapshot().slots.find(item=>item?.id===prize)?.name||'Eşya'} sandıktan alındı.`);
     } else if (chest.state === CHEST.LOOTED) this.hud.setStatus('Bu sandık boş.');
   }
 
@@ -529,7 +547,7 @@ export class Game {
     this.exitButton = document.getElementById("exit-button");
     this.onResume = () => this.togglePause(false);
     this.onPauseQuality = (event) => { window.ToraMenu.applyQuality(event.target.value, true); this.applyQuality(event.target.value); };
-    this.onExit = () => { this.leave(); document.getElementById("menu-screen").classList.remove("is-leaving"); window.ToraMenu.unlock(); };
+    this.onExit = () => { this.leave(); document.dispatchEvent(new CustomEvent("tora:characters")); };
     this.resumeButton.addEventListener("click", this.onResume);
     this.pauseQuality.addEventListener("change", this.onPauseQuality);
     this.exitButton.addEventListener("click", this.onExit);
@@ -543,7 +561,7 @@ export class Game {
 
   async switchRegion(id) {
     if(this.transitioning||!REGIONS[id]||id===this.map.region)return;
-    this.moveMarker.hide();this.hud.closePanels();
+    this.combat.clearEffects();this.buffVfx.clear();this.player.buffs.guard=this.player.buffs.rage=0;this.pendingInteraction=null;this.moveMarker.hide();this.hud.closePanels();
     this.transitioning=true;this.paused=true;this.input.enabled=false;this.input.reset();this.#clearTarget();this.loot.dispose();this.worldUI.close();this.input.enabled=false;
     this.worldUI.loading(true,REGIONS[id].name+' yükleniyor…');
     try {
@@ -552,7 +570,7 @@ export class Game {
       this.#restoreChests();
       const visuals=await Promise.all(world.spawns.map(s=>this.assets.instantiateMob(s.type)));
       this.entities.reset(world.spawns,visuals);this.hud.syncEntities();
-      this.player.position.copyFrom(world.spawn);this.player.respawnPoint=world.spawn.clone();this.player.velocity.setAll(0);this.player.grounded=true;this.player.verticalVelocity=0;
+      this.player.position.copyFrom(world.spawn);this.player.respawnPoint=world.spawn.clone();this.player.velocity.setAll(0);this.player.cancelDestination();
       this.map.addShadowCaster(this.player.root);for(const mob of this.entities.mobs)this.map.addShadowCaster(mob.root);
       this.#disarm();this.camera.snap(world.spawn);this.#faceView();this.worldUI.setRegion();
       this.hud.setStatus(REGIONS[id].name+' · Bölge hazır');
@@ -561,7 +579,7 @@ export class Game {
   }
 
   #useSkill(slot) {
-    if (!this.running || this.paused || this.hud?.openPanel || this.loot?.isOpen?.() || !this.worldUI.modal.hidden || document.activeElement===this.hud?.chatInput) return;
+    if (!this.running || this.paused || this.combat.death.blocked || this.hud?.openPanel || this.loot?.isOpen?.() || !this.worldUI.modal.hidden || document.activeElement===this.hud?.chatInput) return;
     const skill = this.combat.skills.get(slot);
     if (!skill) return;
     this.hud?.skillBar?.markPressed?.(slot);
@@ -576,7 +594,7 @@ export class Game {
     this.armedSkill = skill;
     this.hud.skillBar.setArmed(slot);
     this.skillMarker?.update(skill, this.player);
-    const hint = skill.aoe ? 'Etki alanını onaylamak için zemine tıkla.' : skill.action === 'dash' ? 'Atılım yönü için zemine tıkla.' : 'Hedefe tıkla.';
+    const hint = skill.aoe ? 'Etki alanını onaylamak için zemine tıkla.' : skill.target==='ground' ? 'Geçerli bir zemine tıkla.' : !this.entities.selected?.alive ? 'Önce bir hedef seç; düşmana tıkla.' : 'Hedefe tıkla.';
     this.hud.setStatus(`${skill.name}: ${hint} Esc iptal.`);
   }
 
@@ -595,7 +613,7 @@ export class Game {
   #frame() {
     if (!this.scene || this.scene.isDisposed) return;
     const now = performance.now();
-    // Bound simulation catch-up: a stalled GPU frame must not skip an entire jump or attack.
+    // Bound simulation catch-up so stalled rendering does not skip an entire combat action.
     const raw = Math.min(0.25, (now - this.lastTime) / 1000 || 0.016);
     this.lastTime = now;
     if (this.running && !this.paused) {
@@ -605,18 +623,19 @@ export class Game {
         const dt = Math.min(0.05, remaining);
         remaining -= dt;
         this.combat.update(dt);
-        this.player.update(dt, this.camera);
+        this.player.update(dt);this.quickItems.update(dt);
         this.buffVfx?.update(dt);
         this.animator.setState(this.player.state);
         this.animator.update(dt, this.player.speedRatio);
         this.player.visual?.weaponSheath?.update(dt, this.player.state);
         this.entities.update(dt, this.player);
         this.loot?.update?.(dt);
-        if (this.player.alive) this.player.mana = Math.min(this.player.maxMana, this.player.mana + 4 * dt);
+        if (this.player.alive) this.player.mana = Math.min(this.player.maxMana, this.player.mana + this.classDef.manaRegen * dt);
       }
       const viewDt = Math.min(0.05, raw);
       this.skillMarker?.update(this.armedSkill, this.player);
       this.moveMarker?.update(viewDt);
+      if(this.pendingInteraction?.type==='npc'&&this.map.npc&&BABYLON.Vector3.Distance(this.player.position,this.map.npc.position)<=4){this.pendingInteraction=null;this.worldUI.openNpc();}
       this.camera.update(viewDt);
       this.map.update(viewDt, this.camera.camera, this.engine.getFps());
       this.audio?.update?.(viewDt, this.player, this.map.region);

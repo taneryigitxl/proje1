@@ -1,6 +1,6 @@
 import { CameraControls } from './CameraControls.js';
 
-/** Locked isometric follow. Yaw never changes; jump height is ignored. */
+/** Locked isometric follow, anchored to the terrain under the player. */
 export class IsometricCamera {
   constructor(scene, canvas, target, config) {
     this.scene = scene;
