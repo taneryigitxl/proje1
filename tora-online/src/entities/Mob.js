@@ -175,6 +175,23 @@ export class Mob extends Entity {
     this.feetTimer=.2;
   }
 
+  applyNetworkState(state) {
+    if (this.disposed) return;
+    const wasAlive = this.alive;
+    this.id = state.id;
+    this.health = state.health;
+    this.maxHealth = state.maxHealth;
+    this.alive = state.alive;
+    this.level = state.level;
+    this.targetId = state.targetId;
+    this.networkTarget = state;
+    this.root.getChildMeshes(false).forEach(mesh => { mesh.metadata = { ...(mesh.metadata || {}), entityId: state.id, mob: true }; });
+    if (!state.alive && wasAlive) this.#play('death', false, true);
+    if (state.alive && !wasAlive) { this.root.setEnabled(true); this.#play('idle', true, true); }
+    const animation = ({ chase: 'run', return: 'walk', attack: 'attack', hit: 'hit', dead: 'death' })[state.state] || 'idle';
+    if (state.alive && animation !== this.animationState) this.#play(animation, ['run', 'walk', 'idle'].includes(animation));
+  }
+
   dispose() {this.disposed=true;this.groups.forEach(g=>g.dispose());const meshes=this.root.getChildMeshes(false);const skeletons=new Set(meshes.map(m=>m.skeleton).filter(Boolean));meshes.forEach(m=>this.scene.getLightByName("afternoon-sun")?.getShadowGenerator()?.removeShadowCaster(m,false));this.root.dispose(false,false);skeletons.forEach(s=>s.dispose());}
 
   #snapFeetToGround() {

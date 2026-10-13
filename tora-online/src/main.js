@@ -2,6 +2,7 @@ import { CharacterLobby } from './ui/CharacterLobby.js';
 import "../menu.js";
 import { EngineRuntime } from "./core/Engine.js";
 import { Game } from "./core/Game.js";
+import { OnlineGame } from './core/OnlineGame.js';
 
 if (window.__TORA_BOOTSTRAP__) {
   console.warn("[Tora Startup] İkinci bootstrap isteği engellendi; mevcut oyun instance korunuyor.");
@@ -69,7 +70,7 @@ if (window.__TORA_BOOTSTRAP__) {
     try {
       if (!game) {
         runtime = await EngineRuntime.create(canvas, lastQuality, progress);
-        game = new Game(runtime, progress, showError);
+        game = lastIdentity.online ? new OnlineGame(runtime, progress, showError) : new Game(runtime, progress, showError);
         window.__TORA_BOOTSTRAP__.runtime = runtime;
         window.__TORA_BOOTSTRAP__.game = game;
         const result = await game.initialize(lastIdentity);
@@ -98,7 +99,7 @@ if (window.__TORA_BOOTSTRAP__) {
 
   const onEnter = (event) => void enter(event.detail.quality, {
     username: event.detail.username,
-    isAdmin: false,classId:event.detail.classId,characterId:event.detail.characterId,profile:event.detail.profile,
+    isAdmin: false,classId:event.detail.classId,characterId:event.detail.characterId,profile:event.detail.profile,online:event.detail.online,
   });
   const onQuality = (event) => game?.applyQuality(event.detail.quality);
   const onWindowError = (event) => console.error("[Tora Online] Çalışma zamanı hatası:", event.error || event.message);

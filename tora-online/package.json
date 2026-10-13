@@ -5,9 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
+    "dev:online": "node scripts/dev-online.mjs",
     "build": "node scripts/build.mjs",
     "preview": "vite preview --host 0.0.0.0",
     "test": "node --test tests/*.test.mjs",
+    "test:online": "node --test tests/online-integration.test.mjs",
+    "test:online:browser": "node tests/online-browser.mjs",
+    "server": "node server/index.js",
+    "db:migrate": "node server/migrate.js",
     "validate": "node scripts/validate.mjs",
     "test:browser": "node tests/browser-smoke.mjs",
     "test:soak": "node tests/browser-smoke.mjs --soak=600"
@@ -15,9 +20,20 @@
   "devDependencies": {
     "@gltf-transform/core": "^4.3.0",
     "@gltf-transform/functions": "^4.3.0",
+    "embedded-postgres": "^18.4.0-beta.17",
     "meshoptimizer": "^1.3.0",
     "playwright": "^1.63.0",
     "sharp": "^0.35.5",
     "vite": "^7.3.6"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "pg": "^8.23.1",
+    "ws": "^8.22.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "@embedded-postgres/windows-x64@18.4.0-beta.17": true,
+    "@embedded-postgres/linux-x64@18.4.0-beta.17": true
   }
 }

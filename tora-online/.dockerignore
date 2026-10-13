@@ -1,0 +1,9 @@
+node_modules
+dist
+reports
+assets
+vendor
+.tora-db
+.env
+.env.local
+.git

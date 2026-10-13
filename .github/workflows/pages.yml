@@ -35,6 +35,12 @@ jobs:
       - run: npm run test:browser
         if: github.event_name != 'workflow_dispatch' || inputs.browser_smoke
         working-directory: tora-online
+      - name: Build online client when the game API is deployed
+        if: vars.TORA_GAME_API_URL != ''
+        run: npm run build
+        working-directory: tora-online
+        env:
+          VITE_GAME_API_URL: ${{ vars.TORA_GAME_API_URL }}
       - run: node scripts/package-pages.mjs
       - uses: actions/upload-pages-artifact@v3
         with:

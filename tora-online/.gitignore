@@ -1,5 +1,8 @@
 node_modules/
 dist/
+.env
+.env.local
+.tora-db/
 /reports/revision-2026-10-12/asset-sources/
 /reports/revision-2026-10-12/source-before.zip
 /reports/revision-2026-10-12/source-before.patch
