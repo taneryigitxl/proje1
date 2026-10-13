@@ -15,7 +15,7 @@ import { PlayerController } from "../player/PlayerController.js";
 import { PlayerAnimator } from "../player/PlayerAnimator.js";
 import { EntityManager } from "../entities/EntityManager.js";
 import { CombatSystem } from "../combat/CombatSystem.js";
-import { NetworkAdapter } from "../network/NetworkAdapter.js";
+import { LocalNetworkAdapter } from "../network/LocalNetworkAdapter.js";
 import { HUD } from "../ui/HUD.js";
 import { ProgressionSystem } from "../progression/ProgressionSystem.js";
 import { StatsSystem } from "../progression/StatsSystem.js";
@@ -67,7 +67,7 @@ export class Game {
       this.classDef=classDef(this.identity.classId);this.save=new SaveService(this.identity.characterId);this.characterStore=new CharacterStore(this.identity.profile);
       document.body.dataset.class=this.classDef.id;document.body.style.setProperty('--class-accent',this.classDef.accent);
       this.onProgress(28, "Yerel dünya oturumu açılıyor…");
-      this.network = new NetworkAdapter();
+      this.network = new LocalNetworkAdapter();
       await this.network.connect();
 
       console.info("[Tora Startup] 3/10 Scene oluşturuluyor.");
@@ -81,7 +81,7 @@ export class Game {
 
       console.info("[Tora Startup] 4/10 Zorunlu harita assetleri ve harita hazırlanıyor.");
       this.map = new RegionWorld(this.scene, this.navigation, this.runtime.profile, this.runtime.quality);
-      this.map.onChestOpen = () => this.audio?.play('ui', 'effects', .65);
+      this.map.onChestOpen = () => this.audio?.playCue('chest');
       const savedWorld=this.save.read('world');
       const world = await this.map.build(assets, { id: Object.hasOwn(REGIONS,savedWorld?.region)?savedWorld.region:'village' });
       this.#restoreChests();
@@ -111,7 +111,7 @@ export class Game {
         onDamage: (entity, result) => {if(entity===this.player)this.buffVfx?.impact();this.hud?.showDamage(entity, result);},
         onKill: (mob) => this.#onMobDefeated(mob),
         onStatus: (message) => this.hud?.setStatus(message),
-        onBuff: (type, duration) => this.buffVfx?.applyBuff(type, duration),
+        onBuff: (type, duration) => {this.buffVfx?.applyBuff(type,duration);this.audio?.playCue('buff');},
         onActionStart: (skill) => {this.player.visual?.weaponSheath?.markCombat(skill?.duration || 1.2);this.audio?.playSwing(skill);},
         onCameraShake: (amp, dur) => {
           this.camera?.shake(amp, dur);
@@ -130,6 +130,7 @@ export class Game {
       this.loot.onOpen = () => { this.player.cancelDestination(); this.syncInputGate(); };
       this.loot.onClose = () => this.syncInputGate();
       this.loot.onPickup = () => {
+        this.audio?.playCue('pickup');
         this.hud?.refreshInventory();
         const collector = this.progression.syncCollectorQuest();
         if (collector) this.hud?.announceProgress({ ...collector, questCompleted: true });
@@ -146,9 +147,10 @@ export class Game {
         onQuality: (name) => { window.ToraMenu?.applyQuality(name, true); this.applyQuality(name); const pause = document.getElementById("pause-quality"); if (pause) pause.value = name; },
         onVolume: (bus, value) => { this.audio?.setVolume(bus, value); const input = document.getElementById("volume-" + bus); if (input) input.value = String(value); },
         isBlocked:()=>this.combat.death.blocked,loot: this.loot, quickItems:this.quickItems, onQuickItem:index=>this.useQuickItem(index),
+        onCue:kind=>this.audio?.playCue(kind),network:this.network,
       });
       this.worldUI = new WorldUI(this);
-      this.cursor = new CursorManager(this.scene, this.canvas, this.player, this.entities);
+      this.cursor = new CursorManager(this.scene, this.canvas, this.player, this.entities,(data,mesh)=>this.worldUI.hover(data,mesh));
       this.hud.setDebug(GAME_CONFIG.debug);
       this.hud.applyIdentity(this.identity);
       this.map.addShadowCaster(this.player.root);
@@ -326,14 +328,14 @@ export class Game {
       this.togglePause();
     };
     this.input.onQuickItem=index=>this.useQuickItem(index);
-    this.input.onLootAll=()=>{if(this.running&&!this.paused&&!this.combat.death.blocked&&this.loot.isOpen())this.loot.takeAll();};
+    this.input.onLootAll=()=>{if(!this.running||this.paused||this.combat.death.blocked)return;if(this.loot.isOpen())this.loot.takeAll();else this.worldUI.interactCurrent();};
     this.input.onSkill = (slot) => this.#useSkill(slot);
     this.input.onInventory = () => {
       if (!this.running || this.paused || this.combat.death.blocked || !this.worldUI.modal.hidden) return;
       this.hud.togglePanel("inventory");
     };
     this.input.onStats = () => {
-      if (!this.running || this.paused || this.combat.death.blocked) return;
+      if (!this.running || this.paused || this.combat.death.blocked || !this.worldUI.modal.hidden) return;
       this.hud.togglePanel("stats");
     };
     this.input.onPanel = (name) => {
@@ -460,7 +462,7 @@ export class Game {
     const skill = this.armedSkill;
     if (!skill) return;
     const check = this.combat.skills.canUse(skill, this.player);
-    if (!check.ok) { this.hud.setStatus(check.reason); return; }
+    if (!check.ok) { if(this.player.mana<skill.mana)this.hud.warnMana();this.hud.setStatus(check.reason); return; }
     const ground = this.#pickGround();
     if(skill.target==='ground'){
       if(!ground?.hit){this.hud.setStatus('Geçerli bir zemin seç.');return;}
@@ -606,7 +608,7 @@ export class Game {
     if (!result && !collector) return;
     if (result) this.hud.announceProgress(result);
     if (collector) this.hud.announceProgress({ ...collector, questCompleted: true });
-    if (result?.questCompleted) this.hud.setStatus("İlk Sınav tamamlandı. Ayame için 3 Kadim Diş topla.");
+    if (result?.questCompleted) {this.audio?.playCue('quest');this.hud.setStatus("İlk Sınav tamamlandı. Ayame için 3 Kadim Diş topla.");}
     else if (result) this.hud.setStatus(`${mob.name} yenildi • +${result.killXp} XP`);
   }
 

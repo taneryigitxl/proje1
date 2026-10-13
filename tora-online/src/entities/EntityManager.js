@@ -34,12 +34,15 @@ export class EntityManager {
   resetAggro(){for(const mob of this.mobs){mob.aggro=false;mob.targetId=null;mob.attackWindup=0;mob.attackTimer=2;mob.aggroLock=4;mob.wanderTarget=null;}}
 
   select(mob) {
+    this.#clearOutline();
     this.selected = mob?.alive ? mob : null;
+    if(this.selected){this.outline=[];for(const mesh of this.selected.root.getChildMeshes(false)){if(!mesh.getTotalVertices())continue;this.outline.push([mesh,mesh.renderOutline,mesh.outlineWidth,mesh.outlineColor]);mesh.renderOutline=true;mesh.outlineWidth=.012;mesh.outlineColor=new BABYLON.Color3(.9,.59,.36);}}
     this.#syncRing();
     return this.selected;
   }
 
   clear() {
+    this.#clearOutline();
     this.selected = null;
     this.#syncRing();
   }
@@ -69,9 +72,11 @@ export class EntityManager {
       else if (this.slowAccumulator > 0.2) mob.update(this.slowAccumulator, player);
     }
     if (this.slowAccumulator > 0.2) this.slowAccumulator = 0;
-    if (this.selected && !this.selected.alive) this.selected = null;
+    if (this.selected && !this.selected.alive) this.clear();
     this.#syncRing();
   }
+
+  #clearOutline(){for(const [mesh,enabled,width,color]of this.outline||[]){if(mesh.isDisposed())continue;mesh.renderOutline=enabled;mesh.outlineWidth=width;mesh.outlineColor=color;}this.outline=[];}
 
   #syncRing() {
     if (!this.selectionRing) return;

@@ -1,3 +1,4 @@
+import { WorldPropAnimation } from './WorldPropAnimation.js';
 export const CHEST = Object.freeze({ CLOSED: 'CLOSED', OPENING: 'OPENING', OPEN: 'OPEN', LOOTED: 'LOOTED' });
 
 export class ChestState {
@@ -9,8 +10,7 @@ export class ChestState {
     this.groups = groups;
     this.openAnimation = groups.find(group => /chest_open$/i.test(group.name)) || null;
     this.openedAnimation = groups.find(group => /chest_opened$/i.test(group.name)) || null;
-    for (const group of groups) group.stop();
-    this.endObserver = null;
+    this.animation = new WorldPropAnimation(groups);
   }
 
   open() {
@@ -18,18 +18,14 @@ export class ChestState {
     this.state = CHEST.OPENING;
     this.onOpen(this);
     if (!this.openAnimation) { this.#finish(); return true; }
-    const group = this.openAnimation;
-    this.endObserver = group.onAnimationGroupEndObservable.add(() => this.#finish());
-    group.start(false, 1, group.from, group.to, false);
+    this.animation.playOnce(this.openAnimation, () => this.#finish());
     return true;
   }
 
   #finish() {
     if (this.state !== CHEST.OPENING) return;
-    if (this.endObserver) this.openAnimation.onAnimationGroupEndObservable.remove(this.endObserver);
-    this.endObserver = null;
     this.state = CHEST.OPEN;
-    this.openedAnimation?.start(true, 1, this.openedAnimation.from, this.openedAnimation.to, false);
+    this.animation.hold(this.openedAnimation || this.openAnimation);
   }
 
   loot() {
@@ -40,11 +36,10 @@ export class ChestState {
 
   restoreLooted() {
     this.state = CHEST.LOOTED;
-    this.openedAnimation?.start(true, 1, this.openedAnimation.from, this.openedAnimation.to, false);
+    this.animation.hold(this.openedAnimation || this.openAnimation);
   }
 
   dispose() {
-    if (this.endObserver) this.openAnimation.onAnimationGroupEndObservable.remove(this.endObserver);
-    for (const group of this.groups) { group.stop(); group.dispose(); }
+    this.animation.dispose();
   }
 }

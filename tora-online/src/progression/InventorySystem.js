@@ -1,10 +1,11 @@
+import { EQUIPMENT_SLOTS, equipmentSlot, createEquipment } from './EquipmentSchema.js';
 export const ITEM_DEFS = Object.freeze({
   "rusty-sword": {
     id: "rusty-sword", name: "Paslı Kılıç", type: "weapon", slot: "weapon", rarity: "common",
     description: "Başlangıç kılıcı. Güç +2.", bonuses: { strength: 2 }, allowedClasses: ['warrior'],
   },
   "leather-vest": {
-    id: "leather-vest", name: "Deri Yelek", type: "armor", slot: "armor", rarity: "common",
+    id: "leather-vest", name: "Deri Yelek", type: "armor", slot: "chest", rarity: "common",
     description: "Hafif zırh. Canlılık +2.", bonuses: { vitality: 2 }, allowedClasses: ['warrior'],
   },
   "health-potion": {
@@ -29,7 +30,7 @@ export const ITEM_DEFS = Object.freeze({
   },
   'apprentice-staff': {id:'apprentice-staff',name:'Acemi Asası',type:'weapon',slot:'weapon',rarity:'common',description:'Yeşim uçlu başlangıç asası. Zeka +2.',bonuses:{intelligence:2},allowedClasses:['mage']},
   'jade-staff': {id:'jade-staff',name:'Yeşim Asası',type:'weapon',slot:'weapon',rarity:'uncommon',description:'Ayame tarafından işlenmiş asa. Zeka +4.',bonuses:{intelligence:4},allowedClasses:['mage']},
-  'cloth-robe': {id:'cloth-robe',name:'Kumaş Cübbe',type:'armor',slot:'armor',rarity:'common',description:'Büyücü cübbesi. Canlılık +1, Zeka +1.',bonuses:{vitality:1,intelligence:1},allowedClasses:['mage']},
+  'cloth-robe': {id:'cloth-robe',name:'Kumaş Cübbe',type:'armor',slot:'chest',rarity:'common',description:'Büyücü cübbesi. Canlılık +1, Zeka +1.',bonuses:{vitality:1,intelligence:1},allowedClasses:['mage']},
   'trail-ration': {id:'trail-ration',name:'Yol Azığı',type:'consumable',rarity:'common',description:'25 can ve 10 mana yeniler.',effect:{health:25,mana:10},cooldown:8},
   'arcane-scroll': {id:'arcane-scroll',name:'Arkane Parşömen',type:'consumable',rarity:'uncommon',description:'50 mana yeniler.',effect:{mana:50},cooldown:10},
 });
@@ -48,7 +49,7 @@ export class InventorySystem {
     while (this.slots.length < capacity) this.slots.push(null);
     this.gold = 50;
     this.selected = -1;
-    this.equipped = { weapon: null, armor: null };
+    this.equipped = createEquipment();
     this.#load();
     this.#autoEquipStarters();
     this.#recomputeGear();
@@ -145,7 +146,8 @@ export class InventorySystem {
 
   #equip(item) {
     if (item.allowedClasses && !item.allowedClasses.includes(this.classDef.id)) return {ok:false,message:'Bu ekipman sınıfına uygun değil.'};
-    const slot = item.slot || item.type;
+    const slot = equipmentSlot(item.slot || item.type);
+    if (!EQUIPMENT_SLOTS.find(def=>def.id===slot)?.active) return {ok:false,message:'Bu ekipman yuvası etkin değil.'};
     const previous = this.equipped[slot];
     if (previous === item.id) {
       this.equipped[slot] = null;
@@ -160,6 +162,7 @@ export class InventorySystem {
   }
 
   #autoEquipStarters() {
+    if (this.hadEquipmentRecord) return;
     if (!this.equipped.weapon) {
       const weaponId = this.slots.find((id) => id && ITEM_DEFS[id]?.type === "weapon" && ITEM_DEFS[id].allowedClasses?.includes(this.classDef.id));
       if (weaponId) this.equipped.weapon = weaponId;
@@ -186,7 +189,7 @@ export class InventorySystem {
 
   #save() {
     try {
-      const data = { slots: this.slots, equipped: this.equipped, gold: this.gold };
+      const data = { equipmentVersion:2, slots: this.slots, equipped: this.equipped, gold: this.gold };
       if (this.save) this.save.write('inventory', data); else localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     } catch (_) { /* optional */ }
   }
@@ -198,8 +201,8 @@ export class InventorySystem {
       if(Number.isFinite(data.gold))this.gold=Math.max(0,data.gold);
       if (Array.isArray(data.slots)) this.slots = data.slots.slice(0, this.capacity).map(id=>typeof id==='string'&&Object.hasOwn(ITEM_DEFS,id)?id:null);
       while (this.slots.length < this.capacity) this.slots.push(null);
-      if (data.equipped) this.equipped = { weapon: data.equipped.weapon || null, armor: data.equipped.armor || null };
-      for (const key of Object.keys(this.equipped)) {const id=this.equipped[key];if(!this.slots.includes(id)||!ITEM_DEFS[id]?.allowedClasses?.includes(this.classDef.id))this.equipped[key]=null;}
+      if (data.equipped && typeof data.equipped === 'object') {this.hadEquipmentRecord=true;this.equipped = createEquipment(data.equipped);}
+      for (const def of EQUIPMENT_SLOTS) {const id=this.equipped[def.id],item=ITEM_DEFS[id];if(!def.active||!this.slots.includes(id)||equipmentSlot(item?.slot)!==def.id||!item?.allowedClasses?.includes(this.classDef.id))this.equipped[def.id]=null;}
     } catch (_) { /* optional */ }
   }
 

@@ -1,0 +1,14 @@
+const CHANNELS=[['general','Genel'],['near','Yakın'],['party','Grup'],['guild','Lonca'],['whisper','Özel'],['system','Sistem']];
+export class ChatPanel {
+  constructor(element,log,input,network,onGate,onBubble) {
+    Object.assign(this,{element,log,input,network,onGate,onBubble});this.messages=[];this.channel='general';this.lastActivity=performance.now();
+    const nav=document.createElement('nav');nav.className='chat-tabs';nav.setAttribute('aria-label','Sohbet kanalları');this.tabs=new Map();for(const [id,label]of CHANNELS){const button=document.createElement('button');button.type='button';button.dataset.channel=id;button.textContent=label;button.disabled=!['general','near','system'].includes(id)&&!network.capabilities?.chat?.[id];button.title=button.disabled?'Bu kanal için çevrimiçi bağlantı gerekli.':id==='system'?'Sistem bildirimleri':label+' · yerel oturum';button.addEventListener('click',()=>this.select(id));nav.append(button);this.tabs.set(id,button);}element.prepend(nav);
+    this.onFocus=()=>{this.lastActivity=performance.now();onGate();};this.onBlur=()=>onGate();this.onHover=()=>this.lastActivity=performance.now();input.addEventListener('focus',this.onFocus);input.addEventListener('blur',this.onBlur);element.addEventListener('pointerenter',this.onHover);this.select('general');
+  }
+  select(id){if(this.tabs.get(id)?.disabled)return;this.channel=id;for(const [key,button]of this.tabs)button.classList.toggle('active',key===id);this.input.disabled=id==='system';this.input.placeholder=id==='system'?'Sistem bildirimleri':'Enter ile yaz…';this.render();}
+  send(message){if(this.channel==='system'||!message)return false;this.network.sendChat?.(message,this.channel);this.add('Sen',message,{channel:this.channel,type:'local'});return true;}
+  add(author,message,{channel='system',type='system'}={}){this.messages.push({author,message,channel,type});if(this.messages.length>60)this.messages.shift();this.lastActivity=performance.now();this.render();if(author==='Sen')this.onBubble(message);}
+  render(){this.log.replaceChildren();for(const message of this.messages.filter(m=>this.channel==='general'||m.channel===this.channel).slice(-20)){const line=document.createElement('p');line.className='chat-message type-'+message.type;const name=document.createElement('b');name.textContent=message.author;line.append(name,document.createTextNode(' '+message.message));this.log.append(line);}this.log.scrollTop=this.log.scrollHeight;}
+  update(now){const idle=now-this.lastActivity>7000&&document.activeElement!==this.input;if(idle!==this.idle){this.idle=idle;this.element.classList.toggle('chat-idle',idle);}}
+  dispose(){this.input.removeEventListener('focus',this.onFocus);this.input.removeEventListener('blur',this.onBlur);this.element.removeEventListener('pointerenter',this.onHover);this.element.querySelector('.chat-tabs')?.remove();this.log.replaceChildren();}
+}

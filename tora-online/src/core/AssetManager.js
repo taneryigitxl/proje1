@@ -263,6 +263,7 @@ export class AssetManager {
     const slash = url.lastIndexOf("/");
     const rootUrl = slash >= 0 ? url.slice(0, slash + 1) : "";
     const filename = slash >= 0 ? url.slice(slash + 1) : url;
+    const observer=BABYLON.SceneLoader.OnPluginActivatedObservable.add(plugin=>{if(plugin.name==='gltf')plugin.animationStartMode=0;});
     try {
       const loaded=await this.#withTimeout(BABYLON.SceneLoader.ImportMeshAsync("", rootUrl, filename, this.scene), this.config.assetTimeoutMs);
       // Babylon's GLSL skinning shader expects float joint attributes on WebGPU.
@@ -274,7 +275,7 @@ export class AssetManager {
       return loaded;
     } catch (error) {
       throw new Error(`GLB yüklenemedi: ${url} (${error?.message || error})`);
-    }
+    } finally { BABYLON.SceneLoader.OnPluginActivatedObservable.remove(observer); }
   }
 
   #wrap(name, meshes, transformNodes = []) {

@@ -1,0 +1,568 @@
+[
+  {
+    "classId": "warrior",
+    "checks": [
+      "nine icon skills, no visible key labels",
+      "nine shortcuts and one hidden world prompt",
+      "HUD within three viewports",
+      "animated isolated inventory rig",
+      "exclusive panels and grouped stats",
+      "separate minimap terrain and marker layers",
+      "F chest prompt, one opening and cue, static final pose and one-time loot",
+      "E remains the quick item key",
+      "no console or asset errors"
+    ],
+    "preview": {
+      "fitted": true,
+      "renders": 2,
+      "groups": 19,
+      "targetGroups": 390,
+      "scene": 24,
+      "weapon": true,
+      "bounds": {
+        "min": [
+          -0.46530821284250123,
+          -0.0038453610613942146,
+          -0.336533884016621
+        ],
+        "max": [
+          0.3661397179281689,
+          2.0995023539016984,
+          0.39175511051685596
+        ]
+      },
+      "distance": 4.409503069112,
+      "center": [
+        -0.049584247457166164,
+        1.047828496420152,
+        0.02761061325011749
+      ],
+      "meshData": [
+        {
+          "name": "node0",
+          "sourcePose": [
+            0.31361550092697144,
+            1.3191022872924805,
+            -0.02908948063850403
+          ],
+          "clonePose": [
+            0.3041194975376129,
+            1.301831841468811,
+            -0.014322041533887386
+          ],
+          "material": "MI_Ranger",
+          "sourceMaterial": "MI_Ranger",
+          "enabled": true,
+          "visible": true,
+          "sourceTextures": [
+            {
+              "name": "MI_Ranger (Base Color)",
+              "url": "data:assets/models/player/female-ranger.glb#image1",
+              "ready": true
+            },
+            {
+              "name": "MI_Ranger (Metallic Roughness)",
+              "url": "data:assets/models/player/female-ranger.glb#image2",
+              "ready": true
+            },
+            {
+              "name": "MI_Ranger (Normal)",
+              "url": "data:assets/models/player/female-ranger.glb#image0",
+              "ready": true
+            }
+          ],
+          "cloneTextures": [
+            {
+              "name": "MI_Ranger (Base Color)",
+              "url": "data:assets/models/player/female-ranger.glb#image1",
+              "ready": true
+            },
+            {
+              "name": "MI_Ranger (Metallic Roughness)",
+              "url": "data:assets/models/player/female-ranger.glb#image2",
+              "ready": true
+            },
+            {
+              "name": "MI_Ranger (Normal)",
+              "url": "data:assets/models/player/female-ranger.glb#image0",
+              "ready": true
+            }
+          ]
+        },
+        {
+          "name": "node1_primitive0",
+          "sourcePose": [
+            0.17279933393001556,
+            1.4332756996154785,
+            -0.04466616362333298
+          ],
+          "clonePose": [
+            0.16786795854568481,
+            1.420715570449829,
+            -0.03671105578541756
+          ],
+          "material": "MI_Ranger",
+          "sourceMaterial": "MI_Ranger",
+          "enabled": true,
+          "visible": true,
+          "sourceTextures": [
+            {
+              "name": "MI_Ranger (Base Color)",
+              "url": "data:assets/models/player/female-ranger.glb#image1",
+              "ready": true
+            },
+            {
+              "name": "MI_Ranger (Metallic Roughness)",
+              "url": "data:assets/models/player/female-ranger.glb#image2",
+              "ready": true
+            },
+            {
+              "name": "MI_Ranger (Normal)",
+              "url": "data:assets/models/player/female-ranger.glb#image0",
+              "ready": true
+            }
+          ],
+          "cloneTextures": [
+            {
+              "name": "MI_Ranger (Base Color)",
+              "url": "data:assets/models/player/female-ranger.glb#image1",
+              "ready": true
+            },
+            {
+              "name": "MI_Ranger (Metallic Roughness)",
+              "url": "data:assets/models/player/female-ranger.glb#image2",
+              "ready": true
+            },
+            {
+              "name": "MI_Ranger (Normal)",
+              "url": "data:assets/models/player/female-ranger.glb#image0",
+              "ready": true
+            }
+          ]
+        },
+        {
+          "name": "node1_primitive1",
+          "sourcePose": [
+            0.3489333391189575,
+            0.821581244468689,
+            0.005985759664326906
+          ],
+          "clonePose": [
+            0.3340010643005371,
+            0.8039892315864563,
+            0.025016942992806435
+          ],
+          "material": "MI_Regular_Female",
+          "sourceMaterial": "MI_Regular_Female",
+          "enabled": true,
+          "visible": true,
+          "sourceTextures": [
+            {
+              "name": "MI_Regular_Female (Base Color)",
+              "url": "data:assets/models/player/female-ranger.glb#image4",
+              "ready": true
+            },
+            {
+              "name": "MI_Regular_Female (Metallic Roughness)",
+              "url": "data:assets/models/player/female-ranger.glb#image5",
+              "ready": true
+            },
+            {
+              "name": "MI_Regular_Female (Normal)",
+              "url": "data:assets/models/player/female-ranger.glb#image3",
+              "ready": true
+            }
+          ],
+          "cloneTextures": [
+            {
+              "name": "MI_Regular_Female (Base Color)",
+              "url": "data:assets/models/player/female-ranger.glb#image4",
+              "ready": true
+            },
+            {
+              "name": "MI_Regular_Female (Metallic Roughness)",
+              "url": "data:assets/models/player/female-ranger.glb#image5",
+              "ready": true
+            },
+            {
+              "name": "MI_Regular_Female (Normal)",
+              "url": "data:assets/models/player/female-ranger.glb#image3",
+              "ready": true
+            }
+          ]
+        },
+        {
+          "name": "node2",
+          "sourcePose": [
+            0.30638059973716736,
+            0.9478152394294739,
+            -0.012627288699150085
+          ],
+          "clonePose": [
+            0.2921961545944214,
+            0.9304895401000977,
+            0.006520464550703764
+          ],
+          "material": "MI_Ranger",
+          "sourceMaterial": "MI_Ranger",
+          "enabled": true,
+          "visible": true,
+          "sourceTextures": [
+            {
+              "name": "MI_Ranger (Base Color)",
+              "url": "data:assets/models/player/female-ranger.glb#image1",
+              "ready": true
+            },
+            {
+              "name": "MI_Ranger (Metallic Roughness)",
+              "url": "data:assets/models/player/female-ranger.glb#image2",
+              "ready": true
+            },
+            {
+              "name": "MI_Ranger (Normal)",
+              "url": "data:assets/models/player/female-ranger.glb#image0",
+              "ready": true
+            }
+          ],
+          "cloneTextures": [
+            {
+              "name": "MI_Ranger (Base Color)",
+              "url": "data:assets/models/player/female-ranger.glb#image1",
+              "ready": true
+            },
+            {
+              "name": "MI_Ranger (Metallic Roughness)",
+              "url": "data:assets/models/player/female-ranger.glb#image2",
+              "ready": true
+            },
+            {
+              "name": "MI_Ranger (Normal)",
+              "url": "data:assets/models/player/female-ranger.glb#image0",
+              "ready": true
+            }
+          ]
+        },
+        {
+          "name": "node3",
+          "sourcePose": [
+            0.12217062711715698,
+            1.2797951698303223,
+            -0.09314166009426117
+          ],
+          "clonePose": [
+            0.11626727879047394,
+            1.274206519126892,
+            -0.08774637430906296
+          ],
+          "material": "MI_Ranger",
+          "sourceMaterial": "MI_Ranger",
+          "enabled": true,
+          "visible": true,
+          "sourceTextures": [
+            {
+              "name": "MI_Ranger (Base Color)",
+              "url": "data:assets/models/player/female-ranger.glb#image1",
+              "ready": true
+            },
+            {
+              "name": "MI_Ranger (Metallic Roughness)",
+              "url": "data:assets/models/player/female-ranger.glb#image2",
+              "ready": true
+            },
+            {
+              "name": "MI_Ranger (Normal)",
+              "url": "data:assets/models/player/female-ranger.glb#image0",
+              "ready": true
+            }
+          ],
+          "cloneTextures": [
+            {
+              "name": "MI_Ranger (Base Color)",
+              "url": "data:assets/models/player/female-ranger.glb#image1",
+              "ready": true
+            },
+            {
+              "name": "MI_Ranger (Metallic Roughness)",
+              "url": "data:assets/models/player/female-ranger.glb#image2",
+              "ready": true
+            },
+            {
+              "name": "MI_Ranger (Normal)",
+              "url": "data:assets/models/player/female-ranger.glb#image0",
+              "ready": true
+            }
+          ]
+        }
+      ]
+    },
+    "errors": [],
+    "requests": []
+  },
+  {
+    "classId": "mage",
+    "checks": [
+      "nine icon skills, no visible key labels",
+      "nine shortcuts and one hidden world prompt",
+      "HUD within three viewports",
+      "animated isolated inventory rig",
+      "exclusive panels and grouped stats",
+      "separate minimap terrain and marker layers",
+      "F chest prompt, one opening and cue, static final pose and one-time loot",
+      "E remains the quick item key",
+      "no console or asset errors"
+    ],
+    "preview": {
+      "fitted": true,
+      "renders": 2,
+      "groups": 17,
+      "targetGroups": 390,
+      "scene": 33,
+      "weapon": true,
+      "bounds": {
+        "min": [
+          -0.44214120852107186,
+          -0.006246298085898161,
+          -0.46029418943557054
+        ],
+        "max": [
+          1.451001366707736,
+          1.819433569908142,
+          0.5144679239709582
+        ]
+      },
+      "distance": 5.342143769779105,
+      "center": [
+        0.504430079093332,
+        0.906593635911122,
+        0.027086867267693826
+      ],
+      "meshData": [
+        {
+          "name": "Female_Peasant_Arms",
+          "sourcePose": [
+            0.270878404378891,
+            1.2773866653442383,
+            -0.04696016386151314
+          ],
+          "clonePose": [
+            0.2715523838996887,
+            1.2580360174179077,
+            -0.038521721959114075
+          ],
+          "material": "MI_Peasant",
+          "sourceMaterial": "MI_Peasant",
+          "enabled": true,
+          "visible": true,
+          "sourceTextures": [
+            {
+              "name": "MI_Peasant (Base Color)",
+              "url": "data:assets/models/player/female-mage.glb#image1",
+              "ready": true
+            },
+            {
+              "name": "MI_Peasant (Metallic Roughness)",
+              "url": "data:assets/models/player/female-mage.glb#image2",
+              "ready": true
+            },
+            {
+              "name": "MI_Peasant (Normal)",
+              "url": "data:assets/models/player/female-mage.glb#image0",
+              "ready": true
+            }
+          ],
+          "cloneTextures": [
+            {
+              "name": "MI_Peasant (Base Color)",
+              "url": "data:assets/models/player/female-mage.glb#image1",
+              "ready": true
+            },
+            {
+              "name": "MI_Peasant (Metallic Roughness)",
+              "url": "data:assets/models/player/female-mage.glb#image2",
+              "ready": true
+            },
+            {
+              "name": "MI_Peasant (Normal)",
+              "url": "data:assets/models/player/female-mage.glb#image0",
+              "ready": true
+            }
+          ]
+        },
+        {
+          "name": "Female_Peasant_Body",
+          "sourcePose": [
+            0.050976864993572235,
+            1.339211344718933,
+            -0.12839439511299133
+          ],
+          "clonePose": [
+            0.05627753213047981,
+            1.3310915231704712,
+            -0.12996158003807068
+          ],
+          "material": "MI_Peasant",
+          "sourceMaterial": "MI_Peasant",
+          "enabled": true,
+          "visible": true,
+          "sourceTextures": [
+            {
+              "name": "MI_Peasant (Base Color)",
+              "url": "data:assets/models/player/female-mage.glb#image1",
+              "ready": true
+            },
+            {
+              "name": "MI_Peasant (Metallic Roughness)",
+              "url": "data:assets/models/player/female-mage.glb#image2",
+              "ready": true
+            },
+            {
+              "name": "MI_Peasant (Normal)",
+              "url": "data:assets/models/player/female-mage.glb#image0",
+              "ready": true
+            }
+          ],
+          "cloneTextures": [
+            {
+              "name": "MI_Peasant (Base Color)",
+              "url": "data:assets/models/player/female-mage.glb#image1",
+              "ready": true
+            },
+            {
+              "name": "MI_Peasant (Metallic Roughness)",
+              "url": "data:assets/models/player/female-mage.glb#image2",
+              "ready": true
+            },
+            {
+              "name": "MI_Peasant (Normal)",
+              "url": "data:assets/models/player/female-mage.glb#image0",
+              "ready": true
+            }
+          ]
+        },
+        {
+          "name": "Female_Peasant_Feet",
+          "sourcePose": [
+            0.242625430226326,
+            0.04321549832820892,
+            0.15054230391979218
+          ],
+          "clonePose": [
+            0.24260729551315308,
+            0.04300536587834358,
+            0.15026742219924927
+          ],
+          "material": "MI_Peasant",
+          "sourceMaterial": "MI_Peasant",
+          "enabled": true,
+          "visible": true,
+          "sourceTextures": [
+            {
+              "name": "MI_Peasant (Base Color)",
+              "url": "data:assets/models/player/female-mage.glb#image1",
+              "ready": true
+            },
+            {
+              "name": "MI_Peasant (Metallic Roughness)",
+              "url": "data:assets/models/player/female-mage.glb#image2",
+              "ready": true
+            },
+            {
+              "name": "MI_Peasant (Normal)",
+              "url": "data:assets/models/player/female-mage.glb#image0",
+              "ready": true
+            }
+          ],
+          "cloneTextures": [
+            {
+              "name": "MI_Peasant (Base Color)",
+              "url": "data:assets/models/player/female-mage.glb#image1",
+              "ready": true
+            },
+            {
+              "name": "MI_Peasant (Metallic Roughness)",
+              "url": "data:assets/models/player/female-mage.glb#image2",
+              "ready": true
+            },
+            {
+              "name": "MI_Peasant (Normal)",
+              "url": "data:assets/models/player/female-mage.glb#image0",
+              "ready": true
+            }
+          ]
+        },
+        {
+          "name": "Female_Peasant_Legs",
+          "sourcePose": [
+            0.12444110959768295,
+            0.4739387631416321,
+            0.15598618984222412
+          ],
+          "clonePose": [
+            0.1268233209848404,
+            0.4730311930179596,
+            0.1692408323287964
+          ],
+          "material": "MI_Peasant",
+          "sourceMaterial": "MI_Peasant",
+          "enabled": true,
+          "visible": true,
+          "sourceTextures": [
+            {
+              "name": "MI_Peasant (Base Color)",
+              "url": "data:assets/models/player/female-mage.glb#image1",
+              "ready": true
+            },
+            {
+              "name": "MI_Peasant (Metallic Roughness)",
+              "url": "data:assets/models/player/female-mage.glb#image2",
+              "ready": true
+            },
+            {
+              "name": "MI_Peasant (Normal)",
+              "url": "data:assets/models/player/female-mage.glb#image0",
+              "ready": true
+            }
+          ],
+          "cloneTextures": [
+            {
+              "name": "MI_Peasant (Base Color)",
+              "url": "data:assets/models/player/female-mage.glb#image1",
+              "ready": true
+            },
+            {
+              "name": "MI_Peasant (Metallic Roughness)",
+              "url": "data:assets/models/player/female-mage.glb#image2",
+              "ready": true
+            },
+            {
+              "name": "MI_Peasant (Normal)",
+              "url": "data:assets/models/player/female-mage.glb#image0",
+              "ready": true
+            }
+          ]
+        },
+        {
+          "name": "Mage pleated split overskirt",
+          "sourcePose": [
+            0.4343048632144928,
+            0.15501727163791656,
+            0.2232024073600769
+          ],
+          "clonePose": [
+            0.4344918131828308,
+            0.1539512425661087,
+            0.22356507182121277
+          ],
+          "material": "jade silk robe",
+          "sourceMaterial": "jade silk robe",
+          "enabled": true,
+          "visible": true,
+          "sourceTextures": [],
+          "cloneTextures": []
+        }
+      ]
+    },
+    "errors": [],
+    "requests": []
+  }
+]

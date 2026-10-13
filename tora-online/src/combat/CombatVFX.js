@@ -8,7 +8,7 @@ export class CombatVFX{
  spawn(index,position,size=1.5,ground=false,duration=.28,spin=0,yaw=0){
   const effect=this.pool[this.cursor++%this.pool.length],m=effect.mesh;m.material=this.materials[index];m.position.copyFrom(position);m.position.y+=ground?.04:1;
   m.rotationQuaternion=null;m.rotation.set(ground?Math.PI/2:0,ground?yaw:0,0);m.billboardMode=ground?0:BABYLON.Mesh.BILLBOARDMODE_ALL;
-  m.scaling.setAll(size);m.visibility=1;effect.life=effect.duration=duration;effect.spin=spin;m.setEnabled(true);return effect;
+  m.scaling.setAll(size*(this.player.buffs.rage>0&&[0,5].includes(index)?1.18:1));m.visibility=1;effect.life=effect.duration=duration;effect.spin=spin;m.setEnabled(true);return effect;
  }
  cast(skill,from,to){
   if(!skill.trail){const effect=this.spawn(3,from,skill.target==='self-area'?skill.radius*2:1.2,true,.3);effect.mesh.material.emissiveColor=BABYLON.Color3.FromHexString(skill.color);return;}

@@ -18,12 +18,14 @@ export class CursorManager {
 
   reset() {
     this.#set("normal");
+    this.onInteract(null,null);
   }
 
   #move() {
     const pick = this.scene.pick(this.scene.pointerX, this.scene.pointerY, (mesh) => mesh.isPickable);
-    if (!pick?.hit) return this.#set("normal");
+    if (!pick?.hit) {this.onInteract(null,null);return this.#set("normal");}
     const data = pick.pickedMesh?.metadata || {};
+    this.onInteract(data,pick.pickedMesh);
     if (data.mob) {
       const mob = this.entities.getById(data.entityId);
       const close = mob && BABYLON.Vector3.DistanceSquared(mob.position, this.player.position) < 12;

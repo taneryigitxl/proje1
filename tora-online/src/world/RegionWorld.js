@@ -67,11 +67,12 @@ export class RegionWorld {
     for(let i=0;i<positions.length;i+=3) positions[i+1]=this.heightAt(positions[i],positions[i+2]);
     ground.updateVerticesData(BABYLON.VertexBuffer.PositionKind,positions,true); ground.refreshBoundingInfo();
     const normals=[];BABYLON.VertexData.ComputeNormals(positions,ground.getIndices(),normals);ground.updateVerticesData(BABYLON.VertexBuffer.NormalKind,normals);
+    const terrainColors=[];for(let i=0;i<positions.length;i+=3){const x=positions[i],z=positions[i+2],grain=Math.sin(x*1.61+z*2.17)*Math.cos(z*1.09-x*.73),patch=Math.sin(x*.31+this.definition.seed)*Math.cos(z*.27),value=1+grain*.035+patch*.045;terrainColors.push(value,value*(this.region==='forest'?1.015:1),value*(this.region==='ruins'?.97:1),1);}ground.setVerticesData(BABYLON.VertexBuffer.ColorKind,terrainColors);
     ground.material=this.#material(this.definition.terrain,this.region==='ruins'?20:7);ground.receiveShadows=true;ground.metadata={ground:true};ground.isPickable=true;this.roots.push(ground);
     // Terrain surfaces are geometry; all scenery is licensed GLB.
     const road=BABYLON.MeshBuilder.CreateGround('dirt-road',{width:8,height:49,subdivisions:80,updatable:true},this.scene);
     const rp=road.getVerticesData(BABYLON.VertexBuffer.PositionKind);
-    const colors=[];for(let i=0;i<rp.length;i+=3){const edge=1-Math.abs(rp[i])/4;rp[i+1]=this.heightAt(rp[i],rp[i+2])+.024;colors.push(1,1,1,Math.min(1,Math.max(0,edge*5)));}road.setVerticesData(BABYLON.VertexBuffer.ColorKind,colors);road.hasVertexAlpha=true;
+    const colors=[];for(let i=0;i<rp.length;i+=3){const edge=1-Math.abs(rp[i])/4,grain=1+Math.sin(rp[i]*2.8+rp[i+2]*1.6)*.038+Math.cos(rp[i+2]*.55)*.035;rp[i+1]=this.heightAt(rp[i],rp[i+2])+.024;colors.push(grain,grain*.98,grain*.93,Math.min(1,Math.max(0,edge*5)));}road.setVerticesData(BABYLON.VertexBuffer.ColorKind,colors);road.hasVertexAlpha=true;
     road.updateVerticesData(BABYLON.VertexBuffer.PositionKind,rp,true); road.refreshBoundingInfo();road.material=this.#material('mud',10);road.material.albedoTexture.uScale=road.material.bumpTexture.uScale=road.material.metallicTexture.uScale=2;road.material.albedoTexture.vScale=road.material.bumpTexture.vScale=road.material.metallicTexture.vScale=20;road.isPickable=false;road.receiveShadows=true;this.roots.push(road);
     if(this.region==='village') {
       const plaza=BABYLON.MeshBuilder.CreateGround('village-plaza',{width:22,height:18,subdivisions:40},this.scene);plaza.position.z=-2;plaza.position.y=.025;
@@ -225,7 +226,7 @@ export class RegionWorld {
   clear() {
     this.grass?.dispose();this.grass=null;
     const fadeMaterials=[];
-    for(const root of this.roots){for(const mesh of root.metadata?.occlusionMeshes||[])if(mesh.metadata?.occlusionMaterial)fadeMaterials.push(mesh.metadata.occlusionMaterial);root.metadata?.chestState?.dispose();root.metadata?.animationGroups?.forEach(g=>g.dispose());root.metadata?.skeletons?.forEach(s=>s.dispose());root.getChildMeshes(false).forEach(m=>this.shadowGenerator?.removeShadowCaster(m,false));root.dispose(false,false);}
+    for(const root of this.roots){for(const mesh of root.metadata?.occlusionMeshes||[])if(mesh.metadata?.occlusionMaterial)fadeMaterials.push(mesh.metadata.occlusionMaterial);root.metadata?.chestState?.dispose();if(!root.metadata?.chestState)root.metadata?.animationGroups?.forEach(g=>g.dispose());root.metadata?.skeletons?.forEach(s=>s.dispose());root.getChildMeshes(false).forEach(m=>this.shadowGenerator?.removeShadowCaster(m,false));root.dispose(false,false);}
     for(const mat of fadeMaterials)mat.dispose(false,false);
     this.roots=[];
     for(const mat of this.owned)mat.dispose(false,true);this.owned=[];this.npc=null;this.waterMaterial=null;this.chests=[];
