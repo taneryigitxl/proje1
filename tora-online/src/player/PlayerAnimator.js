@@ -1,9 +1,14 @@
 import { classDef } from '../characters/ClassDefs.js';
 const LOOPING = new Set(["idle", "combatIdle", "walk", "run"]);
+const ANIMATION_PROFILES = Object.freeze({
+  warrior: { blendSeconds: .11, clipBlendSpeed: .14 },
+  mage: { blendSeconds: .16, clipBlendSpeed: .10 },
+});
 
 export class PlayerAnimator {
   constructor(visual) {
     this.aliases = classDef(visual.classId).animations;
+    this.profile = ANIMATION_PROFILES[visual.classId] || ANIMATION_PROFILES.warrior;
     this.groups = visual.animationGroups || [];
     this.state = "";
     this.activeGroup = null;
@@ -13,7 +18,7 @@ export class PlayerAnimator {
     this.groups.forEach((group) => {
       group.stop();
       group.enableBlending = true;
-      group.blendingSpeed = 0.12;
+      group.blendingSpeed = this.profile.clipBlendSpeed;
       try { group.setWeightForAllAnimatables(1); } catch (_) { /* older Babylon */ }
     });
     this.clips = new Map(Object.keys(this.aliases).map((state) => [state, this.#findGroup(state)]));
@@ -62,7 +67,7 @@ export class PlayerAnimator {
     if (!this.activeGroup) return;
     if(performance.now()<(this.hitStopUntil||0)){this.activeGroup.speedRatio=0;return;}
     this.activeGroup.speedRatio=this.actionSpeed||1;
-    if(this.outgoing) {this.blendTime+=dt;const weight=Math.min(1,this.blendTime/.13);this.activeGroup.setWeightForAllAnimatables(weight);this.outgoing.setWeightForAllAnimatables(1-weight);if(weight>=1){this.outgoing.stop();this.outgoing=null;}}
+    if(this.outgoing) {this.blendTime+=dt;const weight=Math.min(1,this.blendTime/this.profile.blendSeconds);this.activeGroup.setWeightForAllAnimatables(weight);this.outgoing.setWeightForAllAnimatables(1-weight);if(weight>=1){this.outgoing.stop();this.outgoing=null;}}
     else this.activeGroup.setWeightForAllAnimatables(1);
     // Keep non-loop locomotion alive if a one-shot ended early
     if (LOOPING.has(this.state) && !this.#isPlaying(this.activeGroup)) {

@@ -18,6 +18,7 @@ export class CursorManager {
 
   reset() {
     this.#set("normal");
+    this.entities.hover(null);
     this.onInteract(null,null);
   }
 
@@ -25,6 +26,7 @@ export class CursorManager {
     const pick = this.scene.pick(this.scene.pointerX, this.scene.pointerY, (mesh) => mesh.isPickable);
     if (!pick?.hit) {this.onInteract(null,null);return this.#set("normal");}
     const data = pick.pickedMesh?.metadata || {};
+    this.entities.hover(data.mob ? this.entities.getById(data.entityId) : null);
     this.onInteract(data,pick.pickedMesh);
     if (data.mob) {
       const mob = this.entities.getById(data.entityId);
@@ -46,6 +48,7 @@ export class CursorManager {
   }
 
   dispose() {
+    this.entities.hover(null);
     this.canvas.removeEventListener("pointermove", this.onMove);
     this.canvas.removeEventListener("pointerleave", this.onLeave);
     removeEventListener("pointercancel", this.onCancel);

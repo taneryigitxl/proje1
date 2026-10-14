@@ -4,6 +4,8 @@ export class InputManager {
     this.pointerOverUI = false;
     this.onEscape = null;
     this.onSkill = null;
+    this.onSkillRelease = null;
+    this.heldSkills = new Set();
     this.onInventory = null;
     this.onStats = null;
     this.onClearTarget = null;
@@ -23,8 +25,13 @@ export class InputManager {
       if (code === "Escape") { event.preventDefault(); this.onEscape?.(); }
       if (code === "KeyI") { event.preventDefault(); this.onInventory?.(); }
       if (code === "KeyC") { event.preventDefault(); this.onStats?.(); }
-      if (/^Digit[1-9]$/.test(code)) this.onSkill?.(Number(code.slice(-1)));
+      if (/^Digit[1-9]$/.test(code)) { event.preventDefault(); if (this.heldSkills.has(code)) return; this.heldSkills.add(code); this.onSkill?.(Number(code.slice(-1))); }
       // Keep soft-target while closing distance — clear only via ESC / empty cancel
+    };
+    this.onKeyUp = (event) => {
+      if (!this.heldSkills.delete(event.code)) return;
+      event.preventDefault();
+      this.onSkillRelease?.(Number(event.code.slice(-1)));
     };
     this.onVisibilityChange = () => { if (document.hidden) this.reset(); };
     this.onContextMenu = (event) => event.preventDefault();
@@ -33,18 +40,20 @@ export class InputManager {
 
   #bind() {
     addEventListener("keydown", this.onKeyDown, { passive: false });
+    addEventListener("keyup", this.onKeyUp, { passive: false });
     addEventListener("blur", this.onBlur);
     document.addEventListener("visibilitychange", this.onVisibilityChange);
     this.canvas.addEventListener("contextmenu", this.onContextMenu);
   }
 
   endFrame() {}
-  reset() { this.onReset?.(); }
+  reset() { this.heldSkills.clear(); this.onReset?.(); }
 
   dispose() {
     this.enabled = false;
     this.reset();
     removeEventListener("keydown", this.onKeyDown);
+    removeEventListener("keyup", this.onKeyUp);
     removeEventListener("blur", this.onBlur);
     document.removeEventListener("visibilitychange", this.onVisibilityChange);
     this.canvas.removeEventListener("contextmenu", this.onContextMenu);

@@ -1,13 +1,15 @@
+import { applyWeaponPose } from './WeaponAttachmentProfiles.js';
+
 /**
  * Holds the greatsword on the back while idle; draws to the right hand for combat.
  */
 export class WeaponSheath {
-  constructor(weaponRoot, skeleton, skinnedMesh, handBone, handPose) {
+  constructor(weaponRoot, skeleton, skinnedMesh, handBone, attachment) {
     this.weaponRoot = weaponRoot;
     this.skeleton = skeleton;
     this.skinnedMesh = skinnedMesh;
     this.handBone = handBone;
-    this.handPose = handPose;
+    this.attachment = attachment;
     this.backBone = this.#findBackBone();
     this.sheathed = false;
     this.combatTimer = 0;
@@ -30,18 +32,14 @@ export class WeaponSheath {
     if (this.sheathed || !this.backBone) return;
     this.weaponRoot.attachToBone(this.backBone, this.skinnedMesh);
     // Upright diagonal, tight to back plane (minimize world depth stick-out)
-    this.weaponRoot.position.set(-0.04, 0.1, -0.06);
-    this.weaponRoot.rotation.set(0.28, 0.92, -0.48);
-    this.weaponRoot.scaling.setAll((this.handPose.scale || 1.32) * 0.82);
+    applyWeaponPose(this.weaponRoot, this.attachment.sheath);
     this.sheathed = true;
   }
 
   draw() {
     if (!this.sheathed && this.weaponRoot.parent) return;
     this.weaponRoot.attachToBone(this.handBone, this.skinnedMesh);
-    this.weaponRoot.position.copyFrom(this.handPose.position);
-    this.weaponRoot.rotation.copyFrom(this.handPose.rotation);
-    this.weaponRoot.scaling.setAll(this.handPose.scale || 1.32);
+    applyWeaponPose(this.weaponRoot, this.attachment.hand);
     this.sheathed = false;
   }
 

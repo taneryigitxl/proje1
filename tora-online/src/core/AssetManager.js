@@ -1,6 +1,7 @@
 import { classDef } from '../characters/ClassDefs.js';
 import {TwoHandIK} from "../player/TwoHandIK.js";
 import { WeaponSheath } from "../player/WeaponSheath.js";
+import { WEAPON_ATTACHMENT_PROFILES, applyWeaponPose } from '../player/WeaponAttachmentProfiles.js';
 import { ChestState } from "../world/ChestState.js";
 
 export class AssetManager {
@@ -102,31 +103,25 @@ export class AssetManager {
     this.onProgress(66, `${definition.weaponName} ele bağlanıyor…`);
     const weapon = await this.#load(weaponDef.url);
     const weaponRoot = this.#wrap("greatsword-root", weapon.meshes, weapon.transformNodes);
-    const hand = skeleton.bones.find((bone) => bone.name.toLowerCase() === weaponDef.bone.toLowerCase());
+    const attachment = WEAPON_ATTACHMENT_PROFILES[classId];
+    const hand = skeleton.bones.find((bone) => bone.name.toLowerCase() === attachment.handBone.toLowerCase());
     const skinnedMesh = loaded.meshes.find((mesh) => mesh.skeleton === skeleton);
-    if (!hand || !skinnedMesh) throw new Error(`Kılıç bağlama kemiği bulunamadı: ${weaponDef.bone}`);
+    if (!hand || !skinnedMesh) throw new Error(`Silah bağlama kemiği bulunamadı: ${attachment.handBone}`);
     weaponRoot.attachToBone(hand, skinnedMesh);
-    weaponRoot.position.copyFrom(BABYLON.Vector3.FromArray(weaponDef.position));
-    weaponRoot.rotation.copyFrom(BABYLON.Vector3.FromArray(weaponDef.rotation));
-    weaponRoot.scaling.setAll(weaponDef.scale || 1);
+    applyWeaponPose(weaponRoot, attachment.hand);
     weaponRoot.getChildMeshes(false).forEach((mesh) => {
       mesh.isPickable = false;
       mesh.receiveShadows = true;
       // Normalize nested GLB offsets so grip comes from weaponRoot only
       if (!mesh.parent || mesh.parent === weaponRoot) return;
     });
-    console.info(`[Tora Assets] Kılıç '${hand.name}' kemiğine bağlandı (scale=${weaponDef.scale}).`);
+    console.info(`[Tora Assets] ${definition.weaponName} '${hand.name}' kemiğine bağlandı (scale=${attachment.hand.scale}).`);
 
     this.playerGroups = animationGroups;
     this.onProgress(70, "Yüz detayı ekleniyor…");
     await this.#attachHead(root, targetByName, definition.head);
 
-    const handPose = {
-      position: BABYLON.Vector3.FromArray(weaponDef.position),
-      rotation: BABYLON.Vector3.FromArray(weaponDef.rotation),
-      scale: weaponDef.scale || 1,
-    };
-    const weaponSheath = weaponDef.twoHanded ? new WeaponSheath(weaponRoot, skeleton, skinnedMesh, hand, handPose) : null;
+    const weaponSheath = attachment.sheath ? new WeaponSheath(weaponRoot, skeleton, skinnedMesh, hand, attachment) : null;
 
     const tip=new BABYLON.TransformNode('weapon-tip',this.scene);tip.parent=weaponRoot;tip.position.copyFrom(BABYLON.Vector3.FromArray(weaponDef.tip));
     // Bone attachments are outside TransformNode descendants; include equipment explicitly.

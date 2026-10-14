@@ -10,6 +10,21 @@ export class Mob extends Entity {
     this.navigation = navigation;
     this.onDamage = onDamage;
     this.definition = definition;
+    if (boss) {
+      const warning = BABYLON.MeshBuilder.CreateTorus(`boss-warning-${index}`, { diameter: 5.1, thickness: .06, tessellation: 56 }, scene);
+      const material = new BABYLON.StandardMaterial(`boss-warning-mat-${index}`, scene);
+      material.emissiveColor = new BABYLON.Color3(.9, .22, .1);
+      material.disableLighting = true;
+      material.disableDepthWrite = true;
+      material.zOffset = -2;
+      material.alpha = .5;
+      warning.material = material;
+      warning.renderingGroupId = 2;
+      warning.isPickable = false;
+      warning.setEnabled(false);
+      this.attackWarning = warning;
+      scene.setRenderingAutoClearDepthStencil?.(2, false, false, false);
+    }
     this.index = index;
     this.root = visual.root;
     this.groups = visual.animationGroups;
@@ -55,6 +70,11 @@ export class Mob extends Entity {
     if(!player.alive){this.aggro=false;this.targetId=null;this.attackWindup=0;}
     if(this.feetTimer>0){this.feetTimer-=dt;if(this.feetTimer<=0)this.#snapFeetToGround();}
     if(this.attackWindup>0){this.attackWindup-=dt;if(this.attackWindup<=0 && this.alive && player.alive && BABYLON.Vector3.Distance(this.position,player.position)<2.65){const result=DamageSystem.apply(this,player,this.definition.boss?24:9+this.level*2);if(result)this.onDamage?.(player,result,this);}}
+    if (this.attackWarning) {
+      this.attackWarning.setEnabled(this.attackWindup > 0 && this.alive && player.alive);
+      this.attackWarning.position.set(this.position.x, this.navigation.heightAt(this.position.x, this.position.z) + .12, this.position.z);
+      this.attackWarning.visibility = .5 + .35 * Math.sin(performance.now() * .035);
+    }
     if (!this.alive) {
       this.respawnTimer -= dt;
       if(this.respawnTimer<(this.definition.boss?25:9)-2)this.root.setEnabled(false);
@@ -192,7 +212,7 @@ export class Mob extends Entity {
     if (state.alive && animation !== this.animationState) this.#play(animation, ['run', 'walk', 'idle'].includes(animation));
   }
 
-  dispose() {this.disposed=true;this.groups.forEach(g=>g.dispose());const meshes=this.root.getChildMeshes(false);const skeletons=new Set(meshes.map(m=>m.skeleton).filter(Boolean));meshes.forEach(m=>this.scene.getLightByName("afternoon-sun")?.getShadowGenerator()?.removeShadowCaster(m,false));this.root.dispose(false,false);skeletons.forEach(s=>s.dispose());}
+  dispose() {this.disposed=true;this.attackWarning?.material?.dispose();this.attackWarning?.dispose();this.groups.forEach(g=>g.dispose());const meshes=this.root.getChildMeshes(false);const skeletons=new Set(meshes.map(m=>m.skeleton).filter(Boolean));meshes.forEach(m=>this.scene.getLightByName("afternoon-sun")?.getShadowGenerator()?.removeShadowCaster(m,false));this.root.dispose(false,false);skeletons.forEach(s=>s.dispose());}
 
   #snapFeetToGround() {
     if (!this.root || !this.alive || this.disposed) return;

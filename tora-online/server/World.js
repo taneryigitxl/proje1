@@ -75,7 +75,7 @@ export class World{
       const step=dist(player,ground),ratio=Math.min(1,skill.range/Math.max(step,.001));let reached={x:player.x,z:player.z};const count=Math.ceil(step/.2);for(let i=1;i<=count;i++){const nx=player.x+(ground.x-player.x)*ratio*i/count,nz=player.z+(ground.z-player.z)*ratio*i/count;if(!canOccupy(player.region,nx,nz))break;reached={x:nx,z:nz};}
       player.x=reached.x;player.z=reached.z;this.snapshot(player);return;
     }
-    const victims=skill.aoe?room.mobs.filter(m=>m.alive&&dist(m,player)<=skill.radius):(skill.target==='ground'?room.mobs.filter(m=>m.alive&&dist(m,ground)<=skill.radius):target?[target]:[]);
+    const victims=skill.aoe?room.mobs.filter(m=>m.alive&&dist(m,ground||player)<=skill.radius):(skill.target==='ground'?room.mobs.filter(m=>m.alive&&dist(m,ground)<=skill.radius):target?[target]:[]);
     this.broadcast(room,SERVER.COMBAT,{phase:'cast',sourceId:player.id,skillSlot:slot,targetId:target?.id||null,x:ground?.x??target?.x??player.x,z:ground?.z??target?.z??player.z},null,p=>dist(p,player)<=40);
     if(!victims.length)return;const impactAt=stamp+Math.max(80,(skill.impact?.[0]||.3)*1000);this.pending??=[];this.pending.push({playerId:player.id,region:player.region,slot,victimIds:victims.map(m=>m.id),impactAt});
   }

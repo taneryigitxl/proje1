@@ -139,7 +139,7 @@ export class Game {
       this.buffVfx = new BuffVFXManager(this.scene, this.player, this.combat.vfx.materials[4].diffuseTexture);
 
       console.info("[Tora Startup] 8/10 HUD ve cursor bağlanıyor.");
-      this.hud = new HUD(this.scene, this.engine, this.player, this.entities, this.combat.skills, this.progression, (slot) => this.#useSkill(slot), this.stats, this.inventory, {
+      this.hud = new HUD(this.scene, this.engine, this.player, this.entities, this.combat.skills, this.progression, (slot) => this.#useSkill(slot, 'button'), this.stats, this.inventory, {
         onDropItem: (itemId) => this.#dropInventoryItem(itemId),
         onPanelChange: () => this.syncInputGate(),
         map: this.map,
@@ -234,7 +234,7 @@ export class Game {
     if(!this.input)return;
     const blocked=this.combat?.death.blocked || this.hud?.openPanel || this.loot?.isOpen() || (this.worldUI && !this.worldUI.modal.hidden) || document.activeElement===this.hud?.chatInput;
     this.input.enabled=this.running&&!this.paused&&!this.transitioning&&!blocked;
-    if(blocked){this.moveMarker?.hide();this.pendingInteraction=null;this.input.reset();this.combat?.playerCombat.cancelApproach();this.#endSteer();if(this.armedSkill)this.#disarm();this.player?.cancelDestination?.();if(this.player?.velocity){this.player.velocity.x=0;this.player.velocity.z=0;}}
+    if(blocked){this.moveMarker?.hide();this.pendingInteraction=null;this.input.reset();this.combat?.playerCombat.cancelApproach();this.#endSteer();this.resetCombatInputState();this.player?.cancelDestination?.();if(this.player?.velocity){this.player.velocity.x=0;this.player.velocity.z=0;}}
   }
 
   togglePause(force) {
@@ -243,6 +243,7 @@ export class Game {
     this.syncInputGate();
     this.audio?.suspend(this.paused);
     if (this.paused) this.input.reset();
+    if (this.paused) this.resetCombatInputState();
     document.getElementById("pause-menu").hidden = !this.paused;
   }
 
@@ -269,6 +270,7 @@ export class Game {
       window.removeEventListener('pointerup', this.onSteerRelease);
       window.removeEventListener('pointercancel', this.onSteerRelease);
     }
+    if (this.onCanvasLeave) this.canvas.removeEventListener('pointerleave', this.onCanvasLeave);
     this.deathScreen?.dispose();this.combat?.projectiles.dispose();
     this.skillMarker?.dispose();
     this.moveMarker?.dispose();
@@ -292,7 +294,7 @@ export class Game {
 
   #saveWorld() {if(!this.player||!this.map||this.transitioning)return;const position=this.combat?.death.blocked?this.player.respawnPoint:this.player.position;this.save.write('world',{region:this.map.region,position:position.asArray()});this.characterStore.update(this.identity.characterId,{level:this.player.level,region:this.map.region,lastPlayed:Date.now()});}
 
-  handleDeath() {this.#disarm();this.#endSteer();this.pendingInteraction=null;this.#clearTarget();this.moveMarker.hide();this.loot.close();this.hud.closePanels();this.worldUI.close();this.combat.clearEffects();this.buffVfx.clear();this.player.actionLocked=true;this.player.state='dead';this.syncInputGate();this.#saveWorld();}
+  handleDeath() {this.resetCombatInputState();this.#endSteer();this.pendingInteraction=null;this.#clearTarget();this.moveMarker.hide();this.loot.close();this.hud.closePanels();this.worldUI.close();this.combat.clearEffects();this.buffVfx.clear();this.player.actionLocked=true;this.player.state='dead';this.syncInputGate();this.#saveWorld();}
   useQuickItem(index){if(!this.running||this.paused||this.combat.death.blocked||this.loot.isOpen()||!this.worldUI.modal.hidden||this.hud.openPanel||document.activeElement===this.hud.chatInput)return;const result=this.quickItems.use(index);this.hud.setStatus(result.message);this.hud.refreshInventory();}
   approachNpc(){if(!this.player.alive||this.combat.death.blocked)return;this.combat.playerCombat.cancel();this.moveMarker.hide();this.loot.cancelApproach();if(BABYLON.Vector3.Distance(this.player.position,this.map.npc.position)<=4)this.worldUI.openNpc();else {this.player.setDestination(this.map.npc.position,2.5);this.pendingInteraction={type:'npc'};this.hud.setStatus('Ayame’ye yaklaşıyorsun.');}}
 
@@ -324,12 +326,13 @@ export class Game {
         this.hud.closePanels();
         return;
       }
-      if (this.armedSkill) { this.#disarm('Yetenek iptal edildi.'); return; }
+      if (this.armedSkill) { this.resetCombatInputState('Yetenek iptal edildi.'); return; }
       this.togglePause();
     };
     this.input.onQuickItem=index=>this.useQuickItem(index);
     this.input.onLootAll=()=>{if(!this.running||this.paused||this.combat.death.blocked)return;if(this.loot.isOpen())this.loot.takeAll();else this.worldUI.interactCurrent();};
     this.input.onSkill = (slot) => this.#useSkill(slot);
+    this.input.onSkillRelease = (slot) => this.#releaseSkill(slot);
     this.input.onInventory = () => {
       if (!this.running || this.paused || this.combat.death.blocked || !this.worldUI.modal.hidden) return;
       this.hud.togglePanel("inventory");
@@ -346,12 +349,15 @@ export class Game {
       if (!this.running || this.paused || this.combat.death.blocked) return;
       this.#clearTarget();
     };
-    this.steer = null;this.input.onReset=()=>this.#endSteer();
+    this.steer = null;this.input.onReset=()=>{this.#endSteer();this.resetCombatInputState();};
     this.armedSkill = null;
+    this.combatInputState = 'NORMAL';
     this.onSecondaryInteract = null;
     this.onSteerRelease = (event) => { if (this.steer && event.pointerId === this.steer.id) this.#endSteer(); };
     window.addEventListener('pointerup', this.onSteerRelease);
     window.addEventListener('pointercancel', this.onSteerRelease);
+    this.onCanvasLeave = () => { if (this.armedSkill) this.resetCombatInputState('Hedefleme iptal edildi.'); };
+    this.canvas.addEventListener('pointerleave', this.onCanvasLeave);
     this.pointerObserver = this.scene.onPointerObservable.add((info) => {
       const event = info.event;
       if (event?.toraLootDismissed) return;
@@ -361,6 +367,7 @@ export class Game {
       }
       if (!this.#pointerLive(info)) return;
       if (info.type === BABYLON.PointerEventTypes.POINTERDOWN && event.button === 2) {
+        if (this.armedSkill) { this.resetCombatInputState('Yetenek iptal edildi.'); return; }
         this.onSecondaryInteract?.(info);
         return;
       }
@@ -370,7 +377,7 @@ export class Game {
       }
       if (info.type === BABYLON.PointerEventTypes.POINTERMOVE) { this.#steerMove(event); return; }
       if (info.type !== BABYLON.PointerEventTypes.POINTERDOWN || event.button !== 0) return;
-      if (this.armedSkill) { this.#confirmArmed(); return; }
+      if (this.armedSkill) return;
       const actionPick = this.#pickAction();
       if (actionPick?.hit) { this.#useWorldPick(actionPick); return; }
       const groundPick = this.#pickGround();
@@ -392,7 +399,7 @@ export class Game {
 
   #beginGroundMove(event, point) {
     this.pendingInteraction=null;this.loot.cancelApproach();
-    this.combat.playerCombat.cancel();
+    this.combat.playerCombat.interruptForMovement();
     this.entities.clear();
     this.steer = { id: event.pointerId, x: event.clientX, y: event.clientY, hold: false, next: 0 };
     {
@@ -449,68 +456,37 @@ export class Game {
     this.hud.setStatus('Demirci tezgâhı.');
   }
 
-  #disarm(message) {
+  resetCombatInputState(message) {
     this.armedSkill = null;
+    this.combatInputState = this.combat?.death?.blocked ? 'DEAD' : this.hud?.openPanel || this.paused ? 'UI_BLOCKED' : 'NORMAL';
+    this._groundTarget = null;
     this.skillMarker?.hide();
     this.hud?.skillBar?.setArmed(null);
     if (message) this.hud?.setStatus(message);
   }
 
-  #isSelfCast(skill) { return skill.action === 'guard' || skill.action === 'rage'; }
+  #disarm(message) { this.resetCombatInputState(message); }
 
-  #confirmArmed() {
-    const skill = this.armedSkill;
-    if (!skill) return;
-    const check = this.combat.skills.canUse(skill, this.player);
-    if (!check.ok) { if(this.player.mana<skill.mana)this.hud.warnMana();this.hud.setStatus(check.reason); return; }
-    const ground = this.#pickGround();
-    if(skill.target==='ground'){
-      if(!ground?.hit){this.hud.setStatus('Geçerli bir zemin seç.');return;}
-      const point=ground.pickedPoint;
-      if(BABYLON.Vector3.Distance(this.player.position,point)>skill.range+.2||!this.navigation.canOccupy(point)){this.hud.setStatus('Bu noktaya yetenek kullanılamaz.');return;}
-      if(skill.action==='blink'&&BABYLON.Vector3.Distance(this.navigation.findReachable(this.player.position,point),point)>.3){this.hud.setStatus('Işınlanma engel veya suyu aşamaz.');return;}
-      this._groundTarget=point.clone();this.#castArmed(skill,null,point.subtract(this.player.position));return;
-    }
-
-    if (skill.aoe) {
-      const point = ground?.pickedPoint || this.player.position;
-      if (BABYLON.Vector3.Distance(this.player.position, point) > skill.range + 0.45) { this.hud.setStatus('Menzil dışı.'); return; }
-      this.#castArmed(skill, null);
-      return;
-    }
-    if (skill.action === 'dash') {
-      if (!ground?.hit) { this.hud.setStatus('Zemin seç.'); return; }
-      const dir = ground.pickedPoint.subtract(this.player.position);
-      dir.y = 0;
-      if (dir.lengthSquared() < 0.05) { this.hud.setStatus('Daha uzağı seç.'); return; }
-      if (dir.length() > skill.range + 0.45) { this.hud.setStatus('Menzil dışı.'); return; }
-      this.#castArmed(skill, null, dir);
-      return;
-    }
-    if (skill.target === 'enemy') {
-      const action = this.#pickAction();
-      let mob = action?.hit && action.pickedMesh.metadata?.mob ? this.entities.getById(action.pickedMesh.metadata.entityId) : null;
-      if (!mob?.alive && ground?.hit) {
-        const near = this.entities.aliveMobs()
-          .map((entry) => ({ entry, d: Math.hypot(entry.position.x - ground.pickedPoint.x, entry.position.z - ground.pickedPoint.z) }))
-          .filter((item) => item.d < 1.8)
-          .sort((a, b) => a.d - b.d)[0];
-        mob = near?.entry || null;
-      }
-      if (!mob?.alive) { this.hud.setStatus('Geçersiz hedef.'); return; }
-      this.entities.select(mob);
-      if (BABYLON.Vector3.Distance(this.player.position, mob.position) > skill.range) this.hud.setStatus('Menzil dışı · yaklaşıyor.');
-      this.#castArmed(skill, mob);
-      return;
-    }
-    this.hud.setStatus('Geçersiz hedef.');
+  #cursorEnemy() {
+    const pick = this.#pickAction();
+    return pick?.hit && pick.pickedMesh.metadata?.mob ? this.entities.getById(pick.pickedMesh.metadata.entityId) : null;
   }
 
-  #castArmed(skill, target, forward) {
-    this.armedSkill = null;
-    this.skillMarker?.hide();
-    this.hud?.skillBar?.setArmed(null);
-    this.combat.useSkill(skill.slot, target, forward || this.camera.forwardOnGround(), this._groundTarget);this._groundTarget=null;
+  #castSkill(skill, target = null, ground = null) {
+    const direction = ground?.subtract(this.player.position) || target?.position.subtract(this.player.position) || this.camera.forwardOnGround();
+    return this.combat.useSkill(skill.slot, target, direction, ground);
+  }
+
+  #releaseSkill(slot) {
+    const skill = this.armedSkill;
+    if (!skill || skill.slot !== slot) return;
+    this.skillMarker.update(skill, this.player);
+    const point = this.skillMarker.valid && this.skillMarker.point?.clone();
+    this.resetCombatInputState();
+    if (!point) { this.hud.setStatus('Geçerli bir hedef alanı seç.'); return; }
+    const check = this.combat.skills.canUse(skill, this.player);
+    if (!check.ok) { this.hud.setStatus(check.reason); return; }
+    this.#castSkill(skill, null, point);
   }
 
   #restoreChests() {
@@ -580,24 +556,44 @@ export class Game {
     finally {this.transitioning=false;this.paused=false;this.input.enabled=true;this.worldUI.loading(false);this.canvas.focus();this.lastTime=performance.now();}
   }
 
-  #useSkill(slot) {
+  #useSkill(slot, source = 'keyboard') {
     if (!this.running || this.paused || this.combat.death.blocked || this.hud?.openPanel || this.loot?.isOpen?.() || !this.worldUI.modal.hidden || document.activeElement===this.hud?.chatInput) return;
     const skill = this.combat.skills.get(slot);
     if (!skill) return;
     this.hud?.skillBar?.markPressed?.(slot);
+    if (this.combat.playerCombat.active || this.combat.playerCombat.pending) { this.hud.setStatus('Devam eden saldırının bitmesini bekle.'); return; }
     const check = this.combat.skills.canUse(skill, this.player);
-    if (!check.ok) { this.hud.setStatus(check.reason); return; }
-    if (this.#isSelfCast(skill)) {
-      this.#disarm();
-      this.combat.useSkill(slot, null, this.camera.forwardOnGround());
+    if (!check.ok) { if(this.player.mana<skill.mana)this.hud.warnMana();this.hud.setStatus(check.reason);this.resetCombatInputState();return; }
+    if (skill.castType === 'GROUND_AOE') {
+      this.resetCombatInputState();
+      this.armedSkill = skill;
+      this.combatInputState = 'GROUND_TARGETING';
+      this.hud.skillBar.setArmed(slot);
+      this.skillMarker.update(skill, this.player);
+      if (source === 'button') this.#releaseSkill(slot);
+      else this.hud.setStatus(`${skill.name}: tuşu bırakınca kullanılır · Esc/sağ tık iptal.`);
       return;
     }
-    if (this.armedSkill?.slot === slot) { this.#disarm('Yetenek iptal edildi.'); return; }
-    this.armedSkill = skill;
-    this.hud.skillBar.setArmed(slot);
-    this.skillMarker?.update(skill, this.player);
-    const hint = skill.aoe ? 'Etki alanını onaylamak için zemine tıkla.' : skill.target==='ground' ? 'Geçerli bir zemine tıkla.' : !this.entities.selected?.alive ? 'Önce bir hedef seç; düşmana tıkla.' : 'Hedefe tıkla.';
-    this.hud.setStatus(`${skill.name}: ${hint} Esc iptal.`);
+    this.resetCombatInputState();
+    if (skill.castType === 'TARGETED') {
+      const selected = this.entities.selected?.alive ? this.entities.selected : null;
+      const mob = selected || this.#cursorEnemy();
+      if (!mob?.alive) { this.hud.setStatus('Geçerli bir hedef seç.'); return; }
+      if (BABYLON.Vector3.Distance(this.player.position, mob.position) > skill.range + .2) { this.hud.setStatus('Menzil dışında.'); return; }
+      this.entities.select(mob);
+      this.#castSkill(skill, mob);
+      return;
+    }
+    if (skill.castType === 'MOBILITY') {
+      const ground = this.#pickGround();
+      if (!ground?.hit) { this.hud.setStatus('Geçerli bir zemin seç.'); return; }
+      const point = ground.pickedPoint;
+      if (!this.navigation.canOccupy(point) || BABYLON.Vector3.Distance(this.player.position, point) > skill.range + .2) { this.hud.setStatus('Menzil dışında.'); return; }
+      if (skill.action === 'blink' && BABYLON.Vector3.Distance(this.navigation.findReachable(this.player.position,point),point) > .3) { this.hud.setStatus('Işınlanma engel veya suyu aşamaz.'); return; }
+      this.#castSkill(skill, null, point.clone());
+      return;
+    }
+    this.#castSkill(skill);
   }
 
   #onMobDefeated(mob) {
@@ -627,7 +623,7 @@ export class Game {
         this.combat.update(dt);
         this.player.update(dt);this.quickItems.update(dt);
         this.buffVfx?.update(dt);
-        this.animator.setState(this.player.state);
+        this.animator.setState(this.combat.playerCombat.active?.skill.canMoveWhileCasting ? this.combat.playerCombat.active.skill.animation : this.player.state);
         this.animator.update(dt, this.player.speedRatio);
         this.player.visual?.weaponSheath?.update(dt, this.player.state);
         this.entities.update(dt, this.player);

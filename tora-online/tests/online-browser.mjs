@@ -39,11 +39,36 @@ try {
   await users[0].page.waitForTimeout(500);
   await users[0].page.keyboard.up('d');
   await users[1].page.waitForFunction(({ id, x }) => window.__TORA_BOOTSTRAP__.game.remotes.get(id)?.target.x > x + .2, a);
+  const aimingPage = users[0].page;
+  const aim = await aimingPage.evaluate(() => {
+    const game = window.__TORA_BOOTSTRAP__.game;
+    game.sentSkills = [];
+    const send = game.connection.send.bind(game.connection);
+    game.connection.send = (type, data) => { if (data?.slot === 4) game.sentSkills.push({ type, data }); send(type, data); };
+    for (const length of [1.3, 1.7, 2.1]) {
+      for (const side of [-.8, 0, .8]) {
+        const forward = game.camera.forwardOnGround(), point = game.player.position.add(forward.scale(length)).add(new BABYLON.Vector3(forward.z * side, 0, -forward.x * side));
+        point.y = game.navigation.heightAt(point.x, point.z);
+        if (!game.navigation.canOccupy(point)) continue;
+        const p = BABYLON.Vector3.Project(point, BABYLON.Matrix.IdentityReadOnly, game.scene.getTransformMatrix(), game.camera.camera.viewport.toGlobal(game.engine.getRenderWidth(), game.engine.getRenderHeight()));
+        const x = p.x / game.engine.getRenderWidth() * innerWidth, y = p.y / game.engine.getRenderHeight() * innerHeight;
+        if (x > 250 && x < 1000 && y > 140 && y < 630) return [x, y];
+      }
+    }
+    throw new Error('No visible ground for online aiming');
+  });
+  await aimingPage.mouse.move(...aim);
+  await aimingPage.keyboard.down('4');
+  await aimingPage.waitForFunction(() => window.__TORA_BOOTSTRAP__.game.armedSkill?.slot === 4 && window.__TORA_BOOTSTRAP__.game.skillMarker.valid);
+  assert.equal(await aimingPage.evaluate(() => window.__TORA_BOOTSTRAP__.game.sentSkills.length), 0);
+  await aimingPage.keyboard.up('4');
+  await aimingPage.waitForFunction(() => window.__TORA_BOOTSTRAP__.game.sentSkills.length === 1);
+  assert.equal(await aimingPage.evaluate(() => { const g = window.__TORA_BOOTSTRAP__.game; return g.armedSkill === null && Number.isFinite(g.sentSkills[0].data.ground.x) && Number.isFinite(g.sentSkills[0].data.ground.z); }), true);
   const before = await users[1].page.evaluate(() => window.__TORA_BOOTSTRAP__.game.mobs.get('forest:mob:0')?.health);
   await users[0].page.evaluate(() => { const game = window.__TORA_BOOTSTRAP__.game; game.targetId = 'forest:mob:0'; game.cast(6); });
   await users[1].page.waitForFunction(before => window.__TORA_BOOTSTRAP__.game.mobs.get('forest:mob:0')?.health < before, before);
   for (const user of users) assert.deepEqual(user.errors, []);
-  console.log('İki ayrı Edge tarayıcı oturumunda kayıt, karakter seçimi, karşılıklı görünürlük, hareket ve ortak yaratık HP senkronizasyonu doğrulandı.');
+  console.log('İki ayrı Edge oturumunda kayıt, karşılıklı görünürlük, hareket, basılı tut/bırak alan isteği ve ortak yaratık HP senkronizasyonu doğrulandı.');
 } finally {
   for (const user of users) await user.context.close();
   await browser.close();

@@ -7,6 +7,7 @@ import { PlayerAnimator } from '../player/PlayerAnimator.js';
 import { IsometricCamera } from '../camera/IsometricCamera.js';
 import { Mob } from '../entities/Mob.js';
 import { CombatVFX } from '../combat/CombatVFX.js';
+import { SkillMarker } from '../combat/SkillMarker.js';
 import { BuffVFXManager } from '../combat/BuffVFXManager.js';
 import { DeathScreen } from '../ui/DeathScreen.js';
 import { CLASS_DEFS } from '../../shared/ClassDefs.js';
@@ -34,7 +35,7 @@ export class OnlineGame {
       this.firstReject = reject;
       this.firstTimer = setTimeout(() => reject(Error('Sunucuya ulaşılamıyor.')), 15_000);
     });
-    this.connection = connectGame(identity.characterId, packet => this.onPacket(packet), state => this.setStatus(state));
+    this.connection = connectGame(identity.characterId, packet => this.onPacket(packet), state => { if (/Bağlantı kesildi|Yeniden bağlanılıyor|ulaşılamıyor/.test(state)) this.resetCombatInputState(); this.setStatus(state); });
     const snapshot = await first;
     this.scene = new BABYLON.Scene(this.engine);
     this.navigation = new Navigation(GAME_CONFIG.mapHalfSize);
@@ -49,6 +50,7 @@ export class OnlineGame {
     this.player.root.rotation.y = snapshot.self.rotation;
     this.animator = new PlayerAnimator(visual);
     this.vfx = new CombatVFX(this.scene, this.player);
+    this.skillMarker = new SkillMarker(this.scene);
     this.buffVfx = new BuffVFXManager(this.scene, this.player, this.vfx.materials[4].diffuseTexture);
     this.deathScreen = new DeathScreen(mode => { this.connection.send(CLIENT.RESPAWN, { mode }); return true; });
     this.camera = new IsometricCamera(this.scene, this.canvas, this.player, GAME_CONFIG.camera);
@@ -77,11 +79,11 @@ export class OnlineGame {
     document.body.append(hud); this.hud = hud;
     const skills = hud.querySelector('[data-skills]');
     for (const skill of CLASS_DEFS[this.identity.classId].skills) {
-      const button = document.createElement('button'); button.type = 'button'; button.textContent = `${skill.slot} · ${skill.name}`; button.title = `${skill.name} · ${skill.mana} Mana`; button.addEventListener('click', () => this.cast(skill.slot)); skills.append(button);
+      const button = document.createElement('button'); button.type = 'button'; button.textContent = `${skill.slot} · ${skill.name}`; button.title = `${skill.name} · ${skill.mana} Mana`; button.addEventListener('click', () => { this.cast(skill.slot); if (skill.castType === 'GROUND_AOE') this.releaseSkill(skill.slot); }); skills.append(button);
     }
     hud.querySelector('[data-pickup]').addEventListener('click', () => this.pickup());
-    hud.querySelector('[data-inventory]').addEventListener('click', () => { const box = hud.querySelector('.online-inventory'); box.hidden = !box.hidden; });
-    hud.querySelector('[data-shop]').addEventListener('click', () => { if (this.map.region !== 'village' || distance(this.player.position, { x: -2, z: 2 }) > 4) { this.setStatus('Dükkân için Ayame’ye yaklaş.'); return; } const box = hud.querySelector('.online-shop'); box.hidden = !box.hidden; });
+    hud.querySelector('[data-inventory]').addEventListener('click', () => { const box = hud.querySelector('.online-inventory'); box.hidden = !box.hidden; this.resetCombatInputState(); });
+    hud.querySelector('[data-shop]').addEventListener('click', () => { if (this.map.region !== 'village' || distance(this.player.position, { x: -2, z: 2 }) > 4) { this.setStatus('Dükkân için Ayame’ye yaklaş.'); return; } const box = hud.querySelector('.online-shop'); box.hidden = !box.hidden; this.resetCombatInputState(); });
     for (const [itemId, price] of [['health-potion', 12], ['mana-potion', 15], ['trail-ration', 10], ['arcane-scroll', 25], [CLASS_DEFS[this.identity.classId].rewardWeapon, 80]]) {
       const button = document.createElement('button'); button.type = 'button'; button.textContent = `${ITEM_DEFS[itemId].name} · ${price} altın`;
       button.addEventListener('click', () => this.connection.send(CLIENT.INTERACT, { action: `npc:buy:${itemId}` })); hud.querySelector('[data-shop-items]').append(button);
@@ -91,6 +93,7 @@ export class OnlineGame {
       event.preventDefault(); const input = hud.querySelector('.online-chat input'), value = input.value.trim(); if (!value) return;
       this.connection.send(CLIENT.CHAT, { channel: value.startsWith('/near ') ? 'near' : 'general', text: value.replace(/^\/near\s+/, '') }); input.value = '';
     });
+    hud.querySelector('.online-chat input').addEventListener('focus', () => this.resetCombatInputState());
     this.setStatus('Dünyaya girildi.');
   }
 
@@ -107,6 +110,7 @@ export class OnlineGame {
 
   async loadRegion(region) {
     if (this.loadingRegion || this.map.region === region) return;
+    this.resetCombatInputState();
     this.loadingRegion = true; this.setStatus(`${REGIONS[region].name} yükleniyor…`);
     try {
       this.clearRemotes();
@@ -153,6 +157,7 @@ export class OnlineGame {
     this.player.mana = packet.self.mana; this.player.maxMana = packet.self.maxMana;
     this.player.level = packet.self.level; this.player.alive = packet.self.alive;
     this.player.state = packet.self.state;
+    if (!packet.self.alive) this.resetCombatInputState();
     this.player.buffs.guard = packet.self.buffs?.guard || 0; this.player.buffs.rage = packet.self.buffs?.rage || 0;
     if (packet.self.alive) this.deathScreen?.hide(); else if (this.deathScreen?.element.hidden) this.deathScreen.show();
     this.player.root.rotation.y = packet.self.rotation;
@@ -231,17 +236,24 @@ export class OnlineGame {
   bindInput() {
     this.onKeyDown = event => {
       if (event.target instanceof HTMLInputElement) { if (event.key === 'Escape') event.target.blur(); return; }
+      if (event.key === 'Escape' && this.armedSkill) { this.resetCombatInputState('Hedefleme iptal edildi.'); return; }
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(event.key)) event.preventDefault();
       this.keys.add(event.key.toLowerCase());
-      if (/^[1-9]$/.test(event.key)) this.cast(Number(event.key));
+      if (/^[1-9]$/.test(event.key) && !event.repeat && !this.heldSkills?.has(event.key)) {
+        this.heldSkills ||= new Set(); this.heldSkills.add(event.key); this.cast(Number(event.key));
+      }
       if (event.key.toLowerCase() === 'f') this.pickup();
-      if (event.key.toLowerCase() === 'i') { const box = this.hud.querySelector('.online-inventory'); box.hidden = !box.hidden; }
+      if (event.key.toLowerCase() === 'i') { const box = this.hud.querySelector('.online-inventory'); box.hidden = !box.hidden; this.resetCombatInputState(); }
       if (event.key === 'Enter') this.hud.querySelector('.online-chat input').focus();
     };
-    this.onKeyUp = event => this.keys.delete(event.key.toLowerCase());
-    this.onBlur = () => this.keys.clear();
+    this.onKeyUp = event => { this.keys.delete(event.key.toLowerCase()); if (this.heldSkills?.delete(event.key) && /^[1-9]$/.test(event.key)) this.releaseSkill(Number(event.key)); };
+    this.onBlur = () => { this.keys.clear(); this.heldSkills?.clear(); this.resetCombatInputState(); };
+    this.onVisibility = () => { if (document.hidden) this.onBlur(); };
+    this.onCanvasLeave = () => this.resetCombatInputState();
+    this.onContextMenu = event => { if (this.armedSkill) { event.preventDefault(); this.resetCombatInputState('Hedefleme iptal edildi.'); } };
     this.onPointer = event => {
       if (!this.running || event.target !== this.canvas || event.button !== 0) return;
+      if (this.armedSkill || !this.hud.querySelector('.online-inventory').hidden || !this.hud.querySelector('.online-shop').hidden) return;
       const pick = this.scene.pick(this.scene.pointerX, this.scene.pointerY, mesh => Boolean(mesh.metadata?.mob || mesh.metadata?.portal || mesh.metadata?.ground));
       if (!pick?.hit) return;
       const meta = pick.pickedMesh.metadata;
@@ -250,12 +262,42 @@ export class OnlineGame {
       if (meta.ground) { this.route = this.navigation.resolvePath(this.player.position, pick.pickedPoint); this.destination = this.route.shift() || null; this.groundTarget = { x: pick.pickedPoint.x, z: pick.pickedPoint.z }; this.pendingPortal = null; this.targetId = null; this.renderHud(); }
     };
     addEventListener('keydown', this.onKeyDown); addEventListener('keyup', this.onKeyUp); addEventListener('blur', this.onBlur);
+    document.addEventListener('visibilitychange', this.onVisibility);
+    this.canvas.addEventListener('pointerleave', this.onCanvasLeave);
+    this.canvas.addEventListener('contextmenu', this.onContextMenu);
     this.canvas.addEventListener('pointerdown', this.onPointer);
+  }
+  resetCombatInputState(message) {
+    this.armedSkill = null;
+    this.combatInputState = !this.self?.alive ? 'DEAD' : this.hud && (!this.hud.querySelector('.online-inventory').hidden || !this.hud.querySelector('.online-shop').hidden) ? 'UI_BLOCKED' : 'NORMAL';
+    this.skillMarker?.hide();
+    if (message) this.setStatus(message);
+  }
+  releaseSkill(slot) {
+    const skill = this.armedSkill;
+    if (!skill || skill.slot !== slot) return;
+    this.skillMarker.update(skill, this.player);
+    const point = this.skillMarker.valid && this.skillMarker.point?.clone();
+    this.resetCombatInputState();
+    if (!point) { this.setStatus('Geçerli bir hedef alanı seç.'); return; }
+    this.connection.send(CLIENT.SKILL, { slot, ground: { x: point.x, z: point.z } });
   }
   cast(slot) {
     if (!this.running || !this.connection?.ready || !this.self?.alive) return;
+    if (!this.hud.querySelector('.online-inventory').hidden || !this.hud.querySelector('.online-shop').hidden) return;
     const skill = CLASS_DEFS[this.identity.classId].skills.find(s => s.slot === slot); if (!skill) return;
-    const ground = skill.target === 'ground' ? (this.groundTarget || { x: this.player.position.x, z: this.player.position.z }) : undefined;
+    if (skill.castType === 'GROUND_AOE') { this.resetCombatInputState(); this.armedSkill = skill; this.combatInputState = 'GROUND_TARGETING'; this.skillMarker.update(skill, this.player); this.setStatus(`${skill.name}: tuşu bırakınca kullanılır · Esc/sağ tık iptal.`); return; }
+    this.resetCombatInputState();
+    const groundPick = skill.castType === 'MOBILITY' ? this.scene.pick(this.scene.pointerX, this.scene.pointerY, mesh => Boolean(mesh.metadata?.ground)) : null;
+    const ground = groundPick?.hit ? { x: groundPick.pickedPoint.x, z: groundPick.pickedPoint.z } : undefined;
+    if (skill.castType === 'MOBILITY' && (!ground || !this.navigation.canOccupy(groundPick.pickedPoint) || distance(ground, this.player.position) > skill.range + .2)) { this.setStatus('Menzil dışında veya geçersiz zemin.'); return; }
+    if (skill.castType === 'TARGETED') {
+      const picked = this.scene.pick(this.scene.pointerX, this.scene.pointerY, mesh => Boolean(mesh.metadata?.mob));
+      const mob = this.mobs.get(this.targetId)?.alive ? this.mobs.get(this.targetId) : this.mobs.get(picked?.pickedMesh?.metadata?.entityId);
+      if (!mob?.alive) { this.setStatus('Geçerli bir hedef seç.'); return; }
+      if (distance(mob.position, this.player.position) > skill.range + .2) { this.setStatus('Menzil dışında.'); return; }
+      this.targetId = mob.id; this.renderHud();
+    }
     this.connection.send(slot === 1 ? CLIENT.ATTACK : CLIENT.SKILL, { slot, targetId: this.targetId, ground });
   }
   pickup() {
@@ -270,6 +312,7 @@ export class OnlineGame {
     if (this.disposed || !this.scene) return;
     const stamp = performance.now(), dt = Math.min(.05, (stamp - this.lastFrame) / 1000); this.lastFrame = stamp;
     if (this.running && !this.loadingRegion) {
+      if (this.armedSkill) this.skillMarker.update(this.armedSkill, this.player);
       let dx = 0, dz = 0;
       if (this.keys.has('w') || this.keys.has('arrowup')) dz++;
       if (this.keys.has('s') || this.keys.has('arrowdown')) dz--;
@@ -315,15 +358,18 @@ export class OnlineGame {
     this.scene.render();
   }
   enter() { if (!this.initialized) throw Error('Dünya hazır değil.'); this.running = true; this.canvas.focus(); this.hud.hidden = false; this.lastFrame = performance.now(); }
-  leave() { this.running = false; this.connection?.close(); this.hud?.remove(); this.hud = null; }
+  leave() { this.resetCombatInputState(); this.running = false; this.connection?.close(); this.hud?.remove(); this.hud = null; }
   applyQuality(name) { this.runtime.applyQuality(name); this.map?.setQuality?.(name); }
   applyIdentity(identity) { this.identity = identity; }
   dispose() {
     if (this.disposed) return; this.disposed = true; this.leave();
     clearTimeout(this.firstTimer); this.firstReject?.(Error('Bağlantı kapatıldı.'));
     removeEventListener('keydown', this.onKeyDown); removeEventListener('keyup', this.onKeyUp); removeEventListener('blur', this.onBlur);
+    document.removeEventListener('visibilitychange', this.onVisibility);
+    this.canvas.removeEventListener('pointerleave', this.onCanvasLeave);
+    this.canvas.removeEventListener('contextmenu', this.onContextMenu);
     this.canvas.removeEventListener('pointerdown', this.onPointer);
     this.clearRemotes(); for (const mob of this.mobs.values()) mob.dispose(); this.mobs.clear();
-    this.deathScreen?.dispose(); this.buffVfx?.dispose(); this.vfx?.dispose(); this.camera?.dispose(); this.map?.dispose(); this.scene?.dispose();
+    this.deathScreen?.dispose(); this.buffVfx?.dispose(); this.vfx?.dispose(); this.skillMarker?.dispose(); this.camera?.dispose(); this.map?.dispose(); this.scene?.dispose();
   }
 }

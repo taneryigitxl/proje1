@@ -11,6 +11,15 @@ export class CombatVFX{
   m.scaling.setAll(size*(this.player.buffs.rage>0&&[0,5].includes(index)?1.18:1));m.visibility=1;effect.life=effect.duration=duration;effect.spin=spin;m.setEnabled(true);return effect;
  }
  cast(skill,from,to){
+  if(skill.effect){
+   const tip=this.player.visual?.tip;
+   const origin=tip?.getAbsolutePosition?.()||from;
+   const charge=this.spawn(3,origin,.62,false,Math.max(.18,skill.castTime||skill.impact?.[0]||.3));
+   charge.follow=tip||null;
+   charge.mesh.position.copyFrom(origin);
+   charge.mesh.material.emissiveColor=BABYLON.Color3.FromHexString(skill.color);
+   return;
+  }
   if(!skill.trail){const effect=this.spawn(3,from,skill.target==='self-area'?skill.radius*2:1.2,true,.3);effect.mesh.material.emissiveColor=BABYLON.Color3.FromHexString(skill.color);return;}
   const yaw=this.player.rotation||0;
   if(skill.slot===1)this.spawn(0,from,1.65,false,.22,0,yaw);
@@ -31,7 +40,7 @@ export class CombatVFX{
   this.particles.emitter.copyFrom(at);this.particles.emitter.y+=.8;const quality=document.body.dataset.quality;
   this.particles.manualEmitCount=quality==='low'?4:quality==='high'?16:8;
  }
- update(dt){for(const e of this.pool){if(e.life<=0)continue;e.life-=dt;const t=Math.max(0,e.life/e.duration);e.mesh.visibility=Math.min(1,t*1.8);e.mesh.rotation.z+=e.spin*dt;if(e.destination&&e.origin){BABYLON.Vector3.LerpToRef(e.origin,e.destination,1-t,e.mesh.position);e.mesh.position.y+=1;}if(e.life<=0){e.mesh.setEnabled(false);e.origin=e.destination=null;}}}
- clear(){for(const e of this.pool){e.life=0;e.origin=e.destination=null;e.mesh.setEnabled(false);}this.particles.stop();this.particles.start();}
+ update(dt){for(const e of this.pool){if(e.life<=0)continue;e.life-=dt;const t=Math.max(0,e.life/e.duration);e.mesh.visibility=Math.min(1,t*1.8);e.mesh.rotation.z+=e.spin*dt;if(e.follow?.getAbsolutePosition)e.mesh.position.copyFrom(e.follow.getAbsolutePosition());if(e.destination&&e.origin){BABYLON.Vector3.LerpToRef(e.origin,e.destination,1-t,e.mesh.position);e.mesh.position.y+=1;}if(e.life<=0){e.mesh.setEnabled(false);e.origin=e.destination=e.follow=null;}}}
+ clear(){for(const e of this.pool){e.life=0;e.origin=e.destination=e.follow=null;e.mesh.setEnabled(false);}this.particles.stop();this.particles.start();}
  dispose(){this.particles.dispose();for(const e of this.pool)e.mesh.dispose();for(const m of this.materials)m.dispose(false,true);}
 }

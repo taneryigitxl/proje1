@@ -6,7 +6,7 @@ export class TwoHandIK{
   this.chain=['lowerarm_l','upperarm_l'].map(name=>bones.find(b=>b.name===name)?.getTransformNode()).filter(Boolean);
   const shoulder=this.chain.at(-1)?.parent;if(shoulder&&/clavicle|shoulder/i.test(shoulder.name))this.chain.push(shoulder);
   this.target=new BABYLON.TransformNode('left-sword-grip',scene);const right=bones.find(b=>b.name==='hand_r')?.getTransformNode();this.target.parent=right||visual.weaponRoot;
-  const pose=visual.weaponSheath.handPose,grip=new BABYLON.Vector3(0,-.085,0),matrix=BABYLON.Matrix.Compose(new BABYLON.Vector3(pose.scale,pose.scale,pose.scale),BABYLON.Quaternion.FromEulerAngles(pose.rotation.x,pose.rotation.y,pose.rotation.z),pose.position);this.target.position.copyFrom(right?BABYLON.Vector3.TransformCoordinates(grip,matrix):grip);
+  const pose=visual.weaponSheath.attachment.hand,grip=new BABYLON.Vector3(0,-.085,0),matrix=BABYLON.Matrix.Compose(new BABYLON.Vector3(pose.scale,pose.scale,pose.scale),BABYLON.Quaternion.FromArray(pose.quaternion),BABYLON.Vector3.FromArray(pose.position));this.target.position.copyFrom(right?BABYLON.Vector3.TransformCoordinates(grip,matrix):grip);
   this.v=Array.from({length:10},()=>BABYLON.Vector3.Zero());this.q=Array.from({length:6},()=>BABYLON.Quaternion.Identity());this.matrix=BABYLON.Matrix.Identity();
   this.observer=scene.onAfterAnimationsObservable.add(()=>this.solve());
  }

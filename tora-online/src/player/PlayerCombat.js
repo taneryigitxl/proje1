@@ -7,6 +7,7 @@ export class PlayerCombat {
     this.callbacks = callbacks;
     this.pending = null;
     this.active = null;
+    this.activePhase = null;
     this.elapsed = 0;
     this.applied = new Set();
     this.fallbackDirection = new BABYLON.Vector3(0, 0, 1);
@@ -50,6 +51,7 @@ export class PlayerCombat {
     if (this.active) {
       this.callbacks.onActionEnd?.(this.active.skill);
       this.active = null;
+      this.activePhase = null;
       this.elapsed = 0;
       this.applied.clear();
       this.player.actionLocked = false;
@@ -61,6 +63,14 @@ export class PlayerCombat {
     this.player.cancelDestination();
   }
 
+  interruptForMovement() {
+    this.autoAttack = false;
+    this.pending = null;
+    this.player.targetId = null;
+    // A committed swing or spell owns its hit frame. A new ground click only
+    // replaces navigation, so fast input cannot silently discard damage.
+  }
+
   cancel() {
     this.autoAttack = false;
     this.pending = null;
@@ -68,6 +78,7 @@ export class PlayerCombat {
     if (this.active) {
       this.callbacks.onActionEnd?.(this.active.skill);
       this.active = null;
+      this.activePhase = null;
       this.elapsed = 0;
       this.applied.clear();
       this.player.actionLocked = false;
@@ -90,12 +101,15 @@ export class PlayerCombat {
     if (this.active) {
       if (this.active.target?.alive && (this.active.skill.target === "enemy" || this.active.skill.action === "dash")) this.player.face(this.active.target.position, dt);
       this.elapsed += dt;
+      this.activePhase = this.elapsed < (this.active.skill.castTime || this.active.skill.impact?.[0] || 0) ? 'WINDUP'
+        : this.elapsed < (this.active.skill.impact?.at(-1) || 0) + .04 ? 'RELEASE' : 'RECOVERY';
       this.active.skill.impact?.forEach((moment, index) => {
         if (this.elapsed >= moment && !this.applied.has(index)) {
           this.applied.add(index);
           this.#impact(this.active.skill, this.active.target, index, this.active.ground);
         }
       });
+      if (this.active && this.elapsed >= (this.active.skill.impact?.at(-1) || 0) + .04) this.player.actionLocked = false;
       if (this.elapsed >= this.active.skill.duration) this.#finish();
       return;
     }
@@ -114,7 +128,7 @@ export class PlayerCombat {
       this.#chase(target, skill, distance);
       return;
     }
-    this.player.cancelDestination();
+    if (!skill.canMoveWhileCasting) this.player.cancelDestination();
     if (target && (skill.target === "enemy" || skill.action === "dash")) this.player.face(target.position);
     else if (skill.action === "dash" && this.fallbackDirection?.lengthSquared?.() > .01) this.player.face(this.player.position.add(this.fallbackDirection));
     const commit = this.skills.commit(skill, this.player);
@@ -128,9 +142,10 @@ export class PlayerCombat {
     this.active = this.pending;
     this.pending = null;
     this.elapsed = 0;
+    this.activePhase = 'WINDUP';
     this.applied.clear();
     const state = skill.animation || "attack1";
-    this.player.actionLocked = true;
+    this.player.actionLocked = !skill.canMoveWhileCasting;
     this.player.state = state;
     this.animator.playAction(state, skill.duration);
     this.callbacks.onActionStart?.(skill);
@@ -163,6 +178,7 @@ export class PlayerCombat {
       this.callbacks.onTargetLost?.();
     }
     this.active = null;
+    this.activePhase = null;
     this.elapsed = 0;
     this.applied.clear();
     this.player.actionLocked = false;
@@ -206,7 +222,7 @@ export class PlayerCombat {
       this.callbacks.onStatus?.(`${skill.name} aktif: saldırı ve hareket hızı arttı.`);
     }
     const victims = skill.aoe
-      ? this.entities.inRadius(this.player.position, skill.range)
+      ? this.entities.inRadius(ground || this.player.position, skill.radius || skill.range)
       : (target?.alive && BABYLON.Vector3.Distance(this.player.position,target.position)<=skill.range+1 && skill.damage > 0 ? [target] : []);
     for (const mob of victims) {
       const damage = Math.round(skill.damage * (index > 0 ? 0.75 : 1));
