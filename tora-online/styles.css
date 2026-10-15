@@ -441,8 +441,8 @@ kbd{font:10px "Segoe UI",sans-serif;color:var(--gold)}
 .lobby-body{display:grid;grid-template-columns:1.15fr 1fr;gap:36px;padding-top:22px}
 .lobby-left{min-width:0}
 #character-slots{display:grid;gap:9px;margin-bottom:18px}
-.character-slot{display:flex;align-items:center;gap:16px;text-align:left;min-height:82px;background:#1e2729;border-color:#655c49;padding:10px 14px;width:100%}
-.character-slot.selected{border-color:#c7aa6c;box-shadow:inset 3px 0 0 #c7aa6c;background:#2a3230}
+.character-slot{display:flex;align-items:center;gap:16px;text-align:left;min-height:82px;background:#24201b;border-color:#655c49;padding:10px 14px;width:100%}
+.character-slot.selected{border-color:#c7aa6c;box-shadow:inset 3px 0 0 #c7aa6c;background:#332b20}
 .character-slot img{width:62px;height:62px;object-fit:cover;border:1px solid #ad966a}
 .character-slot>div{display:grid;gap:5px}
 .character-slot strong{font-family:Georgia,serif;font-size:18px;font-weight:400}
@@ -455,7 +455,7 @@ kbd{font:10px "Segoe UI",sans-serif;color:var(--gold)}
 #lobby-preview-host{height:min(400px,47vh);position:relative;background:radial-gradient(ellipse at 50% 95%,#39433e,#172024 60%,#101718);border:1px solid #73644b;display:grid;place-items:center;overflow:hidden}
 .lobby-preview{height:100%;width:auto;max-width:100%;aspect-ratio:3/4;touch-action:none}
 .preview-status{position:absolute;bottom:4px;font-size:11px;left:12px;color:#b2c4bd}
-#class-summary{padding:16px;background:#1b2325;border:1px solid #534f42;border-top:none}
+#class-summary{padding:16px;background:#211d18;border:1px solid #534f42;border-top:none}
 #class-summary small{color:#bda979;letter-spacing:.05em}
 #class-summary h3{font-size:25px;margin:7px 0}
 #class-summary p{font-size:12px;color:#b2beb5;line-height:1.5;margin:8px 0}
@@ -502,8 +502,8 @@ kbd{font:10px "Segoe UI",sans-serif;color:var(--gold)}
 .navigation-minimap.marker-layer{border:none}
 
 /* 2026 interface pass: the world remains visible around compact information islands. */
-:root{--ui-ink:#101719;--ui-surface:#202b2b;--ui-stroke:#897b5b;--ui-text:#efe6ce;--ui-secondary:#b6bfaf;--ui-blue:#78b8c8;--ui-orange:#e6a26a;--ui-motion-fast:130ms;--ui-motion-panel:190ms}
-.hud .panel{background:linear-gradient(155deg,#2a3434f2,#151c1ef2 70%);border-color:var(--ui-stroke);color:var(--ui-text)}
+:root{--ui-ink:#13110f;--ui-surface:#29251f;--ui-stroke:#897b5b;--ui-text:#efe6ce;--ui-secondary:#c1b39a;--ui-blue:#78b8c8;--ui-orange:#e6a26a;--ui-motion-fast:130ms;--ui-motion-panel:190ms}
+.hud .panel{background:linear-gradient(155deg,#302a23f5,#161411f5 70%);border-color:var(--ui-stroke);color:var(--ui-text)}
 .player-frame{left:var(--ui-gutter);top:var(--ui-gutter);width:316px;min-height:91px;gap:11px;padding:8px 10px;pointer-events:auto}
 .player-frame .portrait{width:68px;height:72px;border:2px solid var(--class-accent);box-shadow:inset 0 0 0 2px #11191a,0 0 9px #0008}
 .player-frame .player-data strong{font-size:16px}
@@ -541,9 +541,9 @@ kbd{font:10px "Segoe UI",sans-serif;color:var(--gold)}
 .quest-panel .quest-details{display:grid;gap:5px}
 .quest-panel .quest-details small{font-size:9px;color:var(--ui-secondary)}
 .quest-panel.collapsed .quest-details{display:none}
-.quest-collapse{position:absolute;right:5px;top:5px;width:21px;height:21px;line-height:18px;padding:0;text-align:center;font-size:12px;background:#192222}
+.quest-collapse{position:absolute;right:5px;top:5px;width:21px;height:21px;line-height:18px;padding:0;text-align:center;font-size:12px;background:#24201a}
 .quest-panel.collapsed .quest-collapse{transform:rotate(180deg)}
-.skill-bar{bottom:14px;gap:5px;padding:6px 7px;background:#172021ee}
+.skill-bar{bottom:14px;gap:5px;padding:6px 7px;background:#191612f5}
 .skill-slot{width:var(--ui-slot);height:var(--ui-slot);border-width:2px;border-radius:4px;transition:border-color var(--ui-motion-fast),box-shadow var(--ui-motion-fast)}
 .skill-slot .key{display:none!important}
 .skill-mana-cost{position:absolute;z-index:4;right:2px;bottom:2px;min-width:14px;padding:1px 3px;background:#0c1a24d9;border:1px solid #55839c;color:#b7e2f2;font:700 10px Arial,sans-serif;text-align:center;pointer-events:none}
@@ -573,28 +573,28 @@ kbd{font:10px "Segoe UI",sans-serif;color:var(--gold)}
 .preview-host{width:100%;max-width:none;aspect-ratio:3/4}
 .preview-help,.equipment-caption{display:block;margin-top:5px;color:#aeb9aa;font-size:9px;letter-spacing:.07em}
 .equip-summary{grid-template-columns:1fr 1fr;gap:5px;margin-top:8px}
-.equip-summary .equipment-slot{min-height:57px;padding:4px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;text-align:center;background:#1a2526;border-color:#647369}
+.equip-summary .equipment-slot{min-height:57px;padding:4px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;text-align:center;background:#24201a;border-color:#756348}
 .equip-summary .equipment-slot .item-art,.equip-summary .equipment-slot .class-item-art{width:30px;height:30px}
 .equipment-slot.locked{opacity:.43;filter:saturate(.35)}
 .equipment-slot small{font-size:9px;color:#bdc9b6}
 .equipment-silhouette{font:23px Georgia,serif;color:#8d9a87;line-height:28px}
-.inv-slot{border-radius:3px;border-color:#58665c;background:#192324}
+.inv-slot{border-radius:3px;border-color:#63533e;background:#211c17}
 .inv-slot.rarity-rare{border-color:#64a3c6}.inv-slot.rarity-epic{border-color:#ae7cc4}.inv-slot.rarity-legendary{border-color:#dfb969}
 .equipped-pip{position:absolute;right:1px;top:1px;color:#ead38e;text-shadow:0 1px 2px #000;font-size:11px}
-.item-tooltip-portal{position:fixed;z-index:75;max-width:250px;padding:10px 12px;background:#142022f7;border:1px solid #a59470;box-shadow:0 8px 24px #000c;pointer-events:none;color:#e9e3ce;font-size:11px;line-height:1.45}
+.item-tooltip-portal{position:fixed;z-index:75;max-width:250px;padding:10px 12px;background:#1b1713fa;border:1px solid #a59470;box-shadow:0 8px 24px #000c;pointer-events:none;color:#e9e3ce;font-size:11px;line-height:1.45}
 .item-tooltip-portal strong,.item-tooltip-portal small,.item-tooltip-portal em,.item-tooltip-portal b{display:block}
 .item-tooltip-portal strong{font:15px Georgia,serif}.item-tooltip-portal small{color:#bfcabd}.item-tooltip-portal em{font-style:normal;color:#ccd6ca}.item-tooltip-portal b{color:#dfbd7d}
 .stats-panel{width:min(780px,calc(100vw - 32px));top:45%;max-height:min(76vh,700px)}
 .stats-layout{grid-template-columns:230px minmax(0,1fr);gap:15px}
 .stats-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
-.stat-category{border:1px solid #536155;background:#182222;padding:7px}
+.stat-category{border:1px solid #6e5e46;background:#211d18;padding:7px}
 .stat-category h3{margin:0 0 5px;color:#ddc78e;font:14px Georgia,serif}
 .stat-row{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:5px;min-height:24px;border-top:1px solid #4650467e;padding:2px 0;font-size:10px}
 .stat-row b{font-size:11px;color:#e6d8aa}.stat-row button{padding:1px 5px;font-size:11px}
 .chat-panel{left:var(--ui-gutter);bottom:var(--ui-gutter);width:300px;height:152px;padding:6px 8px;transition:opacity .16s ease}
 .chat-panel.chat-idle{opacity:.48}.chat-panel.chat-idle:hover,.chat-panel:focus-within{opacity:1}
 .chat-tabs{display:grid;grid-template-columns:repeat(6,1fr);gap:1px;margin-bottom:4px}
-.chat-tabs button{padding:3px 1px;font-size:9px;color:#c1c9b6;background:#1b2728;border-color:#526258}.chat-tabs button.active{color:#ffe5a9;border-color:#bd9a5c;background:#29342d}
+.chat-tabs button{padding:3px 1px;font-size:9px;color:#c1c9b6;background:#241f19;border-color:#736047}.chat-tabs button.active{color:#ffe5a9;border-color:#bd9a5c;background:#3b3021}
 .chat-panel #chat-log{height:88px;font-size:10px;line-height:1.35}.chat-message.type-system{color:#a7c5c3}.chat-message.type-local{color:#e8dcc1}
 .chat-panel form{margin-top:2px}.chat-panel input{padding:3px 0}
 .social-shell{display:grid;gap:11px;padding:10px}.social-shell>strong{font:21px Georgia,serif;color:#e9d09b}.social-tabs{display:flex;gap:5px}.social-tabs button{flex:1;padding:6px;font-size:11px;background:#1d2b2a}.social-tabs button.active{border-color:#d7b46d;color:#f5dfb0}.social-empty{min-height:108px;display:grid;place-items:center;padding:18px;text-align:center;line-height:1.6;color:#b8c8bb;background:#152021;border:1px solid #546457;font-size:12px}.social-shell>button{justify-self:end}
@@ -608,3 +608,24 @@ kbd{font:10px "Segoe UI",sans-serif;color:var(--gold)}
 @media(max-height:800px){.inventory-panel{max-height:75vh}.inventory-panel .preview-host{height:245px}.inventory-panel .inventory-grid{max-width:420px}}
 @media(max-width:1100px){.region-banner{display:none}.minimap{width:174px}.minimap-map{width:156px;height:156px}.quest-panel{top:218px;width:174px}.inventory-layout{grid-template-columns:175px 175px minmax(280px,1fr)}.chat-panel{width:250px}}
 @media(max-width:760px){.shortcut-bar{width:264px;top:105px}.player-frame{width:264px}.buff-bar{top:145px}.minimap{width:132px}.minimap-map{width:114px;height:114px}.quest-panel{width:132px;top:168px}.inventory-layout{grid-template-columns:1fr 1fr}.bag-side{grid-column:1/-1}.preview-host{height:180px}.stats-layout{grid-template-columns:1fr}.stats-layout .preview-host{height:150px}.chat-panel{display:none}.skill-slot{width:calc((100vw - 42px)/9);height:44px}.skill-bar{gap:2px;padding:3px;bottom:6px}.quick-item-bar{bottom:58px}.fixed-interaction-prompt{bottom:115px}}
+/* Shared Tora stone, leather and restrained metal accents. */
+.ui-icon{display:inline-block;width:24px;height:24px;vertical-align:middle;pointer-events:none}
+.equipment-silhouette .ui-icon{width:25px;height:25px}.equipped-pip .ui-icon{width:13px;height:13px}
+.buff-icon .ui-icon{width:22px;height:22px;margin:3px;color:#d8c39a}
+.hud .panel{box-shadow:inset 0 1px 0 #e0c58c33,inset 0 0 0 3px #0e0b084a,0 8px 20px #0008}
+button:focus-visible{outline:2px solid #e5c184;outline-offset:3px}
+.skill-slot:active,.quick-slot:active,.shortcut-button:active{transform:translateY(1px);filter:brightness(1.18)}
+.skill-slot.busy:not(.unavailable){border-bottom-color:var(--class-accent)}
+.skill-slot.out-of-range:not(.unavailable){border-top-color:#b48c57}
+.preview-status{max-width:calc(100% - 24px);line-height:1.6;color:#d9c5a5;z-index:2}
+.preview-retry{position:absolute;top:35%;z-index:3}
+#lobby-preview-host[data-preview-state=error]{background:radial-gradient(ellipse,#30291f,#16130f)}
+@media(min-width:801px) and (max-height:850px){
+ .character-lobby{max-height:calc(100vh - 28px)}.lobby-body{gap:24px;padding-top:14px}
+ #character-slots{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:12px}
+ .character-slot{min-height:76px;gap:7px;padding:8px;flex-wrap:wrap}.character-slot img{width:38px;height:38px}
+ .character-slot strong{font-size:13px}.character-slot span,.character-slot small{font-size:10px}
+ .empty-slot-number{width:28px;font-size:20px}.class-card{padding:8px}.class-card img{width:48px;height:64px}
+}
+@media(prefers-reduced-motion:reduce){.game-panel,.skill-tooltip,.progress-toast{animation:none}button{transition:none}}
+.quest-collapse .ui-icon{width:14px;height:14px}.character-preview-status{position:absolute;inset:15% 8% auto;color:#ddc5a4;font-size:11px;line-height:1.5}.preview-host:has(.character-preview-status)>button{position:absolute;bottom:15%;left:20%;right:20%;font-size:11px}

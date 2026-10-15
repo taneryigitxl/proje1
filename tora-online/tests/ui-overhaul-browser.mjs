@@ -24,7 +24,7 @@ try {
       await page.getByRole('button', { name: 'KARAKTER OLUŞTUR', exact: true }).click();
       await page.getByRole('button', { name: 'DÜNYAYA GİR', exact: true }).click();
       await page.waitForFunction(() => window.__TORA_BOOTSTRAP__.game?.running);
-      await page.evaluate(() => window.g = window.__TORA_BOOTSTRAP__.game);
+      await page.evaluate(() => { window.g = window.__TORA_BOOTSTRAP__.game; });
       assert.equal(await page.locator('.skill-slot .key').count(), 0);
       assert.equal(await page.locator('.skill-slot').count(), 9); checks.push('nine icon skills, no visible key labels');
       assert.equal(await page.locator('.shortcut-button').count(), 9);

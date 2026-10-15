@@ -15,6 +15,6 @@ export class TargetFrame {
     if (this.bar.style.width !== ratio) this.bar.style.width = ratio;
     text(this.value, `${Math.ceil(target.health)} / ${target.maxHealth}`);
     text(this.state, !target.alive ? 'Yenildi' : boss ? 'BOSS · Savaş' : elite ? 'ELİT · ' + (target.aggro ? 'Savaşta' : 'Seçili') : target.aggro ? 'Savaşta' : 'Seçili');
-    const slow = Math.max(0, target.slowTime || 0); text(this.status, slow > 0 ? `❄ ${slow.toFixed(1)} sn yavaş` : ''); this.status.hidden = slow <= 0;
+    const slow = Math.max(0, target.slowTime || 0); text(this.status, slow > 0 ? `${slow.toFixed(1)} sn yavaş` : ''); this.status.hidden = slow <= 0;
   }
 }

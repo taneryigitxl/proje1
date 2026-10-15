@@ -14,3 +14,7 @@ export function safeStep(region,from,dx,dz){
   if(canOccupy(region,next.x,next.z+dz))next.z+=dz;
   return next;
 }
+export function hasLineOfSight(region,from,to){
+ const dx=to.x-from.x,dz=to.z-from.z,length2=dx*dx+dz*dz;
+ return !(STATIC[region]||[]).some(([x,z,r])=>{const t=length2?Math.max(0,Math.min(1,((x-from.x)*dx+(z-from.z)*dz)/length2)):0;return Math.hypot(from.x+t*dx-x,from.z+t*dz-z)<r;});
+}

@@ -1,7 +1,7 @@
 import { classDef } from '../characters/ClassDefs.js';
 import {TwoHandIK} from "../player/TwoHandIK.js";
 import { WeaponSheath } from "../player/WeaponSheath.js";
-import { WEAPON_ATTACHMENT_PROFILES, applyWeaponPose } from '../player/WeaponAttachmentProfiles.js';
+import { WEAPON_ATTACHMENT_PROFILES, applyWeaponPose, staffGripProfile } from '../player/WeaponAttachmentProfiles.js';
 import { ChestState } from "../world/ChestState.js";
 
 export class AssetManager {
@@ -44,6 +44,9 @@ export class AssetManager {
     // The glTF root already converts the Z-up bind into a Y-up mesh that faces +Z.
     // Gameplay yaw uses the same axis (atan2(x, z)), so no extra pivot is applied.
     root.metadata = { assetType: "rigged-gltf", facingOffset: 0 };
+    for (const node of root.getDescendants(false)) {
+      if (definition.hiddenParts?.some(part => node.name === part || node.name === part + '-surface')) node.setEnabled(false);
+    }
     const skeleton = loaded.skeletons[0];
     console.info(`[Tora Animations] Oyuncu iskeleti: ${skeleton.name || "isimsiz"}, ${skeleton.bones.length} kemik.`);
     // glTF skinning is driven by each Bone's linked TransformNode. Prefer that
@@ -91,6 +94,7 @@ export class AssetManager {
         source.meshes.forEach((mesh) => mesh.dispose(false, true));
         source.transformNodes.forEach((node) => { if (!node.isDisposed?.()) node.dispose(); });
         source.skeletons.forEach((sourceSkeleton) => sourceSkeleton.dispose());
+        source.materials.forEach(material=>material.dispose(false,true));
       } catch (error) {
         console.error(`[Tora Animations] Animasyon kütüphanesi kullanılamadı: ${url}. Oyun kalan kliplerle devam edecek.`, error);
       }
@@ -103,7 +107,8 @@ export class AssetManager {
     this.onProgress(66, `${definition.weaponName} ele bağlanıyor…`);
     const weapon = await this.#load(weaponDef.url);
     const weaponRoot = this.#wrap("greatsword-root", weapon.meshes, weapon.transformNodes);
-    const attachment = WEAPON_ATTACHMENT_PROFILES[classId];
+    const baseAttachment = WEAPON_ATTACHMENT_PROFILES[classId];
+    const attachment = staffGripProfile(baseAttachment, skeleton);
     const hand = skeleton.bones.find((bone) => bone.name.toLowerCase() === attachment.handBone.toLowerCase());
     const skinnedMesh = loaded.meshes.find((mesh) => mesh.skeleton === skeleton);
     if (!hand || !skinnedMesh) throw new Error(`Silah bağlama kemiği bulunamadı: ${attachment.handBone}`);
@@ -120,13 +125,14 @@ export class AssetManager {
     this.playerGroups = animationGroups;
     this.onProgress(70, "Yüz detayı ekleniyor…");
     await this.#attachHead(root, targetByName, definition.head);
+    if (definition.hair) await this.#attachHead(root, targetByName, definition.hair);
 
     const weaponSheath = attachment.sheath ? new WeaponSheath(weaponRoot, skeleton, skinnedMesh, hand, attachment) : null;
 
     const tip=new BABYLON.TransformNode('weapon-tip',this.scene);tip.parent=weaponRoot;tip.position.copyFrom(BABYLON.Vector3.FromArray(weaponDef.tip));
     // Bone attachments are outside TransformNode descendants; include equipment explicitly.
     const previewMeshes=[...new Set([...root.getChildMeshes(false),...weaponRoot.getChildMeshes(false)])];
-    const visual={classId,root,skeleton,weaponRoot,weaponSheath,tip,animationGroups,previewMeshes};if(weaponDef.twoHanded)visual.ik=new TwoHandIK(visual,this.scene);
+    const visual={classId,root,skeleton,weaponRoot,weaponSheath,tip,animationGroups,previewMeshes,attachment};if(weaponDef.twoHanded)visual.ik=new TwoHandIK(visual,this.scene);
     visual.weaponMaterials=[...new Set(weaponRoot.getChildMeshes(false).map(m=>m.material).filter(Boolean))];
     return visual;
   }
@@ -160,7 +166,7 @@ export class AssetManager {
     root.rotation.y = rotationY;
     root.scaling.setAll(scale);
     const chest = new ChestState(name, root, loaded.animationGroups, onOpen);
-    root.metadata = { chestState: chest, skeletons: loaded.skeletons };
+    root.metadata = { chestState: chest, skeletons: loaded.skeletons, ownedMaterials:loaded.materials };
     root.getChildMeshes(false).forEach(mesh => {
       mesh.isPickable = true;
       mesh.metadata = { ...(mesh.metadata || {}), ...(metadata || {}), chest, cursor: 'loot' };
@@ -184,17 +190,18 @@ export class AssetManager {
     if ((definition.id.includes("orc") || definition.boss)) await this.#attachMobWeapon(root, loaded.skeletons[0], index);
     if(definition.boss){for(const mesh of root.getChildMeshes(false)){if(!mesh.material)continue;const mat=mesh.material;mat.albedoColor=new BABYLON.Color3(.37,.31,.26);mat.metallic=.55;mat.roughness=.55;}
       await this.#attachMobWeapon(root,loaded.skeletons[0],index+100);const second=this.scene.getTransformNodeByName("orc-sword-"+(index+100));const left=loaded.skeletons[0].bones.find(b=>/hand_l|lefthand/i.test(b.name));const skin=root.getChildMeshes(false).find(m=>m.skeleton===loaded.skeletons[0]);if(second&&left&&skin){second.attachToBone(left,skin);second.rotation.set(1.1,-.2,-1.4);second.scaling.setAll(.95);}}
-    return { root, animationGroups: loaded.animationGroups, definition, footOffset };
+    return { root, animationGroups: loaded.animationGroups, definition, footOffset, ownedMaterials:loaded.materials };
   }
 
   async #attachMobWeapon(root, skeleton, index) {
-    const loaded = await this.#load(this.manifest.weapon.url);
-    const weapon = this.#wrap('orc-sword-'+index, loaded.meshes, loaded.transformNodes);
     const hand = skeleton.bones.find(b=> /hand_r|righthand|hand.r/i.test(b.name));
     const skinned = root.getChildMeshes(false).find(m=>m.skeleton===skeleton);
-    if (!hand || !skinned) { weapon.dispose(); return; }
+    if (!hand || !skinned) return;
+    const loaded = await this.#load(this.manifest.weapon.url);
+    const weapon = this.#wrap('orc-sword-'+index, loaded.meshes, loaded.transformNodes);
     weapon.attachToBone(hand, skinned); weapon.position.set(.02,.04,0); weapon.rotation.set(1.2,.1,1.4); weapon.scaling.setAll(.8);
     weapon.getChildMeshes(false).forEach(m=>m.isPickable=false);
+    weapon.metadata={ownedMaterials:loaded.materials};root.metadata??={};(root.metadata.weapons??=[]).push(weapon);
   }
 
   async #attachHead(root, targets, headUrl) {
@@ -204,9 +211,13 @@ export class AssetManager {
     this.headTargets = new Map(loaded.transformNodes.map(n=>[n.name.toLowerCase(),n]));
     loaded.skeletons.forEach(s=>s.bones.forEach(b=>this.headTargets.set(b.name.toLowerCase(), b.getTransformNode() || b)));
     // Add identical source animations to the companion rig, preserving its inverse bind matrices.
-    for (const group of this.playerGroups || []) for (const ta of [...group.targetedAnimations]) {
+    for (const group of this.playerGroups || []) {
+     const assigned = new Set();
+     for (const ta of [...group.targetedAnimations]) {
       const target = this.headTargets.get(ta.target.name.toLowerCase());
-      if (target) group.addTargetedAnimation(ta.animation.clone(),target);
+      const key = target && target.uniqueId + ':' + ta.animation.targetProperty;
+      if (target && !assigned.has(key)) { group.addTargetedAnimation(ta.animation.clone(),target); assigned.add(key); }
+     }
     }
   }
 
@@ -234,7 +245,7 @@ export class AssetManager {
     root.getChildMeshes(false).forEach((mesh) => { mesh.isPickable = true; mesh.metadata = { ...(mesh.metadata || {}), npc: true, cursor: "talk" }; });
     const idle = loaded.animationGroups.find((group) => group.name.toLowerCase().includes("idle")) || loaded.animationGroups[0];
     idle.start(true, 1, idle.from, idle.to, false);
-    root.metadata={animationGroups:loaded.animationGroups,skeletons:loaded.skeletons};
+    root.metadata={animationGroups:loaded.animationGroups,skeletons:loaded.skeletons,ownedMaterials:loaded.materials};
     return root;
   }
 
@@ -251,6 +262,7 @@ export class AssetManager {
       return root;
     });
     this.staticTemplates.set(key, promise);
+    promise.catch(() => { if (this.staticTemplates.get(key) === promise) this.staticTemplates.delete(key); });
     return promise;
   }
 
@@ -259,8 +271,13 @@ export class AssetManager {
     const rootUrl = slash >= 0 ? url.slice(0, slash + 1) : "";
     const filename = slash >= 0 ? url.slice(slash + 1) : url;
     const observer=BABYLON.SceneLoader.OnPluginActivatedObservable.add(plugin=>{if(plugin.name==='gltf')plugin.animationStartMode=0;});
+    let rejected=false;
     try {
-      const loaded=await this.#withTimeout(BABYLON.SceneLoader.ImportMeshAsync("", rootUrl, filename, this.scene), this.config.assetTimeoutMs);
+      const loading=BABYLON.SceneLoader.LoadAssetContainerAsync(rootUrl, filename, this.scene);
+      loading.then(container=>{if(rejected||this.scene.isDisposed)container.dispose();},()=>{});
+      const loaded=await this.#withTimeout(loading, this.config.assetTimeoutMs);
+      if(this.scene.isDisposed){loaded.dispose();throw new Error('Varlık sahnesi kapatıldı.');}
+      loaded.addAllToScene();
       // Babylon's GLSL skinning shader expects float joint attributes on WebGPU.
       // Quantized GLBs store JOINTS as unnormalized bytes; WebGL silently converts.
       for(const mesh of loaded.meshes) for(const kind of [BABYLON.VertexBuffer.MatricesIndicesKind,BABYLON.VertexBuffer.MatricesIndicesExtraKind]) {
@@ -269,6 +286,7 @@ export class AssetManager {
       }
       return loaded;
     } catch (error) {
+      rejected=true;
       throw new Error(`GLB yüklenemedi: ${url} (${error?.message || error})`);
     } finally { BABYLON.SceneLoader.OnPluginActivatedObservable.remove(observer); }
   }

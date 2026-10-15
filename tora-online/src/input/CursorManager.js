@@ -1,3 +1,4 @@
+import { pickWorldAction } from './WorldPicking.js';
 export class CursorManager {
   constructor(scene, canvas, player, entities, onInteract = () => {}) {
     this.scene = scene;
@@ -6,7 +7,11 @@ export class CursorManager {
     this.entities = entities;
     this.onInteract = onInteract;
     this.state = "normal";
-    this.onMove = (event) => this.#move(event);
+    this.nextPick = 0;
+    this.onMove = () => {
+      if (this.frame) return;
+      this.frame=requestAnimationFrame(()=>{this.frame=null;this.#move();});
+    };
     this.onCancel = () => this.reset();
     this.onLeave = () => this.reset();
     canvas.addEventListener("pointermove", this.onMove);
@@ -17,14 +22,16 @@ export class CursorManager {
   }
 
   reset() {
+    if(this.frame)cancelAnimationFrame(this.frame);this.frame=null;
     this.#set("normal");
     this.entities.hover(null);
     this.onInteract(null,null);
   }
 
   #move() {
-    const pick = this.scene.pick(this.scene.pointerX, this.scene.pointerY, (mesh) => mesh.isPickable);
-    if (!pick?.hit) {this.onInteract(null,null);return this.#set("normal");}
+    if(performance.now()<this.nextPick)return;this.nextPick=performance.now()+50;
+    const pick = this.pickAction?.() || (!this.pickAction ? pickWorldAction(this.scene,this.entities) : null);
+    if (!pick?.hit) {this.entities.hover(null);this.onInteract(null,null);return this.#set("normal");}
     const data = pick.pickedMesh?.metadata || {};
     this.entities.hover(data.mob ? this.entities.getById(data.entityId) : null);
     this.onInteract(data,pick.pickedMesh);
@@ -48,6 +55,7 @@ export class CursorManager {
   }
 
   dispose() {
+    if(this.frame)cancelAnimationFrame(this.frame);
     this.entities.hover(null);
     this.canvas.removeEventListener("pointermove", this.onMove);
     this.canvas.removeEventListener("pointerleave", this.onLeave);

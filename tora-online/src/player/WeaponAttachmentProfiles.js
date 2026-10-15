@@ -31,3 +31,17 @@ export function applyWeaponPose(node, pose) {
     : BABYLON.Quaternion.FromEulerAngles(...pose.rotation);
   node.scaling.setAll(pose.scale);
 }
+
+/** Calibrate the staff from the bind-pose knuckles, in hand_r local space. */
+export function staffGripProfile(profile, skeleton) {
+  const find = name => skeleton.bones.find(b => b.name === name)?.getTransformNode();
+  const index = find('index_01_r'), pinky = find('pinky_01_r');
+  if (!index || !pinky) throw new Error('Asa tutuşu için sağ el parmak kemikleri eksik.');
+  const direction = index.position.subtract(pinky.position).normalize();
+  const axis = BABYLON.Vector3.Cross(new BABYLON.Vector3(0,1,0), direction).normalize();
+  const rotation = BABYLON.Quaternion.RotationAxis(axis, Math.acos(BABYLON.Scalar.Clamp(direction.y,-1,1)));
+  const center = index.position.add(pinky.position).scale(.5);
+  return { ...profile, hand: {
+    ...profile.hand, position: [center.x-.015, center.y*.74, center.z], quaternion: rotation.asArray(),
+  } };
+}

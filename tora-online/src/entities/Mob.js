@@ -27,6 +27,8 @@ export class Mob extends Entity {
     }
     this.index = index;
     this.root = visual.root;
+    this.weapons=this.root.metadata?.weapons||[];
+    this.ownedMaterials=visual.ownedMaterials||[];
     this.groups = visual.animationGroups;
     this.activeAnimation = null;
     this.animationState = "";
@@ -57,8 +59,16 @@ export class Mob extends Entity {
     this._feetFrames = 0;
     this.root.getChildMeshes(false).forEach((mesh) => {
       mesh.metadata = { ...(mesh.metadata || {}), entityId: this.id, mob: true };
-      mesh.isPickable = true;
+      mesh.isPickable = false;
     });
+    const bounds=this.root.getHierarchyBoundingVectors(true);
+    const height=Math.max(.8,Math.min(3.5,bounds.max.y-bounds.min.y));
+    this.selectionProxy=BABYLON.MeshBuilder.CreateBox('mob-hitbox-'+this.id,{width:.85,height,depth:.85},scene);
+    this.selectionProxy.parent=this.root;
+    this.selectionProxy.position.y=height*.5/(this.root.scaling.y||1);
+    this.selectionProxy.scaling.set(1/(this.root.scaling.x||1),1/(this.root.scaling.y||1),1/(this.root.scaling.z||1));
+    this.selectionProxy.visibility=0;this.selectionProxy.isPickable=true;
+    this.selectionProxy.metadata={mob:true,selectionProxy:true,entityId:this.id};
     this.#play("idle", true);
     // Bind-pose AABB differs from idle — re-seat after anim samples, twice for safety
     this.feetTimer=.2;
@@ -77,7 +87,7 @@ export class Mob extends Entity {
     }
     if (!this.alive) {
       this.respawnTimer -= dt;
-      if(this.respawnTimer<(this.definition.boss?25:9)-2)this.root.setEnabled(false);
+      if(this.respawnTimer<(this.definition.boss?25:9)-2){this.root.setEnabled(false);this.weapons.forEach(w=>w.setEnabled(false));}
       if (this.respawnTimer <= 0) this.respawn();
       return;
     }
@@ -189,6 +199,7 @@ export class Mob extends Entity {
     this.aggro = false;
     this.position.copyFrom(this.spawn);
     this.root.setEnabled(true);
+    this.weapons.forEach(w=>w.setEnabled(true));
     this.respawnTimer = 0;
     this.wanderTarget = null;
     this.#play("idle", true, true);
@@ -212,7 +223,7 @@ export class Mob extends Entity {
     if (state.alive && animation !== this.animationState) this.#play(animation, ['run', 'walk', 'idle'].includes(animation));
   }
 
-  dispose() {this.disposed=true;this.attackWarning?.material?.dispose();this.attackWarning?.dispose();this.groups.forEach(g=>g.dispose());const meshes=this.root.getChildMeshes(false);const skeletons=new Set(meshes.map(m=>m.skeleton).filter(Boolean));meshes.forEach(m=>this.scene.getLightByName("afternoon-sun")?.getShadowGenerator()?.removeShadowCaster(m,false));this.root.dispose(false,false);skeletons.forEach(s=>s.dispose());}
+  dispose() {this.disposed=true;this.attackWarning?.material?.dispose();this.attackWarning?.dispose();this.groups.forEach(g=>g.dispose());const meshes=[...this.root.getChildMeshes(false),...this.weapons.flatMap(w=>w.getChildMeshes(false))];const materials=new Set([...this.ownedMaterials,...this.weapons.flatMap(w=>w.metadata?.ownedMaterials||[]),...meshes.map(m=>m.material).filter(Boolean)]);const skeletons=new Set(meshes.map(m=>m.skeleton).filter(Boolean));meshes.forEach(m=>this.scene.getLightByName("afternoon-sun")?.getShadowGenerator()?.removeShadowCaster(m,false));this.weapons.forEach(w=>w.dispose(false,false));this.root.dispose(false,false);skeletons.forEach(s=>s.dispose());materials.forEach(m=>m.dispose(false,true));}
 
   #snapFeetToGround() {
     if (!this.root || !this.alive || this.disposed) return;
@@ -223,6 +234,7 @@ export class Mob extends Entity {
     let minY = Infinity;
     this.root.getChildMeshes(false).forEach((mesh) => {
       const name = (mesh.name || "").toLowerCase();
+      if(mesh.metadata?.selectionProxy)return;
       if (/axe|club|weapon|sword|wing|horn|halo|particle/i.test(name)) return;
       mesh.computeWorldMatrix(true);
       try { mesh.refreshBoundingInfo?.(true, true); } catch (_) {

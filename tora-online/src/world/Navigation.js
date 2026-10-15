@@ -4,6 +4,14 @@ export class Navigation {
   setHeightProvider(provider) { this.heightProvider = provider; }
   heightAt(x, z) { return this.heightProvider(x, z); }
   addObstacle(x, z, radius) { this.obstacles.push({ x, z, radius }); }
+  hasLineOfSight(from, to) {
+    const dx = to.x - from.x, dz = to.z - from.z;
+    const length2 = dx * dx + dz * dz;
+    return !this.obstacles.some(o => {
+      const t = length2 ? Math.max(0, Math.min(1, ((o.x - from.x) * dx + (o.z - from.z) * dz) / length2)) : 0;
+      return Math.hypot(from.x + dx * t - o.x, from.z + dz * t - o.z) < o.radius;
+    });
+  }
   findPath(from, desired, radius=.45) {
     const point=this.clamp(desired.clone());
     if(!this.canOccupy(point,radius)) return [];

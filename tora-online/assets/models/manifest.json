@@ -26,8 +26,8 @@
     ]
   },
   "animationLibraries": [
-    "assets/animations/ual1-standard.glb",
-    "assets/animations/ual2-standard.glb"
+    "assets/animations/warrior-1.glb",
+    "assets/animations/warrior-2.glb"
   ],
   "mobs": [
     {

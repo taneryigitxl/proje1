@@ -1,4 +1,6 @@
 import { PlayerAnimator } from '../player/PlayerAnimator.js';
+import { TwoHandIK } from '../player/TwoHandIK.js';
+import { EngineRuntime } from '../core/Engine.js';
 
 /** One offscreen rig and engine, shared by Inventory and Character. */
 export class CharacterPreview {
@@ -15,10 +17,10 @@ export class CharacterPreview {
     this.onPointerUp = () => { this.dragX = null; };
     this.onWheel = e => { e.preventDefault(); e.stopPropagation(); this.zoom = Math.max(.84, Math.min(1.22, this.zoom - Math.sign(e.deltaY) * .06)); this.#setCameraDistance(); };
   }
-  attach(host) { if (!host || this.disposed) return; if (this.canvas.parentElement !== host) host.append(this.canvas); this.visible = true; this.#bind(); this.readyAt = performance.now() + 100; }
+  attach(host) { if (!host || this.disposed) return; if (this.canvas.parentElement !== host) host.append(this.canvas);if(this.failed)host.append(this.errorStatus,this.retryButton); this.visible = true; this.#bind(); this.readyAt = performance.now() + 100; }
   hide() { this.visible = false; this.dragX = null; this.#unbind(); }
   update(now = performance.now()) {
-    if (this.visible && !this.engine && !this.busy && now >= this.readyAt) void this.#initialize();
+    if (this.visible && !this.engine && !this.busy && !this.failed && now >= this.readyAt) void this.#initialize();
     if (!this.visible || !this.fitted || this.busy || now - this.lastRender < 1000 / 30) return;
     this.syncEquipment(); this.root.rotation.y = this.orbit;
     this.animator.update(Math.min(.05, (now - this.lastRender) / 1000 || .033), 0);
@@ -29,12 +31,20 @@ export class CharacterPreview {
     if (!this.fitted) return;
     const enabled = Boolean(this.player.visual.weaponRoot.isEnabled());
     if (this.weaponOn !== enabled) { this.weaponOn = enabled; this.weapon.setEnabled(enabled); }
+    const visual=this.player.visual,sourceBone=visual.weaponRoot._transformToBone;
+    if(sourceBone&&sourceBone!==this.sourceWeaponBone&&this.bones?.has(sourceBone)){
+      this.weapon.detachFromBone();this.weapon.attachToBone(this.bones.get(sourceBone),this.remap.get(visual.weaponRoot._transformToBoneReferal));
+      this.weapon.position.copyFrom(visual.weaponRoot.position);this.weapon.rotationQuaternion=visual.weaponRoot.rotationQuaternion?.clone()||null;this.weapon.scaling.copyFrom(visual.weaponRoot.scaling);this.sourceWeaponBone=sourceBone;
+    }
+    const sheathed=Boolean(visual.weaponSheath?.sheathed);
+    if(this.ik)this.ik.visual.weaponSheath.sheathed=sheathed;
+    this.animator?.setState(sheathed?'idle':'combatIdle');
     for (const [source, clone] of this.meshes) {
       if (source === this.player.visual.weaponRoot) continue;
       if (clone.isEnabled() !== source.isEnabled()) clone.setEnabled(source.isEnabled());
     }
   }
-  dispose() { this.disposed = true; this.hide(); this.scene?.dispose(); this.engine?.dispose(); this.canvas.remove(); }
+  dispose() { this.disposed = true; this.hide(); this.ik?.dispose(); this.scene?.dispose(); this.runtime?.dispose(); this.canvas.remove(); this.errorStatus?.remove();this.retryButton?.remove(); }
   #bind() {
     if (this.bound) return;
     this.canvas.addEventListener('pointerdown', this.onPointerDown); this.canvas.addEventListener('wheel', this.onWheel, { passive: false });
@@ -49,8 +59,11 @@ export class CharacterPreview {
   }
   async #initialize() {
     this.busy = true;
+    this.canvas.style.visibility='hidden';
     try {
-      this.engine = new BABYLON.Engine(this.canvas, true, { preserveDrawingBuffer: false, stencil: false }); this.engine.setSize(this.width, this.height);
+      const runtime=await EngineRuntime.create(this.canvas,'medium',()=>{},{preferWebGL:true,onDeviceError:()=>this.#fail(new Error('Önizleme grafik bağlantısı kesildi.'))});
+      if(this.disposed){runtime.dispose();return;}
+      this.runtime=runtime;this.engine=runtime.engine;this.engine.setSize(this.width, this.height);
       this.scene = new BABYLON.Scene(this.engine); this.scene.clearColor = new BABYLON.Color4(.065, .095, .09, 1);
       this.root = new BABYLON.TransformNode('preview-model', this.scene);
       const visual = this.player.visual, remap = new Map([[visual.root, this.root]]), mats = new Map(); this.meshes = new Map();
@@ -101,6 +114,7 @@ export class CharacterPreview {
       }
       for (const [source, clone] of this.meshes) if (source.skeleton) clone.skeleton = skeletons.get(source.skeleton);
       const sourceHand = visual.weaponRoot._transformToBone;
+      this.bones=bones;this.remap=remap;this.sourceWeaponBone=sourceHand;
       if (sourceHand) {
         const hand = bones.get(sourceHand), reference = remap.get(visual.weaponRoot._transformToBoneReferal);
         if (hand && reference) {
@@ -120,9 +134,22 @@ export class CharacterPreview {
         if (group.targetedAnimations.length) groups.push(group); else group.dispose();
       }
       this.animator = new PlayerAnimator({ classId: visual.classId, animationGroups: groups });
-      this.#studio(); this.#fit(); await this.scene.whenReadyAsync(); this.lastRender = 0;
-    } catch (error) { if (!this.disposed) console.error('[Tora Preview]', error); }
+      if(visual.ik)this.ik=new TwoHandIK({classId:visual.classId,skeleton:skeletons.get(visual.skeleton),weaponRoot:this.weapon,attachment:visual.attachment,weaponSheath:{sheathed:Boolean(visual.weaponSheath?.sheathed)}},this.scene);
+      this.#studio(); this.#fit(); await this.scene.whenReadyAsync();
+      this.animator.setState(visual.weaponSheath?.sheathed?'idle':'combatIdle',true);
+      for(let frame=0;frame<12;frame++){
+        await new Promise(resolve=>setTimeout(resolve,25));if(this.disposed||!this.scene)return;
+        this.animator.update(.025,0);this.engine.beginFrame();this.scene.render();this.engine.endFrame();
+      }
+      this.canvas.style.visibility='visible';this.lastRender = 0;
+    } catch (error) { if (!this.disposed) this.#fail(error); }
     finally { this.busy = false; }
+  }
+  #fail(error){
+    this.failed=true;this.fitted=false;this.busy=false;this.ik?.dispose();this.ik=null;this.scene?.dispose();this.runtime?.dispose();this.scene=this.engine=this.runtime=null;
+    this.errorStatus??=document.createElement('p');this.errorStatus.className='character-preview-status';this.errorStatus.setAttribute('role','status');this.errorStatus.textContent='3D görünüm açılamadı. '+error.message;
+    if(!this.retryButton){this.retryButton=document.createElement('button');this.retryButton.type='button';this.retryButton.textContent='Tekrar dene';this.retryButton.addEventListener('click',()=>{this.failed=false;this.errorStatus.remove();this.retryButton.remove();this.readyAt=performance.now();});}
+    this.canvas.parentElement?.append(this.errorStatus,this.retryButton);
   }
   #fit() {
     // Quantized GLBs keep large integer bind coordinates. Their bones decode

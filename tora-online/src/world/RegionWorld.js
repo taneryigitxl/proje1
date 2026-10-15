@@ -88,7 +88,7 @@ export class RegionWorld {
     root.computeWorldMatrix(true);const bounds=root.getHierarchyBoundingVectors(true);
     root.position.y=this.heightAt(x,z)-bounds.min.y+elevation;
     root.getChildMeshes(false).forEach(m=>{if(m instanceof BABYLON.InstancedMesh)m.sourceMesh.receiveShadows=true;else m.receiveShadows=true;m.isPickable=Boolean(metadata);});
-    root.computeWorldMatrix(true);root.metadata={...(root.metadata||{}),occlusionBounds:root.getHierarchyBoundingVectors(true),occlusionMeshes:root.getChildMeshes(false)};
+    root.computeWorldMatrix(true);root.metadata={...(root.metadata||{}),blocksSelection:Boolean(obstacle),occlusionBounds:root.getHierarchyBoundingVectors(true),occlusionMeshes:root.getChildMeshes(false)};
     this.roots.push(root);if(obstacle)this.navigation.addObstacle(x,z,obstacle);
     if(!['grass','fern','bush'].includes(key))this.addShadowCaster(root);
     return root;
@@ -222,9 +222,10 @@ export class RegionWorld {
   getGrassStats() { return this.grass?.getStats() || {}; }
   clear() {
     this.grass?.dispose();this.grass=null;
-    const fadeMaterials=[];
+    const fadeMaterials=[],ownedMaterials=new Set(this.roots.flatMap(root=>root.metadata?.ownedMaterials||[]));
     for(const root of this.roots){for(const mesh of root.metadata?.occlusionMeshes||[])if(mesh.metadata?.occlusionMaterial)fadeMaterials.push(mesh.metadata.occlusionMaterial);root.metadata?.chestState?.dispose();if(!root.metadata?.chestState)root.metadata?.animationGroups?.forEach(g=>g.dispose());root.metadata?.skeletons?.forEach(s=>s.dispose());root.getChildMeshes(false).forEach(m=>this.shadowGenerator?.removeShadowCaster(m,false));root.dispose(false,false);}
     for(const mat of fadeMaterials)mat.dispose(false,false);
+    for(const mat of ownedMaterials)mat.dispose(false,true);
     this.roots=[];
     for(const mat of this.owned)mat.dispose(false,true);this.owned=[];this.npc=null;this.waterMaterial=null;this.chests=[];
   }

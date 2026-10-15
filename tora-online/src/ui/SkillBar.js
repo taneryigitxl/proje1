@@ -38,7 +38,7 @@ export class SkillBar {
       if (slot.angle !== angle) { slot.angle = angle; overlay.style.setProperty('--cooldown-angle', angle); }
       const check = system.canUse(skill, player), needsTarget = skill.target === 'enemy' && !selected?.alive;
       const dist = selected?.alive && player.position && skill.target === 'enemy' ? BABYLON.Vector3.Distance(player.position, selected.position) : 0;
-      button.classList.toggle('unavailable', !check.ok || player.actionLocked);
+      button.classList.toggle('unavailable', !check.ok);
       button.classList.toggle('busy', player.actionLocked);
       button.classList.toggle('no-mana', player.mana < skill.mana);
       button.classList.toggle('needs-target', needsTarget);
@@ -46,7 +46,7 @@ export class SkillBar {
       button.classList.toggle('flash', (this.flashUntil.get(skill.slot) || 0) > now);
       button.classList.toggle('ready-flash', (this.readyUntil.get(skill.slot) || 0) > now);
       button.classList.toggle('buff-active', skill.action === 'guard' ? player.buffs.guard > 0 : skill.action === 'rage' ? player.buffs.rage > 0 : false);
-      const message = !check.ok ? check.reason : player.actionLocked ? 'Devam eden saldırının bitmesini bekle.' : needsTarget ? 'Bir düşman seç · sol tık' : dist > skill.range + .15 ? 'Menzil dışı' : 'Kullanıma hazır';
+      const message = !check.ok ? check.reason : needsTarget ? 'Bir düşman seç · sol tık' : dist > skill.range + .15 ? 'Kullanımda hedefe yaklaşılır' : player.actionLocked ? 'Son geçerli komut kısa süre saklanır' : 'Kullanıma hazır';
       if (reason.textContent !== message) reason.textContent = message;
     }
   }

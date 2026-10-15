@@ -32,8 +32,8 @@ export class EntityManager {
     this.clear();for(const mob of this.mobs)mob.dispose();
     this.mobs=spawns.map((spawn,index)=>new Mob(this.scene,spawn,index,this.navigation,this.onDamage,visuals[index]));
   }
-  getById(id) { return this.mobs.find((mob) => mob.id === id) || null; }
-  aliveMobs() { return this.mobs.filter((mob) => mob.alive); }
+  getById(id) { return this.mobs.find((mob) => mob.id === id && !mob.disposed) || null; }
+  aliveMobs() { return this.mobs.filter((mob) => mob.alive && !mob.disposed); }
   resetAggro(){for(const mob of this.mobs){mob.aggro=false;mob.targetId=null;mob.attackWindup=0;mob.attackTimer=2;mob.aggroLock=4;mob.wanderTarget=null;}}
 
   select(mob) {
@@ -94,7 +94,7 @@ export class EntityManager {
       else if (this.slowAccumulator > 0.2) mob.update(this.slowAccumulator, player);
     }
     if (this.slowAccumulator > 0.2) this.slowAccumulator = 0;
-    if (this.selected && !this.selected.alive) this.clear();
+    if (this.selected && (!this.selected.alive || this.selected.disposed)) this.clear();
     if (this.hovered && !this.hovered.alive) this.hover(null);
     this.#syncRing();
   }

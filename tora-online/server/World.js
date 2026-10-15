@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { CLASS_DEFS } from '../shared/ClassDefs.js';
 import { ITEM_DEFS } from '../shared/ItemDefs.js';
 import { REGIONS } from '../shared/Regions.js';
-import { canOccupy, safeStep } from '../shared/Walkability.js';
+import { canOccupy, safeStep, hasLineOfSight } from '../shared/Walkability.js';
 import { CLIENT, SERVER, PROTOCOL_VERSION, parseClientPacket } from '../shared/Protocol.js';
 import { PublicError } from './Repository.js';
 
@@ -67,7 +67,7 @@ export class World{
     if(!this.allow(player,'cast',80))return;if(!player.alive)throw new PublicError(400,'Ölü karakter saldıramaz.');const skill=CLASS_DEFS[player.classId].skills.find(s=>s.slot===slot);if(!skill||!player.skills.has(slot))throw new PublicError(400,'Yetenek açık değil.');
     const stamp=now();if((player.cooldowns.get(slot)||0)>stamp)throw new PublicError(400,'Yetenek bekleme süresinde.');if(player.mana<skill.mana)throw new PublicError(400,'Yeterli mana yok.');
     const room=this.room(player.region),target=room.mobs.find(m=>m.id===targetId&&m.alive);
-    if(skill.target==='enemy'&&(!target||dist(player,target)>skill.range+.35))throw new PublicError(400,'Hedef menzil dışında.');
+    if(skill.target==='enemy'&&(!target||dist(player,target)>skill.range+.35||!hasLineOfSight(player.region,player,target)))throw new PublicError(400,'Hedef menzil dışında.');
     if(skill.target==='ground'&&(!ground||!Number.isFinite(ground.x)||!Number.isFinite(ground.z)||dist(player,ground)>skill.range+.3||!canOccupy(player.region,ground.x,ground.z)))throw new PublicError(400,'Geçersiz hedef nokta.');
     player.mana-=skill.mana;player.cooldowns.set(slot,stamp+skill.cooldown*1000);player.state='combatIdle';
     if(skill.action==='guard'||skill.action==='rage'){player.buffs[skill.action]=stamp+(skill.action==='guard'?6000:8000);this.broadcast(room,SERVER.BUFF,{playerId:player.id,buffs:playerView(player).buffs});return;}
@@ -75,15 +75,20 @@ export class World{
       const step=dist(player,ground),ratio=Math.min(1,skill.range/Math.max(step,.001));let reached={x:player.x,z:player.z};const count=Math.ceil(step/.2);for(let i=1;i<=count;i++){const nx=player.x+(ground.x-player.x)*ratio*i/count,nz=player.z+(ground.z-player.z)*ratio*i/count;if(!canOccupy(player.region,nx,nz))break;reached={x:nx,z:nz};}
       player.x=reached.x;player.z=reached.z;this.snapshot(player);return;
     }
-    const victims=skill.aoe?room.mobs.filter(m=>m.alive&&dist(m,ground||player)<=skill.radius):(skill.target==='ground'?room.mobs.filter(m=>m.alive&&dist(m,ground)<=skill.radius):target?[target]:[]);
+    let victims=skill.aoe?room.mobs.filter(m=>m.alive&&dist(m,ground||player)<=skill.radius):(skill.target==='ground'?room.mobs.filter(m=>m.alive&&dist(m,ground)<=skill.radius):target?[target]:[]);
+    if(skill.effect==='chain')victims=victims.filter(m=>hasLineOfSight(player.region,player,m)).sort((a,b)=>dist(a,ground)-dist(b,ground)||a.id.localeCompare(b.id)).slice(0,1);
     this.broadcast(room,SERVER.COMBAT,{phase:'cast',sourceId:player.id,skillSlot:slot,targetId:target?.id||null,x:ground?.x??target?.x??player.x,z:ground?.z??target?.z??player.z},null,p=>dist(p,player)<=40);
     if(!victims.length)return;const impactAt=stamp+Math.max(80,(skill.impact?.[0]||.3)*1000);this.pending??=[];this.pending.push({playerId:player.id,region:player.region,slot,victimIds:victims.map(m=>m.id),impactAt});
   }
-  async impact(hit){const player=this.players.get(hit.playerId);if(!player||player.region!==hit.region||!player.alive)return;const room=this.room(hit.region),skill=CLASS_DEFS[player.classId].skills.find(s=>s.slot===hit.slot);for(const id of hit.victimIds){const mob=room.mobs.find(m=>m.id===id&&m.alive);if(!mob||dist(player,mob)>skill.range+(skill.radius||0)+1)continue;
+  async impact(hit){const player=this.players.get(hit.playerId);if(!player||player.region!==hit.region||!player.alive)return;const room=this.room(hit.region),skill=CLASS_DEFS[player.classId].skills.find(s=>s.slot===hit.slot);for(const id of hit.victimIds){const mob=room.mobs.find(m=>m.id===id&&m.alive);if(!mob||dist(hit.chainOrigin||player,mob)>(hit.chainOrigin?5:skill.range+(skill.radius||0)+1)||!hasLineOfSight(hit.region,hit.chainOrigin||player,mob))continue;
       const gearBonus=Object.values(player.equipment).reduce((sum,itemId)=>sum+(ITEM_DEFS[itemId]?.bonuses?.[CLASS_DEFS[player.classId].damageStat]||0),0),stat=player.stats[CLASS_DEFS[player.classId].damageStat]+gearBonus;
-      const crit=Math.random()<.08+(player.stats.dexterity||0)*.01,damage=Math.max(1,Math.round((skill.damage+Math.max(0,stat-CLASS_DEFS[player.classId].stats[CLASS_DEFS[player.classId].damageStat])*2+stat*.35)*(player.buffs.rage>now()?1.25:1)*(crit?1.65:1)));
+      const crit=Math.random()<.08+(player.stats.dexterity||0)*.01,damage=Math.max(1,Math.round((skill.damage+Math.max(0,stat-CLASS_DEFS[player.classId].stats[CLASS_DEFS[player.classId].damageStat])*2+stat*.35)*(player.buffs.rage>now()?1.25:1)*(crit?1.65:1)*Math.pow(.75,hit.chainSeen?.length||0)));
       mob.health=Math.max(0,mob.health-damage);mob.aggroId=player.id;mob.state=mob.health?'hit':'dead';mob.alive=mob.health>0;
-      const result={phase:'impact',sourceId:player.id,targetId:mob.id,skillSlot:hit.slot,damage,critical:crit,targetHp:mob.health,dead:!mob.alive};this.broadcast(room,SERVER.COMBAT,result,null,p=>dist(p,mob)<=40);
+      const result={phase:'impact',sourceId:player.id,targetId:mob.id,skillSlot:hit.slot,damage,critical:crit,targetHp:mob.health,dead:!mob.alive,chainFrom:hit.chainOrigin};this.broadcast(room,SERVER.COMBAT,result,null,p=>dist(p,mob)<=40);
+      if(skill.effect==='chain'){
+        const seen=[...(hit.chainSeen||[]),mob.id];
+        if(seen.length<3){const next=room.mobs.filter(m=>m.alive&&!seen.includes(m.id)&&dist(m,mob)<=5&&hasLineOfSight(hit.region,mob,m)).sort((a,b)=>dist(a,mob)-dist(b,mob)||a.id.localeCompare(b.id))[0];if(next){this.pending??=[];this.pending.push({...hit,victimIds:[next.id],chainOrigin:{x:mob.x,z:mob.z},chainSeen:seen,impactAt:now()+120});}}
+      }
       if(!mob.alive){mob.respawnAt=now()+(mob.boss?25000:9000);mob.targetId=null;try{const reward=await this.repository.awardKill(player,mob);Object.assign(player,{xp:reward.xp,level:reward.level,gold:reward.gold});const quest=player.quests.find(entry=>entry.quest_id==='first-trial');if(quest){quest.progress=reward.questProgress;quest.completed=reward.questCompleted;}send(player.socket,SERVER.PROGRESSION,{...reward,quests:player.quests});const drop={id:randomUUID(),ownerId:player.id,itemId:mob.boss?CLASS_DEFS[player.classId].rewardWeapon:mob.type===1?'wolf-fang':'health-potion',quantity:1,x:mob.x,z:mob.z,region:player.region,expiresAt:now()+60000,claimed:false};room.drops.set(drop.id,drop);send(player.socket,SERVER.LOOT,{loot:drop});}catch(error){this.fail(player,error);}}
     }}
   async pickup(player,lootId){if(!this.allow(player,'pickup',100))return;if(!player.alive)throw new PublicError(400,'Ölü karakter ganimet alamaz.');const room=this.room(player.region),drop=room.drops.get(lootId);if(!drop||drop.claimed||drop.ownerId!==player.id||dist(player,drop)>2.4)throw new PublicError(400,'Ganimet alınamıyor.');drop.claimed=true;try{const item=await this.repository.pickup(player,drop);player.items.push(item);room.drops.delete(drop.id);send(player.socket,SERVER.LOOT_REMOVE,{lootId});send(player.socket,SERVER.INVENTORY,{items:player.items,equipment:player.equipment,gold:player.gold});}catch(error){drop.claimed=false;throw error;}}

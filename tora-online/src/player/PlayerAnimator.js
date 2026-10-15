@@ -32,6 +32,7 @@ export class PlayerAnimator {
 
   setState(next, force = false, duration = null) {
     if (!force && next === this.state) return;
+    if (this.locomotionLayer) { this.locomotionLayer.stop(); this.locomotionLayer = null; }
     const group = this.clips.get(next) || this.#findGroup(next);
     if (!group) {
       if (!this.missingLogged.has(next)) {
@@ -82,6 +83,17 @@ export class PlayerAnimator {
     } else if (this.actionSpeed) {
       this.activeGroup.speedRatio = this.actionSpeed;
     }
+    // Moving casts keep the action on the torso and actual locomotion on the legs.
+    const movingAction = this.actionSpeed && speedRatio > .08 && !['dead','respawn','hit'].includes(this.state);
+    const run = this.clips.get('run');
+    if (movingAction && run && run !== this.activeGroup) {
+      if (!this.locomotionLayer) { this.locomotionLayer = run; run.start(true, speedRatio, run.from, run.to, false); }
+      run.speedRatio = BABYLON.Scalar.Clamp(speedRatio,.3,1.2);
+      const lower = target => /^(root|pelvis|thigh_[lr]|calf_[lr]|foot_[lr]|ball_[lr]|toe)/i.test(target?.name || '');
+      for (const animatable of run.animatables || []) animatable.weight = lower(animatable.target) ? 1 : 0;
+      for (const animatable of this.activeGroup.animatables || []) if (lower(animatable.target)) animatable.weight = 0;
+      for (const animatable of this.outgoing?.animatables || []) if (lower(animatable.target)) animatable.weight = 0;
+    } else if (this.locomotionLayer) { this.locomotionLayer.stop(); this.locomotionLayer = null; }
   }
 
   #isPlaying(group) {

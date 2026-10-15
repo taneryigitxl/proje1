@@ -15,38 +15,53 @@ export class PlayerCombat {
     this._approachSide = 1;
     this.approachTime = 0;
     this.autoAttack = false;
+    this.attackTarget = null;
+    this.buffered = null;
   }
 
   request(slot, target, fallbackDirection, ground = null) {
     const skill = this.skills.get(slot);
-    if (!skill || this.active || this.pending) return false;
+    if (!skill) return false;
     const check = this.skills.canUse(skill, this.player);
     if (!check.ok) {
       this.callbacks.onStatus?.(check.reason);
       return false;
     }
     this.fallbackDirection = fallbackDirection?.clone() || this.fallbackDirection;
-    if (skill.target === "enemy" && !target) {
+    if (skill.target === "enemy" && !this.#validTarget(target)) {
       this.callbacks.onStatus?.("Önce bir hedef seç.");
       return false;
     }
-    this.pending = { skill, target, ground: ground?.clone() || null };
+    if (skill.target === 'ground' && !this.#validGround(skill, ground)) {
+      this.callbacks.onStatus?.('Menzil dışında veya geçersiz hedef noktası.');
+      return false;
+    }
+    const command = { skill, target, ground: ground?.clone() || null, direction: this.fallbackDirection.clone() };
+    if (this.active) {
+      this.buffered = { ...command, ttl: .75 };
+      return true;
+    }
+    this.pending = command;
     this.approachTime = 0;
-    this.player.targetId = target?.id || null;
+    if (target) this.player.targetId = target.id;
     return true;
   }
 
   requestBasic(target, fallbackDirection) {
-    const ok=this.request(1,target,fallbackDirection);
-    if(!ok) return false;
+    if (!this.player.alive || !this.#validTarget(target)) return false;
+    this.attackTarget = target;
+    this.player.targetId = target.id;
     this.autoAttack = true;
-    this.combo=((this.combo??-1)+1)%3;
-    const animations=this.player.classDef?.basicAnimations||['attack1','attack2','attack3'];
-    this.pending.skill={...this.pending.skill,animation:animations[this.combo%animations.length]};
+    this.fallbackDirection = fallbackDirection?.clone() || this.fallbackDirection;
+    // The committed hit retains its victim. Selection controls the next swing.
+    if (!this.active) { this.buffered = null; this.#queueBasic(target); }
+    else this.buffered = null;
     return true;
   }
   cancelApproach() {
     this.autoAttack = false;
+    this.attackTarget = null;
+    this.buffered = null;
     this.pending = null;
     if (this.active) {
       this.callbacks.onActionEnd?.(this.active.skill);
@@ -67,12 +82,16 @@ export class PlayerCombat {
     this.autoAttack = false;
     this.pending = null;
     this.player.targetId = null;
-    // A committed swing or spell owns its hit frame. A new ground click only
-    // replaces navigation, so fast input cannot silently discard damage.
+    this.attackTarget = null;
+    this.buffered = null;
+    // Movement interrupts a stationary cast; already applied hit frames remain applied.
+    if (this.active && !this.active.skill.canMoveWhileCasting) this.cancel();
   }
 
   cancel() {
     this.autoAttack = false;
+    this.attackTarget = null;
+    this.buffered = null;
     this.pending = null;
     // Mid-swing cancel must unlock body facing / movement immediately
     if (this.active) {
@@ -92,8 +111,14 @@ export class PlayerCombat {
   }
 
   update(dt) {
+    if (this.buffered) {
+      this.buffered.ttl -= dt;
+      if (this.buffered.ttl < 0) this.buffered = null;
+    }
     this.chaseReplan=Math.max(0,(this.chaseReplan||0)-dt);
     if (!this.player.alive) {
+      this.autoAttack = false;
+      this.attackTarget = this.buffered = null;
       this.#finish();
       this.pending = null;
       return;
@@ -115,16 +140,21 @@ export class PlayerCombat {
     }
     if (!this.pending) return;
     const { skill, target } = this.pending;
-    if (skill.target === "enemy" && (!target || !target.alive)) {
+    if (skill.target === 'ground' && !this.#validGround(skill, this.pending.ground)) {
       this.pending = null;
-      this.player.targetId = null;
+      this.callbacks.onStatus?.('Hedef noktası artık erişilebilir değil.');
+      return;
+    }
+    if (skill.target === "enemy" && !this.#validTarget(target)) {
+      this.pending = null;
+      if (!this.attackTarget?.alive) { this.autoAttack = false; this.attackTarget = null; this.player.targetId = null; }
       return;
     }
     const distance = target ? BABYLON.Vector3.Distance(this.player.position, target.position) : 0;
     // Small hysteresis so borderline range still commits after closing
-    if (skill.target === "enemy" && distance > skill.range) {
+    if (skill.target === "enemy" && (distance > skill.range || !this.#visible(this.player.position, target.position))) {
       this.approachTime += dt;
-      if (this.approachTime > 12) { this.cancelApproach(); this.callbacks.onStatus?.('Hedefe ulaşan güvenli bir yol yok.'); return; }
+      if (this.approachTime > 6) { this.cancelApproach(); this.callbacks.onStatus?.('Hedefe ulaşan güvenli bir yol yok.'); return; }
       this.#chase(target, skill, distance);
       return;
     }
@@ -140,6 +170,7 @@ export class PlayerCombat {
       return;
     }
     this.active = this.pending;
+    this.fallbackDirection = this.active.direction || this.fallbackDirection;
     this.pending = null;
     this.elapsed = 0;
     this.activePhase = 'WINDUP';
@@ -159,8 +190,12 @@ export class PlayerCombat {
     const dir=target.position.subtract(this.player.position);dir.y=0;dir.normalize();
     const stop=Math.max(1.25,skill.range-.5);
     let desired=target.position.subtract(dir.scale(stop));
-    if(!this.player.navigation.canOccupy(desired)) {
-      for(let i=0;i<12;i++){const a=i/12*Math.PI*2;const p=new BABYLON.Vector3(target.position.x+Math.cos(a)*stop,0,target.position.z+Math.sin(a)*stop);if(this.player.navigation.canOccupy(p)){desired=p;break;}}
+    const nav = this.player.navigation;
+    const safe = p => nav.canOccupy(p) && this.#visible(p, target.position) && nav.findPath(this.player.position, p).length;
+    if (!safe(desired)) {
+      desired = null;
+      for(let i=0;i<12;i++){const a=i/12*Math.PI*2;const p=new BABYLON.Vector3(target.position.x+Math.cos(a)*stop,0,target.position.z+Math.sin(a)*stop);if(safe(p)){desired=p;break;}}
+      if (!desired) { this.cancelApproach(); this.callbacks.onStatus?.('Hedefe ulaşan güvenli bir yol yok.'); return; }
     }
     if(!this.player.destination || BABYLON.Vector3.DistanceSquared(desired,this.chaseGoal||this.player.position)>.7 || this.player.destinationStall>.4){
       this.chaseGoal=desired.clone();this.player.setDestination(desired,.2);
@@ -170,9 +205,9 @@ export class PlayerCombat {
   #finish() {
     if (!this.active) return;
     const skill = this.active.skill;
-    const target = this.active.target;
-    const chain = this.autoAttack && skill.slot === 1 && target?.alive && !this.player.destination;
-    if (!target?.alive) {
+    const target = this.attackTarget;
+    const chain = this.autoAttack && this.#validTarget(target);
+    if (this.autoAttack && !this.#validTarget(target)) {
       this.autoAttack = false;
       this.player.targetId = null;
       this.callbacks.onTargetLost?.();
@@ -187,12 +222,17 @@ export class PlayerCombat {
       this.animator.setState("idle");
     }
     this.callbacks.onActionEnd?.(skill);
-    if (chain) this.#queueBasic(target);
+    const command = this.buffered;
+    this.buffered = null;
+    if (command && (command.skill.target !== 'enemy' || this.#validTarget(command.target))) {
+      this.pending = command;
+      this.approachTime = 0;
+    } else if (chain) this.#queueBasic(target);
   }
 
   #queueBasic(target) {
     const base = this.skills.get(1);
-    if (!base || !target?.alive) { this.autoAttack = false; return; }
+    if (!base || !this.#validTarget(target)) { this.autoAttack = false; return; }
     this.combo = ((this.combo ?? -1) + 1) % 3;
     const animations=this.player.classDef?.basicAnimations||['attack1','attack2','attack3'];
     this.pending = { skill: { ...base, animation: animations[this.combo%animations.length] }, target };
@@ -201,6 +241,7 @@ export class PlayerCombat {
   }
 
   #impact(skill, target, index, ground) {
+    if (skill.target === 'enemy' && (!this.#validTarget(target) || !this.#visible(this.player.position, target.position))) return;
     if (skill.effect) { this.callbacks.onEffect?.(skill,target,ground); return; }
     if (skill.action === 'blink' && ground) {
       const safe=this.player.navigation.findReachable(this.player.position,ground);
@@ -222,7 +263,7 @@ export class PlayerCombat {
       this.callbacks.onStatus?.(`${skill.name} aktif: saldırı ve hareket hızı arttı.`);
     }
     const victims = skill.aoe
-      ? this.entities.inRadius(ground || this.player.position, skill.radius || skill.range)
+      ? this.entities.inRadius(ground || this.player.position, skill.radius || skill.range).filter(mob => this.#visible(ground || this.player.position, mob.position))
       : (target?.alive && BABYLON.Vector3.Distance(this.player.position,target.position)<=skill.range+1 && skill.damage > 0 ? [target] : []);
     for (const mob of victims) {
       const damage = Math.round(skill.damage * (index > 0 ? 0.75 : 1));
@@ -235,5 +276,14 @@ export class PlayerCombat {
     }
     const impactTarget = skill.target === "enemy" || skill.action === "dash" ? target?.position : null;
     this.callbacks.onImpact?.(skill, this.player.position, impactTarget);
+  }
+
+  #visible(from, to) { return this.player.navigation?.hasLineOfSight?.(from, to) ?? true; }
+  #validTarget(target) { return Boolean(target?.alive && !target.disposed && (!this.entities.getById || this.entities.getById(target.id) === target)); }
+  #validGround(skill, point) {
+    if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.z)) return false;
+    if (BABYLON.Vector3.Distance(this.player.position, point) > skill.range + .2) return false;
+    if (this.player.navigation?.canOccupy(point) === false) return false;
+    return skill.action !== 'blink' || BABYLON.Vector3.Distance(this.player.navigation.findReachable(this.player.position, point), point) < .3;
   }
 }

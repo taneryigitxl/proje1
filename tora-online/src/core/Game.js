@@ -10,6 +10,7 @@ import { RegionWorld, REGIONS } from "../world/RegionWorld.js";
 import { WorldUI } from "../ui/WorldUI.js";
 import { InputManager } from "../input/InputManager.js";
 import { CursorManager } from "../input/CursorManager.js";
+import { pickWorldAction } from '../input/WorldPicking.js';
 import { IsometricCamera } from "../camera/IsometricCamera.js";
 import { PlayerController } from "../player/PlayerController.js";
 import { PlayerAnimator } from "../player/PlayerAnimator.js";
@@ -151,6 +152,10 @@ export class Game {
       });
       this.worldUI = new WorldUI(this);
       this.cursor = new CursorManager(this.scene, this.canvas, this.player, this.entities,(data,mesh)=>this.worldUI.hover(data,mesh));
+      this.cursor.pickAction = () => pickWorldAction(this.scene, this.entities, this.map.roots);
+      this.scene.skipPointerMovePicking = true;
+      this.scene.skipPointerDownPicking = true;
+      this.scene.skipPointerUpPicking = true;
       this.hud.setDebug(GAME_CONFIG.debug);
       this.hud.applyIdentity(this.identity);
       this.map.addShadowCaster(this.player.root);
@@ -390,7 +395,7 @@ export class Game {
   }
 
   #pickAction() {
-    return this.scene.pick(this.scene.pointerX, this.scene.pointerY, (mesh) => Boolean(mesh.metadata?.portal || mesh.metadata?.mob || mesh.metadata?.npc || mesh.metadata?.loot || mesh.metadata?.interactive || mesh.metadata?.lootPickup || mesh.metadata?.chest));
+    return pickWorldAction(this.scene, this.entities, this.map.roots);
   }
 
   #pickGround() {
@@ -561,7 +566,6 @@ export class Game {
     const skill = this.combat.skills.get(slot);
     if (!skill) return;
     this.hud?.skillBar?.markPressed?.(slot);
-    if (this.combat.playerCombat.active || this.combat.playerCombat.pending) { this.hud.setStatus('Devam eden saldırının bitmesini bekle.'); return; }
     const check = this.combat.skills.canUse(skill, this.player);
     if (!check.ok) { if(this.player.mana<skill.mana)this.hud.warnMana();this.hud.setStatus(check.reason);this.resetCombatInputState();return; }
     if (skill.castType === 'GROUND_AOE') {
@@ -579,7 +583,6 @@ export class Game {
       const selected = this.entities.selected?.alive ? this.entities.selected : null;
       const mob = selected || this.#cursorEnemy();
       if (!mob?.alive) { this.hud.setStatus('Geçerli bir hedef seç.'); return; }
-      if (BABYLON.Vector3.Distance(this.player.position, mob.position) > skill.range + .2) { this.hud.setStatus('Menzil dışında.'); return; }
       this.entities.select(mob);
       this.#castSkill(skill, mob);
       return;

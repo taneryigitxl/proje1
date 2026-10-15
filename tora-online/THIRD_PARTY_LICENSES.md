@@ -60,3 +60,15 @@ Yeni baş modeli hazırlama: @gltf-transform/core ve functions (MIT), Sharp (Apa
 - Kenney RPG Audio: CC0. https://kenney.nl/assets/rpg-audio. Selected footsteps, knife slices, chop, metal pot and UI metal click, unchanged OGG.
 - Forest Ambience music: TinyWorlds, CC0. https://opengameart.org/content/forest-ambience. Unchanged MP3.
 - Stream and wind recordings: Blender Foundation, YoFrankie! project; uploaded by Lamoot; CC-BY 3.0, https://creativecommons.org/licenses/by/3.0/. https://opengameart.org/content/ambient-mountain-river-wind-and-forest-and-waterfall. Unchanged FLAC (amb_stream.flac and amb_wind_1.flac).
+
+## Character and interface polish — 2026-10-15
+
+- `warrior-hair.glb` (`Hair_Buns`) and `mage-hair.glb` (`Hair_Long`) use authored, UV-mapped, head-skinned hairstyles from Quaternius Universal Base Characters Standard, CC0-1.0. Source and license: https://quaternius.com/packs/universalbasecharacters.html and https://quaternius.itch.io/universal-base-characters. Original texture detail is retained at 1024 px, matching the face texture budget; color is lossless WebP, normals are PNG. Material tint gives chestnut Warrior hair and dark walnut Mage hair.
+- The original Mage procedural crown/braid are hidden. The authored `Head` skin, inverse bind matrices, and animation channels move the replacement hair; no primitive hair geometry was added.
+- The Ranger GLB retains its geometry and binary buffers. The actual hood surface is named as well as its grouping node because Babylon reparents skinned meshes to the rig. The companion face crop removes accidental shoulder/arm fragments.
+- `warrior-1.glb` and `warrior-2.glb` retain the used CC0 animation tracks from the existing Universal Animation Libraries; unused animation samplers, accessors and reference mannequin surfaces are removed. Mage's right finger grip is sampled from the authored Sword_Idle clip while preserving its wrist/arm/spell motion.
+- New equipment/status/check icons in `src/ui/Art.js` are original hand-authored SVG paths, CC0-1.0. No Albion graphics are used.
+
+Reproduction: download the Standard archive linked above, extract locally, then run `node scripts/prepare-character-polish.mjs <extracted Standard directory>`. Original `ual1-standard.glb` and `ual2-standard.glb` remain development sources; the manifest ships the trimmed Warrior clips.
+
+`assets/textures/characters/mage-brocade-source.png` is original Tora cloth artwork generated using the built-in `image_gen.imagegen` tool. The exact prompt and project paths are in `assets/textures/characters/generation.json`. `mage-brocade.webp` is its 1024 px game texture, embedded in the existing Mage GLB with cylindrical cloth UVs by `scripts/prepare-mage-textile.mjs`. The original rig, topology, skin weights and animation channels are retained. Build consumption uses the embedded GLB texture; no external service is required at runtime.

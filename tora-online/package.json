@@ -15,6 +15,9 @@
     "db:migrate": "node server/migrate.js",
     "validate": "node scripts/validate.mjs",
     "test:browser": "node tests/browser-smoke.mjs",
+    "test:polish": "node tests/current-browser.mjs",
+    "test:poses": "node tests/weapon-pose-browser.mjs",
+    "test:performance": "node tests/performance-audit.mjs",
     "test:soak": "node tests/browser-smoke.mjs --soak=600"
   },
   "devDependencies": {

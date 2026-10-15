@@ -13,7 +13,7 @@ try { for(const classId of only?[only]:['warrior','mage']) {
  const context=await browser.newContext({viewport:{width:1366,height:768}}),page=await context.newPage(),checks=[],errors=[],metrics={};
  page.setDefaultTimeout(90000);page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  const ev=(fn,arg)=>page.evaluate(fn,arg),pass=name=>{checks.push(name);console.log('PASS',classId,name);};
- async function ready(){await page.waitForFunction(()=>window.__TORA_BOOTSTRAP__.game?.running);await ev(()=>window.g=window.__TORA_BOOTSTRAP__.game);await page.waitForTimeout(400);}
+ async function ready(){await page.waitForFunction(()=>window.__TORA_BOOTSTRAP__.game?.running);await ev(()=>{window.g=window.__TORA_BOOTSTRAP__.game;});await page.waitForTimeout(400);}
  async function lobby(){await page.waitForFunction(()=>{const p=window.__TORA_BOOTSTRAP__.lobby?.preview;return p?.loaded&&!p.busy;});}
  async function enter(){await lobby();await page.locator('[data-lobby="enter"]').click();await ready();}
  async function project(point){return ev(point=>{const p=BABYLON.Vector3.Project(BABYLON.Vector3.FromArray(point),BABYLON.Matrix.IdentityReadOnly,g.scene.getTransformMatrix(),g.camera.camera.viewport.toGlobal(g.engine.getRenderWidth(),g.engine.getRenderHeight()));return [p.x/g.engine.getRenderWidth()*innerWidth,p.y/g.engine.getRenderHeight()*innerHeight];},point);}

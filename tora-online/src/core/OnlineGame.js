@@ -224,6 +224,7 @@ export class OnlineGame {
       else { const remote = this.remotes.get(packet.sourceId); remote?.animator?.playAction(skill.animation, skill.duration); if (remote) remote.actionUntil = performance.now() + skill.duration * 1000; }
     }
     if (packet.phase === 'impact') {
+      if(skill?.effect==='chain'){const origin=packet.chainFrom?new BABYLON.Vector3(packet.chainFrom.x,this.navigation.heightAt(packet.chainFrom.x,packet.chainFrom.z)+1,packet.chainFrom.z):this.player.visual?.tip?.getAbsolutePosition()||from;this.vfx.lightning(origin,to.add(new BABYLON.Vector3(0,1,0)),skill.color);}
       this.vfx.impact(skill || { slot: 1, damage: packet.damage, color: '#d4a056', trail: true }, from, to);
       if (packet.targetId === this.identity.characterId) this.setStatus(`${packet.damage} hasar aldın.`);
       else if (packet.sourceId === this.identity.characterId) this.setStatus(`${packet.damage} hasar verdin${packet.dead ? ' · Yaratık yenildi' : ''}.`);

@@ -1,37 +1,72 @@
-/** CCD on glTF linked TransformNodes, applied after skeletal animation. */
-export class TwoHandIK{
+import { WEAPON_ATTACHMENT_PROFILES } from './WeaponAttachmentProfiles.js';
+/** Two analytic arm solves; preserve bone lengths and the authored elbow planes. */
+export class TwoHandIK {
  constructor(visual,scene){
-  this.visual=visual;this.scene=scene;const bones=visual.skeleton.bones;
-  this.hand=bones.find(b=>b.name==='hand_l')?.getTransformNode();
-  this.chain=['lowerarm_l','upperarm_l'].map(name=>bones.find(b=>b.name===name)?.getTransformNode()).filter(Boolean);
-  const shoulder=this.chain.at(-1)?.parent;if(shoulder&&/clavicle|shoulder/i.test(shoulder.name))this.chain.push(shoulder);
-  this.target=new BABYLON.TransformNode('left-sword-grip',scene);const right=bones.find(b=>b.name==='hand_r')?.getTransformNode();this.target.parent=right||visual.weaponRoot;
-  const pose=visual.weaponSheath.attachment.hand,grip=new BABYLON.Vector3(0,-.085,0),matrix=BABYLON.Matrix.Compose(new BABYLON.Vector3(pose.scale,pose.scale,pose.scale),BABYLON.Quaternion.FromArray(pose.quaternion),BABYLON.Vector3.FromArray(pose.position));this.target.position.copyFrom(right?BABYLON.Vector3.TransformCoordinates(grip,matrix):grip);
-  this.v=Array.from({length:10},()=>BABYLON.Vector3.Zero());this.q=Array.from({length:6},()=>BABYLON.Quaternion.Identity());this.matrix=BABYLON.Matrix.Identity();
+  this.visual=visual;this.scene=scene;
+  const node=name=>visual.skeleton.bones.find(b=>b.name===name)?.getTransformNode();
+  this.hand=node('hand_l');this.lower=node('lowerarm_l');this.upper=node('upperarm_l');
+  this.right=node('hand_r');this.rightLower=node('lowerarm_r');this.rightUpper=node('upperarm_r');
+  this.target=new BABYLON.TransformNode('left-sword-grip',scene);this.target.parent=this.right||visual.weaponRoot;
+  const pose=(visual.attachment||visual.weaponSheath?.attachment||WEAPON_ATTACHMENT_PROFILES.warrior).hand;
+  const matrix=BABYLON.Matrix.Compose(new BABYLON.Vector3(pose.scale,pose.scale,pose.scale),BABYLON.Quaternion.FromArray(pose.quaternion),BABYLON.Vector3.FromArray(pose.position));
+  this.target.position.copyFrom(this.right?BABYLON.Vector3.TransformCoordinates(new BABYLON.Vector3(0,-.085,0),matrix):new BABYLON.Vector3(0,-.085,0));
+  this.v=Array.from({length:19},()=>BABYLON.Vector3.Zero());this.q=BABYLON.Quaternion.Identity();this.delta=BABYLON.Quaternion.Identity();this.originalRightWorld=BABYLON.Matrix.Identity();this.localRightMatrix=BABYLON.Matrix.Identity();this.matrix=BABYLON.Matrix.Identity();
   this.observer=scene.onAfterAnimationsObservable.add(()=>this.solve());
  }
  solve(){
-  if(!this.hand||this.chain.length<2||this.visual.weaponSheath.sheathed||!this.visual.weaponRoot.isEnabled())return;
-  const grip=this.target.getAbsolutePosition(),V=BABYLON.Vector3,Q=BABYLON.Quaternion;
-  this.baseLengths ||= [this.hand.position.length(),this.chain[0].position.length()];this.hand.position.normalize().scaleInPlace(this.baseLengths[0]);this.chain[0].position.normalize().scaleInPlace(this.baseLengths[1]);
-  // The hand bone origin is the wrist; the palm contact is 9 cm along local Y.
-  const pivot=this.chain.at(-1).getAbsolutePosition();grip.subtractToRef(pivot,this.v[7]);this.v[7].normalize();this.v[7].scaleInPlace(.09);grip.subtractToRef(this.v[7],this.v[8]);const target=this.v[8];
-  const reach=this.hand.position.length()+this.chain.slice(0,-1).reduce((sum,n)=>sum+n.position.length(),0),distance=V.Distance(pivot,target),stretch=BABYLON.Scalar.Clamp(distance/reach,1,1.12);
-  if(stretch>1){this.hand.position.scaleInPlace(stretch);this.chain[0].position.scaleInPlace(stretch);this.hand.computeWorldMatrix(true);}
-  for(let iteration=0;iteration<24;iteration++)for(const node of this.chain){
-   this.hand.computeWorldMatrix(true);node.parent.computeWorldMatrix(true).invertToRef(this.matrix);
-   V.TransformCoordinatesToRef(this.hand.getAbsolutePosition(),this.matrix,this.v[0]);this.v[0].subtractInPlace(node.position);
-   V.TransformCoordinatesToRef(target,this.matrix,this.v[1]);this.v[1].subtractInPlace(node.position);
-   if(this.v[0].lengthSquared()<.00001||this.v[1].lengthSquared()<.00001)continue;this.v[0].normalize();this.v[1].normalize();
-   const dot=BABYLON.Scalar.Clamp(V.Dot(this.v[0],this.v[1]),-1,1);V.CrossToRef(this.v[0],this.v[1],this.v[2]);if(this.v[2].lengthSquared()<.000001)continue;
-   this.v[2].normalize();Q.RotationAxisToRef(this.v[2],Math.min(.55,Math.acos(dot)),this.q[0]);
-   if(!node.rotationQuaternion)node.rotationQuaternion=Q.Identity();this.q[0].multiplyToRef(node.rotationQuaternion,this.q[1]);node.rotationQuaternion.copyFrom(this.q[1]);node.computeWorldMatrix(true);
+  if(!this.hand||!this.lower||!this.upper||this.visual.weaponSheath?.sheathed||!this.visual.weaponRoot.isEnabled())return;
+  const started=performance.now(),V=BABYLON.Vector3,grip=this.v[13],leftShoulder=this.v[14],wristGoal=this.v[15],delta=this.v[16];
+  grip.copyFrom(this.target.getAbsolutePosition());leftShoulder.copyFrom(this.upper.getAbsolutePosition());
+  const reach=V.Distance(leftShoulder,this.lower.getAbsolutePosition())+V.Distance(this.lower.getAbsolutePosition(),this.hand.getAbsolutePosition())+.09;
+  const distance=V.Distance(leftShoulder,grip);
+  // Bring the weapon hand toward the support shoulder only when its authored
+  // location is unreachable. Both arms still use their original segment lengths.
+  if(this.rightUpper&&this.rightLower&&this.right&&distance>reach-.015){
+   this.originalRightWorld.copyFrom(this.right.computeWorldMatrix(true));
+   const rightShoulder=this.v[17],leftCenter=this.v[18];
+   rightShoulder.copyFrom(this.rightUpper.getAbsolutePosition());
+   grip.subtractToRef(this.right.getAbsolutePosition(),delta);leftShoulder.subtractToRef(delta,leftCenter);
+   const rightReach=V.Distance(rightShoulder,this.rightLower.getAbsolutePosition())+V.Distance(this.rightLower.getAbsolutePosition(),this.right.getAbsolutePosition())-.001;
+   wristGoal.copyFrom(this.right.getAbsolutePosition());
+   // Project onto the intersection of both arms' reachable volumes.
+   for(let pass=0;pass<6;pass++)for(const [center,radius]of [[leftCenter,reach-.02],[rightShoulder,rightReach]]){
+    const length=V.Distance(wristGoal,center);if(length<=radius)continue;
+    wristGoal.subtractToRef(center,delta);delta.scaleInPlace(radius/length);center.addToRef(delta,wristGoal);
+   }
+   this.solveArm(this.rightUpper,this.rightLower,this.right,wristGoal,0);
+   // Preserve the full basis through glTF's mirrored root. Decomposing world
+   // quaternions separately loses the reflection sign during overhead attacks.
+   this.right.parent.computeWorldMatrix(true).invertToRef(this.matrix);
+   this.originalRightWorld.multiplyToRef(this.matrix,this.localRightMatrix);this.localRightMatrix.decompose(undefined,this.q,undefined);
+   this.right.rotationQuaternion.copyFrom(this.q).normalize();this.right.computeWorldMatrix(true);
+   this.target.computeWorldMatrix(true);grip.copyFrom(this.target.getAbsolutePosition());
   }
-  this.hand.parent.computeWorldMatrix(true).invertToRef(this.matrix);V.TransformCoordinatesToRef(grip,this.matrix,this.v[0]);this.v[0].subtractInPlace(this.hand.position).normalize();
-  this.v[1].set(0,1,0);V.CrossToRef(this.v[1],this.v[0],this.v[2]);const dot=BABYLON.Scalar.Clamp(V.Dot(this.v[1],this.v[0]),-1,1);
-  if(this.v[2].lengthSquared()>.000001){this.v[2].normalize();Q.RotationAxisToRef(this.v[2],Math.acos(dot),this.hand.rotationQuaternion);}
-  this.hand.computeWorldMatrix(true);this.wristError=V.Distance(this.hand.getAbsolutePosition(),target);this.v[9].set(0,.09,0);V.TransformCoordinatesToRef(this.v[9],this.hand.getWorldMatrix(),this.v[6]);this.error=V.Distance(this.v[6],grip);
-
+  this.solveArm(this.upper,this.lower,this.hand,grip,.09);
+  this.hand.computeWorldMatrix(true);V.TransformCoordinatesFromFloatsToRef(0,.09,0,this.hand.getWorldMatrix(),this.v[9]);
+  this.error=V.Distance(this.v[9],grip);this.iterations=1;this.solveMs=performance.now()-started;
+ }
+ solveArm(upper,lower,hand,goal,palm){
+  const V=BABYLON.Vector3,[shoulder,elbow,wrist,grip,direction,bend,desiredElbow,desiredWrist,desiredGrip]=this.v;
+  shoulder.copyFrom(upper.getAbsolutePosition());elbow.copyFrom(lower.getAbsolutePosition());wrist.copyFrom(hand.getAbsolutePosition());grip.copyFrom(goal);
+  const l1=V.Distance(shoulder,elbow),l2=V.Distance(elbow,wrist),reach=l1+l2+palm;
+  grip.subtractToRef(shoulder,direction);const raw=direction.length();if(raw<1e-6||l1<1e-6||l2<1e-6)return;direction.scaleInPlace(1/raw);
+  const distance=Math.max(Math.abs(l1-l2-palm)+.001,Math.min(raw,reach-.001)),a=(l1*l1-(l2+palm)**2+distance*distance)/(2*distance),h=Math.sqrt(Math.max(0,l1*l1-a*a));
+  elbow.subtractToRef(shoulder,bend);direction.scaleToRef(V.Dot(bend,direction),this.v[9]);bend.subtractInPlace(this.v[9]);
+  if(bend.lengthSquared()<1e-6){bend.set(0,0,-1);direction.scaleToRef(V.Dot(bend,direction),this.v[9]);bend.subtractInPlace(this.v[9]);}
+  bend.normalize();direction.scaleToRef(a,desiredElbow);bend.scaleToRef(h,this.v[9]);desiredElbow.addInPlace(this.v[9]).addInPlace(shoulder);
+  direction.scaleToRef(distance,desiredGrip);desiredGrip.addInPlace(shoulder);
+  desiredGrip.subtractToRef(desiredElbow,desiredWrist);desiredWrist.scaleInPlace(l2/(l2+palm)).addInPlace(desiredElbow);
+  this.rotateToward(upper,lower.getAbsolutePosition(),desiredElbow);hand.computeWorldMatrix(true);
+  this.rotateToward(lower,hand.getAbsolutePosition(),desiredWrist);hand.computeWorldMatrix(true);
+  if(palm){V.TransformCoordinatesFromFloatsToRef(0,palm,0,hand.getWorldMatrix(),this.v[9]);this.rotateToward(hand,this.v[9],desiredGrip);hand.computeWorldMatrix(true);}
+  this.wristError=V.Distance(hand.getAbsolutePosition(),desiredWrist);
+ }
+ rotateToward(node,current,target){
+  const V=BABYLON.Vector3,from=this.v[10],to=this.v[11],axis=this.v[12];
+  node.parent.computeWorldMatrix(true).invertToRef(this.matrix);
+  V.TransformCoordinatesToRef(current,this.matrix,from);from.subtractInPlace(node.position).normalize();V.TransformCoordinatesToRef(target,this.matrix,to);to.subtractInPlace(node.position).normalize();
+  V.CrossToRef(from,to,axis);const dot=BABYLON.Scalar.Clamp(V.Dot(from,to),-1,1);if(axis.lengthSquared()<1e-10)return;
+  axis.normalize();BABYLON.Quaternion.RotationAxisToRef(axis,Math.acos(dot),this.delta);node.rotationQuaternion??=BABYLON.Quaternion.Identity();this.delta.multiplyToRef(node.rotationQuaternion,this.q);node.rotationQuaternion.copyFrom(this.q).normalize();node.computeWorldMatrix(true);
  }
  dispose(){this.scene.onAfterAnimationsObservable.remove(this.observer);this.target.dispose();}
 }
